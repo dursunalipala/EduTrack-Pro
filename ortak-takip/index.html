@@ -9,7 +9,7 @@ main{margin-left:252px;min-height:100vh}.top{padding:23px 34px;border-bottom:1px
 @media(max-width:1100px){.kpi{grid-template-columns:repeat(3,1fr)}.twocol{grid-template-columns:1fr}}@media(max-width:780px){aside{position:static;width:100%;padding:11px 14px;display:block}.brand{margin:0 0 9px;font-size:18px}.nav{flex-direction:row;overflow:auto;gap:4px}.nav button{white-space:nowrap;font-size:12px;padding:9px 11px}.sidefoot{display:none}main{margin-left:0}.top{padding:19px 17px}.top h1{font-size:19px}.topright .muted{display:none}.content{padding:16px}.kpi{grid-template-columns:repeat(2,1fr);gap:10px}.card{padding:13px}.card .num{font-size:25px}.panel{padding:15px}.gridcards{grid-template-columns:1fr}.calgrid{gap:2px}.day{padding:3px;min-height:75px;border-radius:4px}.daynum{font-size:10px}.calitem{font-size:8px;padding:2px}.filters input,.filters select{width:100%;max-width:none}.fields{grid-template-columns:1fr}}
 </style></head>
 <body>
-<section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
+<section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
 <div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
@@ -27,8 +27,41 @@ const canManage=()=>["owner","manager"].includes(state.role);
 function toast(m){const a=$("#toast");a.textContent=m;a.style.display="block";clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>a.style.display="none",4500)}
 function error(e){toast(e?.message||String(e)||"İşlem başarısız");console.error(e)}
 let authMode="login";
+let recoveryMode=new URLSearchParams(window.location.hash.replace(/^#/,"")).get("type")==="recovery";
+function showRecoveryScreen(){
+  recoveryMode=true;
+  $("#auth").classList.remove("hide");$("#shell").classList.add("hide");
+  $("#authform").classList.add("hide");$("#recoveryForm").classList.remove("hide");
+  $(".authlinks").classList.add("hide");$(".authbox h1").textContent="Yeni Şifre Belirle";
+  $("#authmsg").textContent="Hesap şifrenizi güvenli bir şekilde yenileyin.";
+}
+function exitRecoveryScreen(){
+  recoveryMode=false;
+  $("#authform").classList.remove("hide");$("#recoveryForm").classList.add("hide");
+  $(".authlinks").classList.remove("hide");$(".authbox h1").textContent="Ortak Takip";
+}
+$("#recoveryForm").onsubmit=async ev=>{
+  ev.preventDefault();
+  const pass=$("#newRecoveryPassword").value,repeat=$("#confirmRecoveryPassword").value;
+  const btn=$("#recoveryForm button[type=submit]");
+  if(pass.length<8){$("#authmsg").textContent="Yeni şifre en az 8 karakter olmalıdır.";return}
+  if(pass!==repeat){$("#authmsg").textContent="Şifreler uyuşmuyor.";return}
+  btn.disabled=true;
+  try {
+    const verified=await sb.auth.getUser();
+    if(verified.error||!verified.data?.user)throw Error("Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Yeni bağlantı isteyin.");
+    const result=await sb.auth.updateUser({password:pass});
+    if(result.error)throw result.error;
+    exitRecoveryScreen();
+    window.history.replaceState(null,"",window.location.pathname);
+    await sb.auth.signOut();
+    $("#password").value="";
+    $("#authmsg").textContent="Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.";
+  }catch(e){$("#authmsg").textContent=e?.message||"Şifre güncellenemedi."}
+  finally{btn.disabled=false}
+};
 $("#switchAuth").onclick=()=>{authMode=authMode==="login"?"signup":"login";$("#namefield").classList.toggle("hide",authMode!=="signup");$("#submitAuth").textContent=authMode==="signup"?"Hesap Oluştur":"Giriş Yap";$("#switchAuth").textContent=authMode==="signup"?"Girişe dön":"Hesap oluştur";$("#authmsg").textContent=""};
-$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});$("#authmsg").textContent=e?e.message:"Şifre sıfırlama bağlantısı e-posta adresinize gönderildi."};
+$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://ortak-takip.onrender.com/"});$("#authmsg").textContent=e?e.message:"Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderilecektir."};
 $("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:window.location.origin+window.location.pathname}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
 $("#logout").onclick=async()=>{await sb.auth.signOut();showAuth()};
 function showAuth(){$("#auth").classList.remove("hide");$("#shell").classList.add("hide")}
@@ -38,7 +71,7 @@ const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
 let ids=state.members.map(x=>x.user_id);
 state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name").in("id",ids);if(!p.error)state.profiles=p.data||[]}
 }
-async function boot(){const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
+async function boot(){if(recoveryMode){showRecoveryScreen();return}const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#authmsg").textContent="Giriş yapıldı ancak Ortak Takip çalışma alanı yetkiniz henüz tanımlanmamış. Yöneticiye başvurunuz.";return}
 state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide")}
@@ -98,6 +131,11 @@ let r;if(editing){r=await sb.from(table).update(payload).eq("id",editing.id).eq(
 if(r.error)throw r.error;toast("Kayıt başarıyla kaydedildi")}
 closeModal();await refresh()
 }catch(e){error(e)}finally{b.disabled=false}};
-sb.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT")showAuth();if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED")setTimeout(()=>{if($("#shell").classList.contains("hide"))boot()},0)});
+sb.auth.onAuthStateChange((event)=>{
+  if(event==="PASSWORD_RECOVERY"){showRecoveryScreen();return}
+  if(event==="SIGNED_OUT"){if(!recoveryMode)showAuth();return}
+  if(recoveryMode)return;
+  if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED")setTimeout(()=>{if($("#shell").classList.contains("hide"))boot()},0);
+});
 boot().catch(error);
 </script></body></html>
