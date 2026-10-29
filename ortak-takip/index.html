@@ -330,7 +330,7 @@ async function saveNotifySetting(key,enabled,element){
  try {
   await requireActiveSession();
   const current=state.notifyPrefs.find(p=>p.user_id===state.user.id);
-  const payload={workspace_id:WS,user_id:state.user.id,[key]:enabled,updated_at:new Date().toISOString()};
+  const payload={workspace_id:WS,user_id:state.user.id,task_assigned:current?.task_assigned!==false,due_reminder:current?.due_reminder!==false,completed:current?.completed!==false,daily_digest:current?.daily_digest!==false,[key]:enabled,updated_at:new Date().toISOString()};
   const {error:e}=await sb.from("notification_preferences").upsert(payload,{onConflict:"workspace_id,user_id"});
   if(e)throw e;
   if(current)Object.assign(current,payload);else state.notifyPrefs.push({...payload});
