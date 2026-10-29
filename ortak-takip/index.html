@@ -72,8 +72,24 @@ if(kind==="member")f.innerHTML='<div class="span2">'+field("email","E-posta adre
 $("#modalscrim").classList.remove("hide")}
 function closeModal(){$("#modalscrim").classList.add("hide");editing=null}
 $("#closeModal").onclick=closeModal;$("#cancelModal").onclick=closeModal;$("#modalscrim").addEventListener("click",e=>{if(e.target.id==="modalscrim")closeModal()});
+async function requireActiveSession(){
+  const verified=await sb.auth.getUser();
+  if(verified.error || !verified.data?.user || verified.data.user.id!==state.user?.id){
+    closeModal();showAuth();
+    $("#authmsg").textContent="Oturumunuz geçersiz veya süresi dolmuş. Lütfen yeniden giriş yapıp işlemi tekrar deneyin.";
+    throw Error("Oturum doğrulanamadı; yeniden giriş yapmanız gerekiyor.");
+  }
+  const result=await sb.auth.getSession();
+  if(result.error || !result.data?.session?.access_token){
+    closeModal();showAuth();
+    $("#authmsg").textContent="Oturumunuz süresi dolduğu için kapandı. Lütfen yeniden giriş yapın.";
+    throw Error("Oturum süresi doldu. Lütfen yeniden giriş yapın.");
+  }
+  return result.data.session;
+}
 $("#modalForm").onsubmit=async ev=>{ev.preventDefault();const b=$("#modalForm button[type=submit]");b.disabled=true;const data=Object.fromEntries(new FormData(ev.target));try{
-if(modalKind==="member"){const {data:{session}}=await sb.auth.getSession();const r=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-panel?api=invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({workspace_id:WS,email:data.email.trim(),full_name:data.full_name.trim(),role:data.role})});const d=await r.json();if(!r.ok)throw Error(d.error||"Davet gönderilemedi");toast("Davet gönderildi")}
+const session=await requireActiveSession();
+if(modalKind==="member"){const r=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-panel?api=invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({workspace_id:WS,email:data.email.trim(),full_name:data.full_name.trim(),role:data.role})});const d=await r.json();if(!r.ok)throw Error(d.error||"Davet gönderilemedi");toast("Davet gönderildi")}
 else{const table=modalKind==="task"?"tasks":modalKind==="goal"?"goals":"calendar_events";const payload={...data,workspace_id:WS};for(const k of ["workstream_id","assigned_to","owner_id","start_date","due_date","period_start","period_end"])if(k in payload&&!payload[k])payload[k]=null;
 if(modalKind==="task"){payload.progress=Number(payload.progress);if(payload.status==="tamamlandi"){payload.progress=100;payload.completed_at=new Date().toISOString()}else if(editing?.status==="tamamlandi")payload.completed_at=null}
 if(modalKind==="goal"){payload.target_value=Number(payload.target_value);payload.actual_value=Number(payload.actual_value)}
