@@ -24,7 +24,7 @@ body *{visibility:hidden!important}
 #printReport th{background:#e7eff9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 #printReport thead{display:table-header-group}
 #printReport tr{break-inside:avoid}
-} .calendar-day{cursor:pointer;transition:background .15s,border-color .15s}.calendar-day:hover,.calendar-day:focus-visible{background:#eef8f9;outline:2px solid #179aa2;outline-offset:1px}.day.selected-day{border:2px solid #155b7b;background:#e8f6f7}.calendar-count{font-size:10px;padding:2px 5px;border-radius:20px;background:#d5f2f1;color:#17647c}.calendar-detail{margin-top:14px}.calendar-task{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #e8edf3;padding:13px 0}.calendar-task:last-child{border:0}@media(max-width:780px){.calendar-task{flex-wrap:wrap}.calendar-task .btn{width:100%}} </style></head>
+} .calendar-day{cursor:pointer;transition:background .15s,border-color .15s}.calendar-day:hover,.calendar-day:focus-visible{background:#eef8f9;outline:2px solid #179aa2;outline-offset:1px}.day.selected-day{border:2px solid #155b7b;background:#e8f6f7}.calendar-count{font-size:10px;padding:2px 5px;border-radius:20px;background:#d5f2f1;color:#17647c}.calendar-detail{margin-top:14px}.calendar-task{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #e8edf3;padding:13px 0}.calendar-task:last-child{border:0}@media(max-width:780px){.calendar-task{flex-wrap:wrap}.calendar-task .btn{width:100%}} .password-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.password-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;border:1px solid #dae4ed;border-radius:12px;padding:16px;min-width:0}.password-form h3{margin:0;font-size:16px}.password-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.password-form label.password-toggle{flex-direction:row;align-items:center}.password-form .password-toggle input{width:auto;margin:0}.password-form p[role=status]{min-height:18px;margin:4px 0;color:#245675}.password-form input{width:100%}@media(max-width:780px){.password-admin-grid{grid-template-columns:1fr}} </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
 <div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
@@ -263,10 +263,56 @@ const csv="\uFEFF"+rows.map(r=>r.map(clean).join(";")).join("\r\n");
 const url=window.URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
 const link=document.createElement("a");link.href=url;link.download="ortak-takip-rapor-"+iso(new Date())+".csv";document.body.appendChild(link);link.click();link.remove();setTimeout(()=>window.URL.revokeObjectURL(url),2000);
 }
+function ownerPasswordView(){
+return '<section class="panel password-admin"><div class="titlebar"><h2>Kurucu · Hesap ve Şifre Yönetimi</h2></div>'+
+'<p class="small muted">Mevcut kullanıcı şifreleri görüntülenemez; güvenli biçimde saklanır. Burada yalnızca yeni girdiğiniz şifreyi gösterebilir, kendi şifrenizi değiştirebilir ve diğer kullanıcıların e-postasına sıfırlama bağlantısı gönderebilirsiniz.</p>'+
+'<div class="password-admin-grid"><form id="ownerPasswordForm" class="password-form"><h3>Kendi Şifremi Değiştir</h3>'+
+'<label>Mevcut şifrem<input type="password" name="currentPassword" autocomplete="current-password" required minlength="8"></label>'+
+'<label>Yeni şifrem<input type="password" name="nextPassword" autocomplete="new-password" required minlength="8"></label>'+
+'<label>Yeni şifre (tekrar)<input type="password" name="confirmPassword" autocomplete="new-password" required minlength="8"></label>'+
+'<label class="password-toggle"><input type="checkbox" id="showOwnerPassword"> Yazdığım şifreleri göster</label>'+
+'<button type="submit" class="btn primary">Şifremi Değiştir</button><p class="small" id="ownerPasswordMessage" role="status" aria-live="polite"></p></form>'+
+'<form id="teamPasswordResetForm" class="password-form"><h3>Yönetici / Personel Şifre Yenileme</h3>'+
+'<p class="small muted">İlgili kişi şifresini kendi e-postasına gönderilen güvenli bağlantı üzerinden belirler.</p>'+
+'<label>Şifre yenileme gönderilecek e-posta<input type="email" name="teamEmail" autocomplete="off" placeholder="kullanici@kurum.com" required></label>'+
+'<button type="submit" class="btn">Sıfırlama E-postası Gönder</button><p class="small" id="teamPasswordMessage" role="status" aria-live="polite"></p></form></div></section>';
+}
+async function changeOwnerPassword(ev){
+ev.preventDefault();if(state.role!=="owner")return;
+const f=ev.currentTarget,button=f.querySelector('button[type="submit"]'),message=$("#ownerPasswordMessage");
+const current=f.elements.currentPassword.value,next=f.elements.nextPassword.value,confirm=f.elements.confirmPassword.value;
+message.textContent="";
+if(next.length<8||next!==confirm){message.textContent="Yeni şifre en az 8 karakter olmalı ve iki giriş eşleşmelidir.";return}
+if(current===next){message.textContent="Yeni şifre eski şifreden farklı olmalıdır.";return}
+button.disabled=true;
+try{
+await requireActiveSession();
+const {data,error:e}=await sb.auth.signInWithPassword({email:state.user.email,password:current});
+if(e||data?.user?.id!==state.user.id)throw Error("Mevcut şifre doğrulanamadı.");
+const updated=await sb.auth.updateUser({password:next});
+if(updated.error)throw updated.error;
+f.reset();
+await sb.auth.signOut();showAuth();
+$("#authmsg").textContent="Şifreniz güncellendi. Yeni şifrenizle tekrar giriş yapın.";
+}catch(e){message.textContent=e?.message||"Şifre değiştirilemedi."}finally{button.disabled=false}
+}
+async function sendTeamPasswordRecovery(ev){
+ev.preventDefault();if(state.role!=="owner")return;
+const f=ev.currentTarget,button=f.querySelector('button[type="submit"]'),message=$("#teamPasswordMessage"),email=f.elements.teamEmail.value.trim().toLowerCase();
+message.textContent="";button.disabled=true;
+try{
+await requireActiveSession();
+const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://ortak-takip.onrender.com/"});
+if(e)throw e;
+message.textContent="Şifre yenileme isteği gönderildi. Bu e-posta adresinde hesap varsa kullanıcıya sıfırlama bağlantısı ulaşacaktır.";
+f.reset();
+}catch(e){message.textContent=e?.message||"Şifre sıfırlama bağlantısı gönderilemedi."}finally{button.disabled=false}
+}
+
 function membersView(){
 const active=state.members.map(m=>'<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div><div style="flex:1"><strong>'+esc(memberName(m.user_id))+'</strong><div class="small muted">'+(m.is_active?"Aktif":"Pasif")+'</div></div><span class="tag">'+esc(labels[m.role]||m.role)+'</span></div>').join("");
 const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
-return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':'')+'</div><section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+'<p class="muted small">Bekleyen davetler giriş yetkisi vermez. Kullanıcının hesap oluşturup e-postasını doğrulaması gerekir. Sadece davet kaydı oluşturmak otomatik e-posta göndermez.</p></section>':'')+'<p class="muted small">Yetki seviyeleri: Kurucu, Yönetici, Üye ve İzleyici. Kullanıcılar kendi hesaplarıyla giriş yapar.</p>'
+return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':'')+'</div><section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+(state.role==="owner"?ownerPasswordView():"")+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+'<p class="muted small">Bekleyen davetler giriş yetkisi vermez. Kullanıcının hesap oluşturup e-postasını doğrulaması gerekir. Sadece davet kaydı oluşturmak otomatik e-posta göndermez.</p></section>':'')+'<p class="muted small">Yetki seviyeleri: Kurucu, Yönetici, Üye ve İzleyici. Kullanıcılar kendi hesaplarıyla giriş yapar.</p>'
 }
 function taskOccursOnDay(t,day){
   if(t.status==="iptal")return false;
@@ -301,7 +347,10 @@ function calendarView(){
   '<section class="panel" style="padding:12px"><div class="calgrid">'+head+grid+'</div></section><div class="small muted">Güne dokunun: görevler ve etkinlikler açılır. Turkuaz: görev · Mor: etkinlik.</div>'+dayPanel+unscheduledPanel;
 }
 
-function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));$("#taskSearch")?.addEventListener("input",e=>{state.search=e.target.value;renderTaskRows()});$("#statusFilter")?.addEventListener("change",e=>{state.status=e.target.value;renderTaskRows()});$("#streamFilter")?.addEventListener("change",e=>{state.stream=e.target.value;renderTaskRows()});renderTaskRows();
+function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));
+$("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
+$("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
+$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));$("#taskSearch")?.addEventListener("input",e=>{state.search=e.target.value;renderTaskRows()});$("#statusFilter")?.addEventListener("change",e=>{state.status=e.target.value;renderTaskRows()});$("#streamFilter")?.addEventListener("change",e=>{state.stream=e.target.value;renderTaskRows()});renderTaskRows();
 const selectCalendarDay=(key)=>{state.calendarDay=key;const y=Number(key.slice(0,4)),m=Number(key.slice(5,7))-1;if(state.month.getMonth()!==m||state.month.getFullYear()!==y)state.month=new Date(y,m,1);render();requestAnimationFrame(()=>$("#calendarDayDetail")?.scrollIntoView({behavior:"smooth",block:"nearest"}))};
 document.querySelectorAll("[data-calendar-day]").forEach(cell=>{
  cell.addEventListener("click",e=>{if(e.target.closest("[data-calendar-task]"))return;selectCalendarDay(cell.dataset.calendarDay)});
