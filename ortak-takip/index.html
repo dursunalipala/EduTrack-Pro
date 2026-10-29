@@ -92,6 +92,38 @@ const joint=(w.collaborator_user_ids||[]).filter(id=>id!==w.lead_user_id).map(me
 return '<section class="goal" style="border-left:5px solid '+esc(w.color)+'"><div class="row"><span class="small muted">BÖLÜM '+esc(String(w.sort_order).padStart(2,"0"))+'</span>'+(canManage()?'<button class="btn sm" data-edit-stream="'+esc(w.id)+'">Düzenle</button>':'')+'</div><h3>'+esc(w.name)+'</h3><p class="muted small">'+esc(w.description||"")+'</p><p class="small"><strong>Bölüm yöneticisi:</strong> '+esc(memberName(w.lead_user_id))+'</p><p class="small muted"><strong>Ortak sorumlular:</strong> '+esc(joint||"Henüz atanmadı")+'</p><div class="bar" style="margin:13px 0 8px"><i style="width:'+pct+'%;background:'+esc(w.color)+'"></i></div><div class="row small"><strong>'+items.length+' görev</strong><span>'+done+' tamamlandı · %'+pct+'</span></div></section>'
 }).join("")+'</div>'
 }
+const reportTasks=()=>state.tasks.filter(t=>{
+if(state.reportStream!=="all"&&t.workstream_id!==state.reportStream)return false;
+const created=new Date(t.created_at),now=new Date();
+if(state.reportPeriod==="month")return created.getFullYear()===now.getFullYear()&&created.getMonth()===now.getMonth();
+if(state.reportPeriod==="30")return created>=new Date(Date.now()-30*864e5);
+return true;
+});
+function reportsView(){
+const ts=reportTasks(),today=iso(new Date()),open=ts.filter(t=>!["tamamlandi","iptal"].includes(t.status)),completed=ts.filter(t=>t.status==="tamamlandi").length,late=open.filter(t=>t.due_date&&t.due_date<today).length;
+const transfers=ts.filter(t=>t.last_delegated_at).length,shared=ts.filter(t=>(t.collaborator_user_ids||[]).length>0).length,pct=ts.length?Math.round(completed*100/ts.length):0;
+const filter='<div class="filters"><select id="reportPeriod">'+options([["all","Tüm tarihler"],["month","Bu ay açılan işler"],["30","Son 30 günde açılan işler"]],state.reportPeriod)+'</select><select id="reportStream">'+options([["all","Tüm iş grupları"],...state.streams.map(w=>[w.id,w.name])],state.reportStream)+'</select><button class="btn sm" id="exportReport">Excel için CSV İndir</button></div>';
+const rows=state.streams.filter(w=>state.reportStream==="all"||w.id===state.reportStream).map(w=>{
+const items=ts.filter(t=>t.workstream_id===w.id),done=items.filter(t=>t.status==="tamamlandi").length,overdue=items.filter(t=>t.due_date&&t.due_date<today&&!["tamamlandi","iptal"].includes(t.status)).length,progress=items.length?Math.round(done*100/items.length):0;
+return '<div class="stream"><div class="row"><strong>'+esc(w.name)+'</strong><span class="small">'+items.length+' görev · '+done+' tamamlandı · '+overdue+' geciken</span></div><div class="small muted" style="margin:6px 0">Yönetici: '+esc(memberName(w.lead_user_id))+'</div><div class="bar"><i style="width:'+progress+'%;background:'+esc(w.color)+'"></i></div><div class="small muted" style="margin-top:6px">%'+progress+' gerçekleşme</div></div>'
+}).join("");
+const members=state.members.filter(m=>m.is_active).map(m=>{
+const items=ts.filter(t=>t.assigned_to===m.user_id),done=items.filter(t=>t.status==="tamamlandi").length,overdue=items.filter(t=>t.due_date&&t.due_date<today&&!["tamamlandi","iptal"].includes(t.status)).length;
+return '<div class="stream"><div class="row"><strong>'+esc(memberName(m.user_id))+'</strong><span class="small">'+items.length+' görev · '+done+' tamamlanan · '+overdue+' geciken</span></div></div>'
+}).join("");
+return '<div class="titlebar"><h2>Yönetim ve Performans Raporu</h2></div>'+filter+
+'<div class="kpi">'+stat("Toplam Görev",ts.length,"Seçili kapsam")+stat("Tamamlanan",completed,"%"+pct+" gerçekleşme")+stat("Açık Görev",open.length,"Takip edilmesi gereken")+stat("Geciken",late,"Süresi geçmiş işler")+stat("Görev Devri",transfers,"Devredilmiş görevler")+stat("Ortak Görev",shared,"Birlikte yürütülen")+'</div>'+
+'<div class="twocol"><section class="panel"><h2>Bölüm Bazında Sonuçlar</h2>'+rows+'</section><section class="panel"><h2>Sorumluların İş Yükü</h2>'+members+'</section></div>'+
+'<p class="small muted">Dönem filtresi görev oluşturulma tarihini esas alır. Görev devri sayısı, son devir kaydı bulunan görevlerin toplamıdır. Tamamlanma yüzdesi, seçili görevlerin tamamlanan kısmını gösterir.</p>'
+}
+function exportReportCsv(){
+const rows=[["İş Grubu","Görev","Birincil Sorumlu","Ortak Sorumlular","Durum","Öncelik","Son Tarih","İlerleme (%)","Son Devir Tarihi"]];
+for(const t of reportTasks())rows.push([streamName(t.workstream_id),t.title,memberName(t.assigned_to),(t.collaborator_user_ids||[]).map(memberName).join(", "),labels[t.status]||t.status,labels[t.priority]||t.priority,t.due_date||"",t.progress??0,t.last_delegated_at||""]);
+const clean=v=>{let x=String(v??"");if(/^[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
+const csv="\uFEFF"+rows.map(r=>r.map(clean).join(";")).join("\r\n");
+const url=window.URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
+const link=document.createElement("a");link.href=url;link.download="ortak-takip-rapor-"+iso(new Date())+".csv";document.body.appendChild(link);link.click();link.remove();setTimeout(()=>window.URL.revokeObjectURL(url),2000);
+}
 function membersView(){
 const active=state.members.map(m=>'<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div><div style="flex:1"><strong>'+esc(memberName(m.user_id))+'</strong><div class="small muted">'+(m.is_active?"Aktif":"Pasif")+'</div></div><span class="tag">'+esc(labels[m.role]||m.role)+'</span></div>').join("");
 const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
