@@ -36,7 +36,7 @@ const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,d
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
-const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Kurucu",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
+const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
@@ -264,7 +264,7 @@ const url=window.URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-
 const link=document.createElement("a");link.href=url;link.download="ortak-takip-rapor-"+iso(new Date())+".csv";document.body.appendChild(link);link.click();link.remove();setTimeout(()=>window.URL.revokeObjectURL(url),2000);
 }
 function ownerPasswordView(){
-return '<section class="panel password-admin"><div class="titlebar"><h2>Kurucu · Hesap ve Şifre Yönetimi</h2></div>'+
+return '<section class="panel password-admin"><div class="titlebar"><h2>Admin · Hesap ve Şifre Yönetimi</h2></div>'+
 '<p class="small muted">Mevcut kullanıcı şifreleri görüntülenemez; güvenli biçimde saklanır. Burada yalnızca yeni girdiğiniz şifreyi gösterebilir, kendi şifrenizi değiştirebilir ve diğer kullanıcıların e-postasına sıfırlama bağlantısı gönderebilirsiniz.</p>'+
 '<div class="password-admin-grid"><form id="ownerPasswordForm" class="password-form"><h3>Kendi Şifremi Değiştir</h3>'+
 '<label>Mevcut şifrem<input type="password" name="currentPassword" autocomplete="current-password" required minlength="8"></label>'+
@@ -312,7 +312,7 @@ f.reset();
 function membersView(){
 const active=state.members.map(m=>'<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div><div style="flex:1"><strong>'+esc(memberName(m.user_id))+'</strong><div class="small muted">'+(m.is_active?"Aktif":"Pasif")+'</div></div><span class="tag">'+esc(labels[m.role]||m.role)+'</span></div>').join("");
 const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
-return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':'')+'</div><section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+(state.role==="owner"?ownerPasswordView():"")+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+'<p class="muted small">Bekleyen davetler giriş yetkisi vermez. Kullanıcının hesap oluşturup e-postasını doğrulaması gerekir. Sadece davet kaydı oluşturmak otomatik e-posta göndermez.</p></section>':'')+'<p class="muted small">Yetki seviyeleri: Kurucu, Yönetici, Üye ve İzleyici. Kullanıcılar kendi hesaplarıyla giriş yapar.</p>'
+return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':'')+'</div><section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+(state.role==="owner"?ownerPasswordView():"")+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+'<p class="muted small">Bekleyen davetler giriş yetkisi vermez. Kullanıcının hesap oluşturup e-postasını doğrulaması gerekir. Sadece davet kaydı oluşturmak otomatik e-posta göndermez.</p></section>':'')+'<p class="muted small">Yetki seviyeleri: Admin, Yönetici, Üye ve İzleyici. Kullanıcılar kendi hesaplarıyla giriş yapar.</p>'
 }
 function taskOccursOnDay(t,day){
   if(t.status==="iptal")return false;
