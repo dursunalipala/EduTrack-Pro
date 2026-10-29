@@ -322,7 +322,7 @@ function notificationsView(){
  '<p class="small muted">Görev atama ve devir bildirimleri sıraya alınır; sistem her 5 dakikada bir gönderim kontrolü yapar. Günlük özet 18.30 Türkiye saati için planlanmıştır.</p>'+
  '<div class="kpi">'+stat("Sırada",pending,"Gönderim bekliyor")+stat("Gönderilen",sent,"Başarılı e-posta")+stat("Hata",failed,"Başarısız kayıt")+'</div>'+
  settings+'<section class="panel"><h2>Son Bildirimler</h2><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>Olay</th><th>Alıcı</th><th>Görev</th><th>Durum</th></tr></thead><tbody>'+logs+'</tbody></table></div></section>'+
- (state.role==="owner"?'<p class="small muted">Gerçek e-posta gönderimi için Supabase Secrets bölümünde RESEND_API_KEY ve NOTIFY_FROM_EMAIL yapılandırılmalıdır. Bunlar tanımlanmadan kayıtlar güvenli biçimde bekler.</p>':"");
+ (state.role==="owner"?'<section class="panel"><h2>Bildirim E-posta Adresleri</h2><p class="small"><strong>Gönderen:</strong> info@elitkoleji.com.tr</p><p class="small"><strong>Admin günlük raporu:</strong> elitkolejiyonetim@gmail.com</p><p class="small muted">Diğer yöneticilerin bildirimleri kendi hesap e-postalarına gönderilir.</p><p class="small muted">Gerçek gönderim için elitkoleji.com.tr alan adının Resend üzerinden doğrulanması ve Supabase Edge Functions Secrets alanına RESEND_API_KEY eklenmesi gerekir. Doğrulama yapılmadan e-posta iletimi başlamaz.</p></section>':"");
 }
 async function saveNotifySetting(key,enabled,element){
  if(!["task_assigned","due_reminder","completed","daily_digest"].includes(key))return;
