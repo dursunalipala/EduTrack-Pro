@@ -66,6 +66,163 @@ body *{visibility:hidden!important}
 .ai-quick button:hover{background:#e6f4f8}
 @media(max-width:780px){.ai-chat-history{height:min(56vh,480px);min-height:280px;padding:12px 10px}.ai-msg{max-width:94%;font-size:13px;padding:11px 12px}.ai-chat-composer{padding:10px}.ai-send{min-width:68px;padding:9px}.ai-hero{margin-bottom:12px}}
 
+
+/* AI chat v2 — modern, immediately visible input above scrollable history */
+.ai-hero{
+  background:linear-gradient(135deg,#102a46 0%,#1b5974 80%,#15828d 100%);
+  border:1px solid #245c75;
+  border-radius:18px;
+  margin-bottom:12px;
+  padding:19px 22px;
+  box-shadow:0 10px 28px #1533501a;
+}
+.ai-hero h2{font-size:22px;letter-spacing:-.45px;margin-bottom:5px}
+.ai-hero p{font-size:12.5px;line-height:1.55;max-width:780px}
+.ai-chat-panel{
+  display:flex;
+  flex-direction:column;
+  border:1px solid #d8e4ef;
+  background:linear-gradient(180deg,#fff 0%,#fbfdff 100%);
+  border-radius:19px;
+  box-shadow:0 16px 38px #183a5b12;
+  overflow:hidden;
+}
+.ai-chat-header{
+  background:#fff;
+  border-bottom:1px solid #edf2f7;
+  padding:12px 19px;
+  min-height:64px;
+}
+.ai-chat-identity{display:flex;align-items:center;gap:11px;min-width:0}
+.ai-chat-symbol{
+  display:grid;
+  place-items:center;
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  border-radius:13px;
+  background:linear-gradient(135deg,#155779,#23a5ae);
+  color:#fff;
+  font-size:20px;
+  box-shadow:0 4px 12px #1d83913b;
+}
+.ai-chat-identity strong{font-size:14px;letter-spacing:-.1px}
+.ai-chat-identity span:not(.ai-chat-symbol){color:#668097}
+.ai-presence-dot{display:inline-block;width:7px;height:7px;background:#20ab83;border-radius:50%;margin-right:4px}
+.ai-chat-composer{
+  position:relative;
+  z-index:1;
+  background:#fff;
+  border-top:0;
+  border-bottom:1px solid #e4edf4;
+  padding:17px 19px 13px;
+}
+.ai-composer-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;font-size:12px;font-weight:750;color:#183e5c}
+.ai-composer-privacy{font-size:10.5px;font-weight:550;color:#71889e}
+.ai-chat-form{
+  position:relative;
+  align-items:stretch;
+  gap:0;
+  border:1.5px solid #c7dbe7;
+  border-radius:17px;
+  background:#f8fbfe;
+  padding:4px 58px 4px 4px;
+  box-shadow:0 5px 18px #2049650a;
+  transition:border-color .18s,box-shadow .18s;
+}
+.ai-chat-form:focus-within{
+  border-color:#1e9da9;
+  box-shadow:0 0 0 4px #19a4ae1c,0 7px 20px #20496511;
+}
+.ai-chat-form textarea{
+  width:100%;
+  flex:1;
+  border:0;
+  outline:none;
+  background:transparent;
+  box-shadow:none;
+  border-radius:13px;
+  padding:12px 14px;
+  min-height:93px;
+  max-height:175px;
+  line-height:1.55;
+  font-size:15px;
+  color:#1b3b55;
+  resize:vertical;
+}
+.ai-chat-form textarea:focus{outline:none;box-shadow:none}
+.ai-chat-form textarea::placeholder{color:#8aa0b4;opacity:1}
+.ai-send{
+  position:absolute;
+  bottom:11px;
+  right:10px;
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  background:linear-gradient(135deg,#195f85,#199baa);
+  color:white;
+  border:0;
+  border-radius:13px;
+  box-shadow:0 5px 12px #187c9040;
+  font-size:27px;
+  font-weight:650;
+  line-height:1;
+}
+.ai-send:hover{background:linear-gradient(135deg,#174f72,#147f90);transform:translateY(-1px)}
+.ai-send:focus-visible{outline:3px solid #71cfd3;outline-offset:2px}
+.ai-send:disabled{transform:none}
+.ai-quick{margin:11px 0 2px;gap:6px}
+.ai-quick button{font-size:11.5px;font-weight:600;padding:8px 11px;border-color:#dae8ef;background:#f4f9fc;color:#32546c}
+.ai-quick button:focus-visible{outline:2px solid #20a0ab}
+.ai-hint{font-size:10.5px;color:#7b8b9c;margin:10px 4px 0}
+.ai-history-caption{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 19px 0;
+  font-size:10.5px;
+  font-weight:750;
+  letter-spacing:.7px;
+  color:#7690a4;
+}
+.ai-history-caption span:last-child{font-weight:500;letter-spacing:0}
+.ai-chat-history{
+  flex:1;
+  height:clamp(235px,43vh,475px);
+  min-height:235px;
+  max-height:475px;
+  overflow-y:auto;
+  padding:15px 19px 22px;
+  background:linear-gradient(180deg,#fff 0%,#f7fafc 100%);
+}
+.ai-msg{box-shadow:0 3px 12px #162e4609;border:1px solid #e2ebf1}
+.ai-msg-user{border:0;background:linear-gradient(125deg,#176486,#1b8290)}
+.ai-msg-assistant{background:white}
+@media(max-width:780px){
+ .ai-hero{padding:16px 17px;border-radius:16px;margin-bottom:10px}
+ .ai-hero h2{font-size:19px}
+ .ai-chat-panel{border-radius:15px}
+ .ai-chat-header{padding:10px 12px;min-height:58px}
+ .ai-chat-identity{gap:8px}
+ .ai-chat-symbol{width:32px;height:32px;flex-basis:32px;border-radius:10px;font-size:17px}
+ .ai-chat-identity strong{font-size:12.5px}
+ .ai-chat-identity span:not(.ai-chat-symbol){font-size:10.5px}
+ .ai-chat-composer{padding:14px 12px 11px}
+ .ai-composer-label{font-size:11.5px}
+ .ai-composer-privacy{font-size:10px}
+ .ai-chat-form{padding-right:53px;border-radius:14px}
+ .ai-chat-form textarea{font-size:14px;min-height:83px;padding:11px 10px;max-height:140px}
+ .ai-send{width:42px;height:42px;min-width:42px;min-height:42px;right:7px;bottom:8px;border-radius:11px}
+ .ai-quick{gap:6px;margin-top:10px}
+ .ai-quick button{font-size:11px;padding:7px 9px}
+ .ai-history-caption{padding:11px 12px 0}
+ .ai-chat-history{height:clamp(215px,39vh,420px);min-height:215px;max-height:420px;padding:12px 11px 18px}
+}
+
 /* Ortak Takip mobile navigation v3: enforce always-visible complete menu. */
 .mobile-menu-caption{display:none}
 @media(max-width:1000px){
@@ -289,16 +446,18 @@ function aiView(){
   '<div class="ai-msg ai-msg-assistant"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Merhaba! Görevler, geciken işler, performans hedefleri ve iş havuzu hakkında soru sorabilirsiniz.\n\nÖrneğin: “Bu hafta hangi işlere öncelik vermeliyiz?”</div>';
  return '<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
   '<p>Görevler, hedefler ve iş havuzu hakkında sorunuzu yazın; yönetim verilerine dayalı yanıt alın.</p></section>'+
-  '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div><strong>✦ Yönetim Asistanı</strong><div><span>Kurumsal verilerden danışmanlık · Salt okunur</span></div></div>'+
+  '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div class="ai-chat-identity"><span class="ai-chat-symbol" aria-hidden="true">✦</span><div><strong>Ortak Takip Asistanı</strong><div><span><i class="ai-presence-dot"></i> Yönetim verileriyle hazır · Salt okunur</span></div></div></div>'+
   '<button type="button" class="btn sm" id="aiClearChat" '+(!state.aiMessages.length||state.aiLoading?"disabled":"")+'>Sohbeti Temizle</button></div>'+
-  '<div class="ai-chat-history" id="aiChatHistory" role="log" aria-live="polite" aria-relevant="additions">'+messages+
-  (state.aiLoading?'<div class="ai-msg ai-msg-assistant ai-msg-waiting"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Yanıt hazırlanıyor…</div>':"")+'</div>'+
   '<div class="ai-chat-composer">'+
-  '<div class="ai-quick" aria-label="Örnek sorular">'+aiQuestions.map(q=>'<button type="button" data-ai-question="'+esc(q)+'" '+(state.aiLoading?"disabled":"")+'>'+esc(q)+'</button>').join("")+'</div>'+
+  '<div class="ai-composer-label"><span>Mesajınızı yazın</span><span class="ai-composer-privacy">Özel bilgiler paylaşmayın</span></div>'+
   '<form id="aiChatForm" class="ai-chat-form">'+
-  '<textarea id="aiChatInput" name="message" maxlength="350" rows="2" aria-label="Yapay zekâya soru yazın" placeholder="Ortak Takip hakkında bir soru sorun…" '+(state.aiLoading?"disabled":"")+' required></textarea>'+
-  '<button type="submit" class="btn primary ai-send" '+(state.aiLoading?"disabled":"")+'>Gönder ➤</button></form>'+
-  '<p class="ai-hint">Enter: gönder · Shift+Enter: alt satır. Öğrenci veya kişisel bilgi yazmayın. Yalnızca anonim sayısal özetler yapay zekâya aktarılır; ücretsiz kota dolunca yerel analiz kullanılır. Hiçbir kayıt değiştirilmez.</p></div></section>';
+  '<textarea id="aiChatInput" name="message" maxlength="350" rows="3" aria-label="Yapay zekâya soru yazın" placeholder="Örneğin: Bu hafta hangi görevlere öncelik vermeliyiz?" '+(state.aiLoading?"disabled":"")+' required></textarea>'+
+  '<button type="submit" class="ai-send" title="Mesajı gönder" aria-label="Mesajı gönder" '+(state.aiLoading?"disabled":"")+'><span aria-hidden="true">↑</span></button></form>'+
+  '<div class="ai-quick" aria-label="Örnek sorular">'+aiQuestions.map(q=>'<button type="button" data-ai-question="'+esc(q)+'" '+(state.aiLoading?"disabled":"")+'>'+esc(q)+'</button>').join("")+'</div>'+
+  '<p class="ai-hint">Öneriler yalnızca yönetim istatistiklerine dayanır. Ücretsiz kota dolarsa yerel analiz kullanılır; kayıtlar değiştirilmez.</p></div>'+
+  '<div class="ai-history-caption"><span>SOHBET GEÇMİŞİ</span><span>'+state.aiMessages.length+' mesaj</span></div>'+
+  '<div class="ai-chat-history" id="aiChatHistory" role="log" aria-live="polite" aria-relevant="additions">'+messages+
+  (state.aiLoading?'<div class="ai-msg ai-msg-assistant ai-msg-waiting"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Yanıt hazırlanıyor…</div>':"")+'</div></section>';
 }
 function scrollAIChat(){
  const e=$("#aiChatHistory");
