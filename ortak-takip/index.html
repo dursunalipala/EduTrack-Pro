@@ -41,6 +41,9 @@ const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v?
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
 const canManage=()=>["owner","manager"].includes(state.role);
+const allowedPanelOrigins=new Set(["https://ortak-takip.onrender.com","https://takip.elitkoleji.com.tr"]);
+const authRedirectUrl=()=>allowedPanelOrigins.has(window.location.origin)?window.location.origin+"/":"https://ortak-takip.onrender.com/";
+
 const schools=[["all","Tüm Kurumlar"],["ortak","Ortak İşletme"],["aksam","Elit Akşam Lisesi"],["ilkokul","Elit İlkokulu"],["anasinifi","Elit Anasınıfı"]];
 const periodTypes=[["week","Haftalık"],["month","Aylık"],["year","Yıllık"],["custom","Özel tarih aralığı"]];
 const goalLevels=[["kurumsal","Kurumsal"],["bolum","Bölüm"],["bireysel","Bireysel"]];
@@ -96,8 +99,8 @@ $("#recoveryForm").onsubmit=async ev=>{
   finally{btn.disabled=false}
 };
 $("#switchAuth").onclick=()=>{authMode=authMode==="login"?"signup":"login";$("#namefield").classList.toggle("hide",authMode!=="signup");$("#submitAuth").textContent=authMode==="signup"?"Hesap Oluştur":"Giriş Yap";$("#switchAuth").textContent=authMode==="signup"?"Girişe dön":"Hesap oluştur";$("#authmsg").textContent=""};
-$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://ortak-takip.onrender.com/"});$("#authmsg").textContent=e?e.message:"Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderilecektir."};
-$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:window.location.origin+window.location.pathname}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
+$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});$("#authmsg").textContent=e?e.message:"Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderilecektir."};
+$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:authRedirectUrl()}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
 $("#logout").onclick=async()=>{await sb.auth.signOut();showAuth()};
 function showAuth(){$("#auth").classList.remove("hide");$("#shell").classList.add("hide")}
 async function fetchAll(){const q=[sb.from("workstreams").select("*").eq("workspace_id",WS).order("sort_order"),sb.from("tasks").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("goals").select("*").eq("workspace_id",WS),sb.from("calendar_events").select("*").eq("workspace_id",WS),sb.from("workspace_members").select("*").eq("workspace_id",WS),sb.from("workspace_invites").select("email,role,status,created_at").eq("workspace_id",WS).eq("status","pending"),sb.from("notification_queue").select("id,recipient_id,kind,status,payload,created_at,sent_at,last_error").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100),sb.from("notification_preferences").select("*").eq("workspace_id",WS)];
@@ -425,7 +428,7 @@ const f=ev.currentTarget,button=f.querySelector('button[type="submit"]'),message
 message.textContent="";button.disabled=true;
 try{
 await requireActiveSession();
-const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://ortak-takip.onrender.com/"});
+const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});
 if(e)throw e;
 message.textContent="Şifre yenileme isteği gönderildi. Bu e-posta adresinde hesap varsa kullanıcıya sıfırlama bağlantısı ulaşacaktır.";
 f.reset();
