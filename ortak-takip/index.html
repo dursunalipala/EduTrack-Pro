@@ -27,7 +27,7 @@ body *{visibility:hidden!important}
 } .calendar-day{cursor:pointer;transition:background .15s,border-color .15s}.calendar-day:hover,.calendar-day:focus-visible{background:#eef8f9;outline:2px solid #179aa2;outline-offset:1px}.day.selected-day{border:2px solid #155b7b;background:#e8f6f7}.calendar-count{font-size:10px;padding:2px 5px;border-radius:20px;background:#d5f2f1;color:#17647c}.calendar-detail{margin-top:14px}.calendar-task{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #e8edf3;padding:13px 0}.calendar-task:last-child{border:0}@media(max-width:780px){.calendar-task{flex-wrap:wrap}.calendar-task .btn{width:100%}} .password-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.password-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;border:1px solid #dae4ed;border-radius:12px;padding:16px;min-width:0}.password-form h3{margin:0;font-size:16px}.password-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.password-form label.password-toggle{flex-direction:row;align-items:center}.password-form .password-toggle input{width:auto;margin:0}.password-form p[role=status]{min-height:18px;margin:4px 0;color:#245675}.password-form input{width:100%}@media(max-width:780px){.password-admin-grid{grid-template-columns:1fr}} .notify-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:10px 0}.notify-settings label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px}.notify-settings input{width:auto;flex:none}@media(max-width:780px){.notify-settings{grid-template-columns:1fr}} </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
-<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
+<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
@@ -35,12 +35,29 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"month",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
 const canManage=()=>["owner","manager"].includes(state.role);
+const schools=[["all","Tüm Kurumlar"],["ortak","Ortak İşletme"],["aksam","Elit Akşam Lisesi"],["ilkokul","Elit İlkokulu"],["anasinifi","Elit Anasınıfı"]];
+const periodTypes=[["week","Haftalık"],["month","Aylık"],["year","Yıllık"],["custom","Özel tarih aralığı"]];
+const goalLevels=[["kurumsal","Kurumsal"],["bolum","Bölüm"],["bireysel","Bireysel"]];
+const goalCategories=[["kayit","Kayıt ve Öğrenci İşleri"],["tanitim","Tanıtım ve Dijital"],["egitim","Eğitim ve Resmî İşlemler"],["finans","Mali İşler ve Finans"],["operasyon","Operasyon ve Projeler"],["diger","Diğer"]];
+const schoolName=k=>schools.find(x=>x[0]===k)?.[1]||"Ortak İşletme";
+const perLabel=k=>periodTypes.find(x=>x[0]===k)?.[1]||"Özel";
+const levelLabel=k=>goalLevels.find(x=>x[0]===k)?.[1]||"Bölüm";
+const numberTR=x=>Number(x||0).toLocaleString("tr-TR",{maximumFractionDigits:2});
+function performanceWindow(period=state.performancePeriod){
+ const n=new Date(), y=n.getFullYear(),m=n.getMonth();
+ if(period==="all")return {start:null,end:null,label:"Tüm dönemler"};
+ if(period==="year")return {start:iso(new Date(y,0,1)),end:iso(new Date(y,11,31)),label:y+" yılı"};
+ if(period==="week"){const d=(n.getDay()+6)%7,mon=new Date(y,m,n.getDate()-d);return {start:iso(mon),end:iso(new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6)),label:"Bu hafta"};}
+ return {start:iso(new Date(y,m,1)),end:iso(new Date(y,m+1,0)),label:"Bu ay"};
+}
+const periodIncludes=(day,r)=>!r.start||!!day&&(day>=r.start&&day<=r.end);
+const periodOverlaps=(start,end,r)=>!r.start||((!start||start<=r.end)&&(!end||end>=r.start));
 function toast(m){const a=$("#toast");a.textContent=m;a.style.display="block";clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>a.style.display="none",4500)}
 function error(e){toast(e?.message||String(e)||"İşlem başarısız");console.error(e)}
 let authMode="login";
@@ -104,14 +121,94 @@ if(!me?.is_active){showAuth();$("#authmsg").textContent="Giriş yapıldı ancak 
 state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide")}
 async function refresh(){try{await fetchAll();render()}catch(e){error(e)}}
 const streamName=id=>state.streams.find(s=>s.id===id)?.name||"Genel",memberName=id=>state.profiles.find(p=>p.id===id)?.full_name||state.members.find(m=>m.user_id===id)?.user_id.slice(0,8)||"Atanmadı";
-function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Hedefler","Hedefler ve gerçekleşme sonuçları"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,members:membersView})[state.view]();bindView()}
+function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,members:membersView})[state.view]();bindView()}
 function stat(label,num,detail){return '<div class="card"><div class="small muted">'+label+'</div><div class="num">'+num+'</div><div class="small muted">'+detail+'</div></div>'}
 function overview(){const ts=state.tasks,done=ts.filter(t=>t.status==="tamamlandi").length,active=ts.filter(t=>t.status==="devam_ediyor").length,late=ts.filter(t=>t.due_date&&t.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(t.status)).length,priority=ts.filter(t=>t.priority==="kritik"&&t.status!=="tamamlandi").length;
 const soon=[...ts].filter(t=>t.status!=="tamamlandi"&&t.status!=="iptal").sort((a,b)=>(a.due_date||"9999").localeCompare(b.due_date||"9999")).slice(0,6);
 return '<div class="kpi">'+stat("Toplam görev",ts.length,"Kayıtlı işler")+stat("Devam eden",active,"Aktif çalışmalar")+stat("Tamamlanan",done,"Sonuçlanan işler")+stat("Geciken",late,"Süresi geçen")+stat("Kritik",priority,"Öncelikli takip")+'</div><div class="twocol"><section class="panel"><div class="titlebar"><h2>Yakın Takip</h2><button class="btn sm" data-view="tasks">Tüm görevler</button></div>'+(soon.length?soon.map(t=>'<div class="stream"><div class="row"><div style="min-width:0"><div style="font-weight:700;font-size:14px">'+esc(t.title)+'</div><div class="small muted" style="margin-top:5px">'+esc(streamName(t.workstream_id))+' · '+(t.due_date?date(t.due_date):"Tarih atanmamış")+'</div></div><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></div></div>').join(""):'<div class="empty">Takip edilecek görev yok.</div>')+'</section><section class="panel"><h2>İş Grupları İlerlemesi</h2>'+state.streams.map(s=>{const list=ts.filter(t=>t.workstream_id===s.id),pct=list.length?Math.round(list.filter(t=>t.status==="tamamlandi").length/list.length*100):0;return '<div class="stream"><div class="row small"><strong>'+esc(s.name)+'</strong><span>'+list.length+' iş · %'+pct+'</span></div><div class="bar" style="margin-top:11px"><i style="width:'+pct+'%;background:'+esc(s.color)+'"></i></div></div>'}).join("")+'</section></div><section class="panel"><div class="row"><div><h2>Hedef Gerçekleşmesi</h2><div class="muted small">'+state.goals.length+' hedef tanımlı</div></div><button data-view="goals" class="btn sm">Hedefleri Gör</button></div></section>'}
 function tasksView(){const can=state.role!=="viewer";return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+(can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+'</div><div class="filters"><input id="taskSearch" placeholder="Görev ara..." value="'+esc(state.search)+'"><select id="statusFilter">'+options([["all","Tüm durumlar"],["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],state.status)+'</select><select id="streamFilter">'+options([["all","Tüm iş grupları"],...state.streams.map(x=>[x.id,x.name])],state.stream)+'</select></div><section class="panel tablewrap" style="padding:7px"><table><thead><tr><th>Görev</th><th>İş Grubu</th><th>Sorumlu</th><th>Öncelik</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th><th></th></tr></thead><tbody id="taskBody"></tbody></table></section>'}
 function renderTaskRows(){const el=$("#taskBody");if(!el)return;const filtered=state.tasks.filter(t=>(state.status==="all"||state.status===t.status)&&(state.stream==="all"||state.stream===t.workstream_id)&&(!state.search||[t.title,t.description].some(x=>String(x||"").toLocaleLowerCase("tr-TR").includes(state.search.toLocaleLowerCase("tr-TR")))));el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
-function goalsView(){return '<div class="titlebar"><h2>Performans Hedefleri</h2>'+(canManage()?'<button class="btn primary" id="newGoal">+ Hedef Ekle</button>':'')+'</div><div class="gridcards">'+(state.goals.map(g=>{const p=g.target_value>0?Math.round(100*g.actual_value/g.target_value):0;return '<div class="goal"><div class="row"><div class="small muted">'+esc(streamName(g.workstream_id))+'</div>'+(canManage()?'<button class="btn sm" data-edit-goal="'+esc(g.id)+'">Düzenle</button>':'')+'</div><h3>'+esc(g.title)+'</h3><div class="val">'+esc(g.actual_value)+' <span class="muted small">/ '+esc(g.target_value)+' '+esc(g.unit)+'</span></div><div class="bar" style="margin:13px 0 8px"><i style="width:'+Math.min(100,p)+'%"></i></div><div class="small muted">%'+p+' tamamlandı · '+date(g.period_end)+'</div></div>'}).join("")||'<div class="panel empty">Henüz hedef tanımlanmadı. Kayıt sayısı, bütçe ve benzeri hedefler buradan izlenebilir.</div>')+'</div>'}
+function goalsView(){
+ const range=performanceWindow(),today=iso(new Date());
+ const tasks=state.tasks.filter(t=>t.status!=="iptal"&&
+  (state.performanceSchool==="all"||(t.school_unit||"ortak")===state.performanceSchool)&&
+  (state.performanceStream==="all"||t.workstream_id===state.performanceStream)&&
+  (state.performancePerson==="all"||t.assigned_to===state.performancePerson)&&
+  periodIncludes(t.created_at?.slice(0,10),range));
+ const goals=state.goals.filter(g=>
+  (state.performanceSchool==="all"||(g.school_unit||"ortak")===state.performanceSchool)&&
+  (state.performanceStream==="all"||g.workstream_id===state.performanceStream)&&
+  (state.performancePerson==="all"||g.owner_id===state.performancePerson)&&
+  periodOverlaps(g.period_start,g.period_end,range));
+ const completed=tasks.filter(t=>t.status==="tamamlandi"),active=tasks.filter(t=>t.status!=="tamamlandi");
+ const overdue=active.filter(t=>t.due_date&&t.due_date<today).length;
+ const dated=tasks.filter(t=>!!t.due_date).length;
+ const onTimeBase=completed.filter(t=>t.due_date&&t.completed_at);
+ const onTime=onTimeBase.filter(t=>iso(new Date(t.completed_at))<=t.due_date).length;
+ const goalDone=goals.filter(g=>Number(g.target_value)>0&&Number(g.actual_value)>=Number(g.target_value)).length;
+ const completionPct=tasks.length?Math.round(100*completed.length/tasks.length):null;
+ const filters='<div class="filters">'+
+ '<select id="performancePeriod" aria-label="Hedef dönemi">'+options([["week","Bu hafta"],["month","Bu ay"],["year","Bu yıl"],["all","Tüm dönemler"]],state.performancePeriod)+'</select>'+
+ '<select id="performanceSchool" aria-label="Kurum">'+options(schools,state.performanceSchool)+'</select>'+
+ '<select id="performanceStream" aria-label="İş grubu">'+options([["all","Tüm iş grupları"],...state.streams.map(x=>[x.id,x.name])],state.performanceStream)+'</select>'+
+ '<select id="performancePerson" aria-label="Sorumlu">'+options([["all","Tüm sorumlular"],...state.members.filter(x=>x.is_active).map(x=>[x.user_id,memberName(x.user_id)])],state.performancePerson)+'</select>'+
+ '</div>';
+ function targetCard(g){
+  const target=Number(g.target_value),actual=Number(g.actual_value),pct=target>0?Math.round(100*actual/target):null;
+  const scope=g.goal_level==="kurumsal"?"Kurum genelinde":g.goal_level==="bireysel"?memberName(g.owner_id):streamName(g.workstream_id);
+  const dates=g.period_start&&g.period_end?date(g.period_start)+" – "+date(g.period_end):"Dönem belirtilmedi";
+  return '<article class="goal"><div class="row"><span class="small muted">'+esc(schoolName(g.school_unit))+' · '+esc(perLabel(g.period_type))+'</span>'+
+  (canManage()?'<button class="btn sm" data-edit-goal="'+esc(g.id)+'">Düzenle</button>':"")+'</div>'+
+  '<h3>'+esc(g.title)+'</h3><p class="small muted">'+esc(scope)+' · '+esc(goalCategories.find(x=>x[0]===g.metric_category)?.[1]||"Operasyon")+'</p>'+
+  '<div class="val">'+numberTR(actual)+' <span class="muted small">/ '+numberTR(target)+' '+esc(g.unit)+'</span></div>'+
+  '<div class="bar" style="margin:12px 0 8px"><i style="width:'+(pct===null?0:Math.min(100,pct))+'%"></i></div>'+
+  '<div class="small muted">'+(pct===null?"Hedef değeri girilmeli":"%"+pct+" gerçekleşme")+' · '+esc(dates)+'</div></article>';
+ }
+ const sections=goalLevels.map(([key,label])=>{
+  const found=goals.filter(g=>(g.goal_level||"bolum")===key);
+  return '<section style="margin:22px 0"><div class="titlebar"><h2>'+esc(label)+' Hedefler ('+found.length+')</h2></div>'+
+   (found.length?'<div class="gridcards">'+found.map(targetCard).join("")+'</div>':
+   '<div class="panel small muted">Bu kapsamda henüz '+esc(label.toLocaleLowerCase("tr-TR"))+' hedef bulunmuyor. '+(canManage()?"Yeni Hedef Ekle ile tanımlayabilirsiniz.":"")+'</div>')+'</section>';
+ }).join("");
+ const groupRows=state.streams.filter(w=>state.performanceStream==="all"||w.id===state.performanceStream).map(w=>{
+  const scoped=tasks.filter(t=>t.workstream_id===w.id);
+  const done=scoped.filter(t=>t.status==="tamamlandi").length;
+  const late=scoped.filter(t=>t.status!=="tamamlandi"&&t.due_date&&t.due_date<today).length;
+  const pct=scoped.length?Math.round(100*done/scoped.length):null;
+  return '<div class="stream"><div class="row"><strong>'+esc(w.name)+'</strong><span class="small">'+done+'/'+scoped.length+' tamamlandı · '+late+' geciken</span></div>'+
+  '<div class="small muted" style="margin:5px 0">Sorumlu: '+esc(memberName(w.lead_user_id))+'</div>'+
+  '<div class="bar"><i style="width:'+(pct??0)+'%;background:'+esc(w.color)+'"></i></div>'+
+  '<div class="small muted" style="margin-top:5px">'+(pct===null?"Dönem görevi yok":"%"+pct+" tamamlanma")+'</div></div>';
+ }).join("");
+ const memberRows=state.members.filter(m=>m.is_active&&(state.performancePerson==="all"||m.user_id===state.performancePerson)).map(m=>{
+  const list=tasks.filter(t=>t.assigned_to===m.user_id),done=list.filter(t=>t.status==="tamamlandi").length;
+  const late=list.filter(t=>t.status!=="tamamlandi"&&t.due_date&&t.due_date<today).length;
+  const shared=tasks.filter(t=>(t.collaborator_user_ids||[]).includes(m.user_id)&&t.assigned_to!==m.user_id).length;
+  return '<div class="stream"><div class="row"><strong>'+esc(memberName(m.user_id))+'</strong><span class="small">'+done+'/'+list.length+' tamamlandı</span></div>'+
+   '<div class="small muted" style="margin-top:5px">'+late+' geciken · '+shared+' ortak sorumluluk · '+(list.length?"%"+Math.round(100*done/list.length)+" tamamlanma":"Henüz görev yok")+'</div></div>';
+ }).join("");
+ return '<div class="titlebar"><h2>Performans ve Hedef Yönetimi</h2>'+
+ (canManage()?'<button class="btn primary" id="newGoal">+ Yeni Hedef Ekle</button>':"")+'</div>'+
+ '<p class="small muted">Haftalık, aylık ve yıllık hedefler; kayıt, tanıtım, eğitim, mali işler ve görev başarısı ayrı ayrı izlenir.</p>'+
+ filters+'<div class="small muted" style="margin-bottom:15px">Seçili dönem: '+esc(range.label)+(range.start?' ('+date(range.start)+' – '+date(range.end)+')':"")+'</div>'+
+ '<div class="kpi">'+
+ stat("Tanımlı hedef",goals.length,"Seçilen kapsam")+
+ stat("Ulaşılan hedef",goalDone,"Sayıya dayalı hedef")+
+ stat("Görev tamamlanma",completionPct===null?"—":"%"+completionPct,completed.length+"/"+tasks.length+" görev")+
+ stat("Geciken görev",overdue,"Bitiş tarihi geçmiş")+
+ stat("Tarihli görev",dated+"/"+tasks.length,"Son tarihi belirlenmiş")+
+ '</div>'+
+ '<div class="twocol"><section class="panel"><h2>İş Grupları Performansı</h2>'+
+ (groupRows||'<p class="muted small">İş grubu bulunmuyor.</p>')+'</section>'+
+ '<section class="panel"><h2>Ortakların Görev Performansı</h2>'+
+ (memberRows||'<p class="muted small">Aktif üye bulunmuyor.</p>')+'</section></div>'+
+ '<section class="panel"><h2>Zamanında Tamamlanma</h2><p class="small">'+onTime+'/'+onTimeBase.length+
+ ' tamamlanan, bitiş tarihi ve tamamlanma zamanı belli görev zamanında bitirilmiş. '+(onTimeBase.length?"Başarı: %"+Math.round(100*onTime/onTimeBase.length):"Henüz ölçülebilir görev yok.")+'</p>'+
+ '<p class="small muted">Görev göstergeleri, seçilen dönemde açılan görevlerin bugünkü durumunu gösterir. Ortak sorumluluklar kişisel toplamda iki kez sayılmaz. Kurumsal, bölüm ve bireysel hedeflerin gerçekleşen sayıları şimdilik manuel girilir; farklı birimler tek bir puanda birleştirilmez.</p>'+
+ '<p class="small muted">Önceki görevler kurum sınıflandırması yapılmadığından Ortak İşletme grubundadır. İlgili görevleri düzenleyerek okul ataması yapabilirsiniz.</p></section>'+
+ sections;
+}
+
 function streamsView(){
 return '<div class="titlebar"><h2>Dört Ana İş Grubu</h2><span class="muted small">Başlık ve sorumlular panelden düzenlenebilir</span></div><div class="gridcards">'+state.streams.map(w=>{
 const items=state.tasks.filter(t=>t.workstream_id===w.id),done=items.filter(t=>t.status==="tamamlandi").length,pct=items.length?Math.round(100*done/items.length):0;
@@ -421,7 +518,10 @@ const dayPanel=day?'<section class="panel calendar-detail" id="calendarDayDetail
   '<section class="panel" style="padding:12px"><div class="calgrid">'+head+grid+'</div></section><div class="small muted">Güne dokunun: görevler ve etkinlikler açılır. Turkuaz: görev · Mor: etkinlik.</div>'+dayPanel+unscheduledPanel;
 }
 
-function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));
+function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));
+[["performancePeriod","performancePeriod"],["performanceSchool","performanceSchool"],["performanceStream","performanceStream"],["performancePerson","performancePerson"]].forEach(([id,prop])=>{
+ $("#"+id)?.addEventListener("change",e=>{state[prop]=e.target.value;render()});
+});$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));
 document.querySelectorAll("[data-edit-member]").forEach(b=>b.addEventListener("click",()=>{
  if(state.role!=="owner")return;
  const m=state.members.find(x=>x.user_id===b.dataset.editMember);
@@ -461,9 +561,25 @@ const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input na
 const multiPeopleField=(name,selected=[],exclude=null)=>'<div class="span2 multi-people"><strong>Ortak Sorumlular</strong><div class="multi-person-grid">'+state.members.filter(m=>m.is_active&&m.user_id!==exclude).map(m=>'<label><input type="checkbox" name="'+name+'" value="'+esc(m.user_id)+'"'+(selected.includes(m.user_id)?' checked':'')+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><div class="small muted">İlgili kişiler işaretlenerek ortak görev tanımlanabilir.</div></div>';
 const sel=(name,label,opts,val)=>'<label>'+label+'<select name="'+name+'">'+options(opts,val)+'</select></label>';
 function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Hedefi Düzenle":"Yeni Hedef",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle"})[kind];
-if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+(item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
+if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+(item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
 if(kind==="stream")f.innerHTML='<div class="span2">'+field("name","Bölüm adı *",item?.name||"","text","required minlength=3 maxlength=180")+'</div><label class="span2">Kapsam ve sorumluluklar<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("lead_user_id","Bölüm Yöneticisi",people,item?.lead_user_id)+multiPeopleField("shared_users",item?.collaborator_user_ids||[],item?.lead_user_id);
-if(kind==="goal")f.innerHTML='<div class="span2">'+field("title","Hedef adı *",item?.title||"","text","required")+'</div>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("owner_id","Sorumlu",people,item?.owner_id)+field("target_value","Hedef değer",item?.target_value??0,"number",'min=0 step=any')+field("actual_value","Gerçekleşen",item?.actual_value??0,"number",'min=0 step=any')+field("unit","Birim",item?.unit||"adet")+field("period_start","Dönem başlangıcı",item?.period_start||"","date")+field("period_end","Dönem bitişi",item?.period_end||"","date");
+if(kind==="goal"){
+ const win=performanceWindow(state.performancePeriod==="all"?"month":state.performancePeriod);
+ f.innerHTML='<div class="span2">'+field("title","Hedef adı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div>'+
+ sel("goal_level","Hedef seviyesi",goalLevels,item?.goal_level||"bolum")+
+ sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||(state.performanceSchool!=="all"?state.performanceSchool:"ortak"))+
+ sel("metric_category","Performans alanı",goalCategories,item?.metric_category||"operasyon")+
+ sel("period_type","Dönem sıklığı",periodTypes,item?.period_type||(state.performancePeriod==="all"?"month":state.performancePeriod))+
+ sel("workstream_id","İş Grubu",streams,item?.workstream_id||(state.performanceStream!=="all"?state.performanceStream:""))+
+ sel("owner_id","Sorumlu",people,item?.owner_id||(state.performancePerson!=="all"?state.performancePerson:""))+
+ field("target_value","Hedef değer *",item?.target_value??0,"number","required min=0 step=any")+
+ field("actual_value","Gerçekleşen değer *",item?.actual_value??0,"number","required min=0 step=any")+
+ field("unit","Birim (adet, öğrenci, TL vb.) *",item?.unit||"adet","text","required maxlength=30")+
+ field("period_start","Dönem başlangıcı *",item?.period_start||win.start||"","date","required")+
+ field("period_end","Dönem bitişi *",item?.period_end||win.end||"","date","required")+
+ '<p class="span2 small muted">Kurumsal hedef tüm işletmeye; bölüm hedefi ilgili iş grubuna; bireysel hedef seçilen sorumluya aittir. Hedef ve gerçekleşen değerler birbirinden bağımsız olarak kaydedilir.</p>';
+}
+
 if(kind==="event")f.innerHTML='<div class="span2">'+field("title","Etkinlik adı *",item?.title||"","text","required")+'</div>'+
 '<label class="span2">Açıklama<textarea name="details" rows="3">'+esc(item?.details||"")+'</textarea></label>'+
 field("starts_at","Başlangıç *",toDatetimeLocal(item?.starts_at),"datetime-local","required")+
@@ -534,7 +650,19 @@ if(modalKind==="member"){const r=await fetch("https://gnwliizxuryfnpqrynym.supab
 else if(modalKind==="stream"){if(!canManage()||!editing)throw Error("Bu işlem için yönetici yetkisi gereklidir.");const payload={name:data.name.trim(),description:data.description||"",lead_user_id:data.lead_user_id||null,collaborator_user_ids:shared.filter(x=>x!==data.lead_user_id)};const r=await sb.from("workstreams").update(payload).eq("id",editing.id).eq("workspace_id",WS);if(r.error)throw r.error;toast("Bölüm bilgileri güncellendi")}
 else{const table=modalKind==="task"?"tasks":modalKind==="goal"?"goals":"calendar_events";const payload={...data,workspace_id:WS};for(const k of ["workstream_id","assigned_to","owner_id","start_date","due_date","period_start","period_end"])if(k in payload&&!payload[k])payload[k]=null;
 if(modalKind==="task"){payload.collaborator_user_ids=canManage()?shared:(editing?.collaborator_user_ids||[]);if(editing&&editing.assigned_to!==payload.assigned_to&&canManage()){payload.last_delegated_at=new Date().toISOString();payload.last_delegated_by=state.user.id}payload.progress=Number(payload.progress);if(payload.status==="tamamlandi"){payload.progress=100;payload.completed_at=new Date().toISOString()}else if(editing?.status==="tamamlandi")payload.completed_at=null}
-if(modalKind==="goal"){payload.target_value=Number(payload.target_value);payload.actual_value=Number(payload.actual_value)}
+if(modalKind==="goal"){
+ payload.target_value=Number(payload.target_value);payload.actual_value=Number(payload.actual_value);
+ if(!Number.isFinite(payload.target_value)||!Number.isFinite(payload.actual_value)||payload.target_value<0||payload.actual_value<0)
+  throw Error("Hedef ve gerçekleşen değerler sıfırdan küçük olamaz.");
+ if(!payload.period_start||!payload.period_end||payload.period_end<payload.period_start)
+  throw Error("Geçerli bir başlangıç ve bitiş dönemi seçin.");
+ if(payload.goal_level==="bolum"&&!payload.workstream_id)throw Error("Bölüm hedefi için iş grubu seçin.");
+ if(payload.goal_level==="bireysel"&&!payload.owner_id)throw Error("Bireysel hedef için sorumlu seçin.");
+ if(payload.goal_level==="kurumsal"){payload.workstream_id=null;payload.owner_id=null;}
+ if(payload.goal_level==="bolum")payload.owner_id=null;
+ payload.title=String(payload.title||"").trim();payload.unit=String(payload.unit||"").trim();
+ if(payload.title.length<3||!payload.unit)throw Error("Hedef adı ve birim zorunludur.");
+}
 if(modalKind==="event"){if(new Date(payload.ends_at)<=new Date(payload.starts_at))throw Error("Bitiş başlangıçtan sonra olmalı");payload.starts_at=new Date(payload.starts_at).toISOString();payload.ends_at=new Date(payload.ends_at).toISOString()}
 let r;if(editing){r=await sb.from(table).update(payload).eq("id",editing.id).eq("workspace_id",WS)}else{payload.created_by=state.user.id;r=await sb.from(table).insert(payload)}
 if(r.error)throw r.error;toast("Kayıt başarıyla kaydedildi")}
