@@ -43,6 +43,29 @@ body *{visibility:hidden!important}
 .ai-note{background:#f1f7fb;border-left:4px solid #23a5ab;padding:12px 15px;border-radius:8px;margin:14px 0;color:#33516b;font-size:13px}
 @media(max-width:800px){.ai-actions{grid-template-columns:1fr}.ai-action{min-height:0}.ai-hero{padding:20px}}
 
+
+/* AI assistant: messaging layout for phones and desktop */
+.ai-chat-panel{overflow:hidden;border:1px solid #d9e6ef;border-radius:17px;background:#fff;box-shadow:0 5px 20px #142c4910;margin-bottom:18px}
+.ai-chat-header{padding:16px 18px;background:#f5fbfc;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #dce9ef;flex-wrap:wrap}
+.ai-chat-header strong{font-size:15px;color:#143b57}
+.ai-chat-header span{font-size:12px;color:#617990}
+.ai-chat-history{height:min(58vh,540px);min-height:320px;overflow-y:auto;padding:17px 16px;display:flex;flex-direction:column;gap:15px;overscroll-behavior:contain}
+.ai-msg{max-width:min(90%,620px);padding:13px 15px;border-radius:15px;font-size:14px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+.ai-msg-user{align-self:flex-end;background:#176c88;color:#fff;border-bottom-right-radius:4px}
+.ai-msg-assistant{align-self:flex-start;background:#eff5f9;color:#203b55;border-bottom-left-radius:4px}
+.ai-msg-meta{font-size:11px;font-weight:700;opacity:.78;display:block;margin-bottom:7px}
+.ai-msg-note{font-size:11px;color:#627890;display:block;margin-top:10px;border-top:1px solid #d6e1e9;padding-top:7px}
+.ai-msg-waiting{background:#eef6f5;color:#247071}
+.ai-chat-composer{border-top:1px solid #dde7ee;padding:13px;background:#fff}
+.ai-chat-form{display:flex;align-items:flex-end;gap:10px}
+.ai-chat-form textarea{flex:1;min-width:0;min-height:48px;max-height:120px;resize:vertical;border-radius:12px;padding:12px 13px;font-size:14px;line-height:1.4}
+.ai-send{min-width:90px;min-height:48px}
+.ai-hint{font-size:11px;color:#647b8c;margin:8px 3px 0;line-height:1.5}
+.ai-quick{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.ai-quick button{border:1px solid #c8dce6;background:#f3f9fc;border-radius:100px;padding:8px 12px;font-size:12px;color:#235370;font-weight:650;max-width:100%;text-align:left}
+.ai-quick button:hover{background:#e6f4f8}
+@media(max-width:780px){.ai-chat-history{height:min(56vh,480px);min-height:280px;padding:12px 10px}.ai-msg{max-width:94%;font-size:13px;padding:11px 12px}.ai-chat-composer{padding:10px}.ai-send{min-width:68px;padding:9px}.ai-hero{margin-bottom:12px}}
+
 /* Ortak Takip mobile navigation v3: enforce always-visible complete menu. */
 .mobile-menu-caption{display:none}
 @media(max-width:1000px){
@@ -124,7 +147,7 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -240,54 +263,88 @@ function openTaskFromSharedLink(){
  if(["owner","manager"].includes(state.role)||t.assigned_to===state.user?.id||t.created_by===state.user?.id)openModal("task",t);
 }
 
+
 const aiOptions=[
  ["agenda","Günlük Yönetim Ajandası","Açık, geciken ve kritik işleri günlük önceliklere dönüştürür."],
  ["suggestions","Görev Önerileri","Dört iş grubuna göre görev yoğunluğu ve havuz kullanımını değerlendirir."],
  ["report","Yönetim Raporu","İş grubu sonuçlarını ve hedef sayılarını toplantı özeti hâline getirir."]
 ];
+const aiQuestions=[
+ "Bugün hangi işlere öncelik vermeliyiz?",
+ "Geciken işlerimiz ne durumda?",
+ "Kasım hedeflerimizin durumu nedir?",
+ "İş ve görev havuzunu nasıl geliştirebiliriz?"
+];
+const aiModeTitle=mode=>aiOptions.find(x=>x[0]===mode)?.[1]||"Yönetim Analizi";
+function renderAIMessage(message){
+ const user=message.role==="user";
+ const origin=message.source==="cloudflare"?"Cloudflare Workers AI":
+  message.source==="rules"?"Yerel yönetim analizi":"";
+ return '<div class="ai-msg '+(user?"ai-msg-user":"ai-msg-assistant")+'">'+
+  '<span class="ai-msg-meta">'+(user?"Siz":"✦ Ortak Takip Asistanı"+(origin?" · "+origin:""))+'</span>'+
+  esc(message.text||"")+(message.notice?'<span class="ai-msg-note">'+esc(message.notice)+'</span>':"")+'</div>';
+}
 function aiView(){
- const result=state.aiResult;
- return '<section class="ai-hero"><h2>✦ Ortak Takip Yönetim Asistanı</h2>'+
-  '<p>Görev Takibi, İş ve Görev Havuzu ve Performans ve Hedefler alanlarındaki sayısal durumları analiz eder. Öğrenci veya personel kimlik bilgileri dış hizmete aktarılmaz; hiçbir kayıt otomatik değiştirilmez.</p></section>'+
+ const messages=state.aiMessages.length?state.aiMessages.map(renderAIMessage).join(""):
+  '<div class="ai-msg ai-msg-assistant"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Merhaba! Görevler, geciken işler, performans hedefleri ve iş havuzu hakkında soru sorabilirsiniz.\n\nÖrneğin: “Bu hafta hangi işlere öncelik vermeliyiz?”</div>';
+ return '<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet</h2>'+
+  '<p>Ortak Takip verilerine dayalı yönetim sohbeti. Sorunuzu doğal dille yazın; öğrenci veya kişisel bilgiler gerektirmeyen güvenli özetler üzerinden yanıt alın.</p></section>'+
+  '<div class="ai-quick">'+aiQuestions.map(q=>'<button type="button" data-ai-question="'+esc(q)+'" '+(state.aiLoading?"disabled":"")+'>'+esc(q)+'</button>').join("")+'</div>'+
+  '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div><strong>✦ Yönetim Asistanı</strong><div><span>Kurumsal verilerden danışmanlık · Salt okunur</span></div></div>'+
+  '<button type="button" class="btn sm" id="aiClearChat" '+(!state.aiMessages.length||state.aiLoading?"disabled":"")+'>Sohbeti Temizle</button></div>'+
+  '<div class="ai-chat-history" id="aiChatHistory" role="log" aria-live="polite" aria-relevant="additions">'+messages+
+  (state.aiLoading?'<div class="ai-msg ai-msg-assistant ai-msg-waiting"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Yanıt hazırlanıyor…</div>':"")+'</div>'+
+  '<div class="ai-chat-composer"><form id="aiChatForm" class="ai-chat-form">'+
+  '<textarea id="aiChatInput" name="message" maxlength="350" rows="2" aria-label="Yapay zekâya soru yazın" placeholder="Ortak Takip hakkında bir soru sorun…" '+(state.aiLoading?"disabled":"")+' required></textarea>'+
+  '<button type="submit" class="btn primary ai-send" '+(state.aiLoading?"disabled":"")+'>Gönder ➤</button></form>'+
+  '<p class="ai-hint">Enter: gönder · Shift+Enter: alt satır. Mesajlar yalnızca bu açık sayfada tutulur; yenileyince silinir. Cloudflare’e özgün mesajınız değil, yalnızca konusu ve anonim sayısal özetler gönderilir.</p></div></section>'+
+  '<div class="titlebar"><h2>Hazır Yönetim Analizleri</h2></div>'+
   '<div class="ai-actions">'+aiOptions.map(([key,title,desc])=>
     '<button type="button" class="ai-action" data-ai-run="'+key+'" '+(state.aiLoading?"disabled":"")+'>'+
     '<strong>'+esc(title)+'</strong><span>'+esc(desc)+'</span></button>').join("")+'</div>'+
-  '<section class="panel"><div class="titlebar"><h2>Analiz Sonucu</h2>'+
-   (result?'<button type="button" class="btn sm" id="copyAIResult">Metni Kopyala</button>':"")+'</div>'+
-  (state.aiLoading?'<p class="muted">Yönetim verileri güvenli biçimde özetleniyor...</p>':
-    result?
-      '<div class="ai-source">'+(result.source==="cloudflare"?"Cloudflare Workers AI · Ücretsiz kullanım":"Ücretsiz Yerel Analiz · Yapay zekâ bağlantısı gerekmez")+'</div>'+
-      '<div class="ai-answer">'+esc(result.text||"")+'</div>'+
-      '<div class="ai-note">'+esc(result.notice||"Sonuçlar bilgilendirme amaçlıdır.")+'</div>'+
-      '<p class="small muted">Kaynak: '+esc(result.stats?.tasks??0)+' görev, '+esc(result.stats?.goalTotal??0)+
-       ' hedef, '+esc(result.stats?.catalogTotal??0)+' havuz işi. Bu işlem kayıtları değiştirmez.</p>':
-      '<p class="muted small">Yukarıdaki üç analizden birini seçin. Cloudflare bağlantısı henüz yapılandırılmamışsa sistem ücretsiz, sayısal/kural tabanlı bir değerlendirme sunar.</p>')+
-  '</section>'+
   '<section class="panel"><h2>Ücretsiz Kullanım ve Gizlilik</h2>'+
-   '<p class="small">Cloudflare Free planında günlük 10.000 Neuron ücretsizdir. Cloudflare AI bağlantısı etkinleştirildiğinde uygulama ayrıca çalışma alanı için en fazla 12, kullanıcı başına en fazla 4 AI isteğini günlük olarak kabul eder; limitte ek ücret oluşturmaz, yerel analize geçer.</p>'+
-   '<p class="small">Cloudflare’e yalnızca iş grubu bazlı sayılar, tamamlanma/gecikme istatistikleri ve toplu hedef sayıları gönderilebilir. Görev başlıkları, öğrenci verileri, kişiler, telefonlar ve mali tutarlar gönderilmez.</p>'+
-   '<p class="small muted">AI önerileri karar destek niteliğindedir. Görev atama, silme, güncelleme veya hedef onaylama yetkisi yoktur.</p></section>';
+   '<p class="small">Cloudflare ücretsiz kotası ve ek günlük uygulama sınırı kullanılır. Kota dolarsa asistan ücretli işlem yapmaz; ücretsiz yerel yönetim analizi gösterir.</p>'+
+   '<p class="small">Sohbet yalnızca görev durumları, iş grupları, hedef sayıları ve iş havuzu istatistikleri hakkında yanıt verir; genel internet araması yapmaz. Kişi, öğrenci veya mali tutar bilgisi dış hizmete gönderilmez.</p>'+
+   '<p class="small muted">Asistan hiçbir görev, kullanıcı veya hedef kaydını otomatik eklemez, silmez veya değiştirmez.</p></section>';
 }
-async function generateAIReport(mode){
- if(!aiOptions.some(([key])=>key===mode)||state.aiLoading)return;
- state.aiMode=mode;state.aiLoading=true;state.aiResult=null;render();
+function scrollAIChat(){
+ const e=$("#aiChatHistory");
+ if(e)e.scrollTop=e.scrollHeight;
+}
+async function sendAIRequest(mode,message=""){
+ if(state.aiLoading)return;
+ const isChat=mode==="chat";
+ if(isChat&&(message.trim().length<2||message.trim().length>350)){
+  toast("Soru 2 ile 350 karakter arasında olmalıdır.");return;
+ }
+ state.aiLoading=true;
+ state.aiMessages.push({role:"user",text:isChat?message.trim():aiModeTitle(mode)});
+ state.aiMessages=state.aiMessages.slice(-20);
+ render();scrollAIChat();
  try{
   const session=await requireActiveSession();
+  const body=isChat?{mode:"chat",message:message.trim(),previousTopic:state.aiLastTopic}:{mode};
   const response=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-ai",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
-    body:JSON.stringify({mode})
+   method:"POST",
+   headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+   body:JSON.stringify(body)
   });
-  let result={};
-  try{result=await response.json()}catch{}
-  if(!response.ok)throw Error(result.error||"Yapay zekâ analizi alınamadı.");
-  state.aiResult=result;
+  let result={};try{result=await response.json()}catch{}
+  if(!response.ok)throw Error(result.error||"Asistan yanıtı alınamadı.");
+  if(result.topic)state.aiLastTopic=result.topic;
+  state.aiMessages.push({role:"assistant",text:result.text||"Yanıt boş döndü.",source:result.source,notice:result.notice});
  }catch(e){
-  error(e);
+  state.aiMessages.push({role:"assistant",text:"Sohbet yanıtı şu anda alınamadı. Tekrar deneyebilirsiniz.",notice:e?.message||"Bağlantı hatası"});
  }finally{
+  state.aiMessages=state.aiMessages.slice(-20);
   state.aiLoading=false;
-  if(state.view==="ai")render();
+  if(state.view==="ai"){render();scrollAIChat();}
  }
+}
+function generateAIReport(mode){
+ if(!aiOptions.some(([key])=>key===mode))return;
+ state.aiMode=mode;
+ return sendAIRequest(mode);
 }
 function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],catalog:["İş ve Görev Havuzu","İş tanımları, tekrar kuralları ve görev oluşturma"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],ai:["Yapay Zekâ Yönetim Asistanı","Günlük ajanda, görev önerileri ve yönetim raporu"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,catalog:catalogView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,ai:aiView,members:membersView})[state.view]();bindView()}
 
@@ -822,11 +879,24 @@ async function changeGoalApproval(id,status,btn){
 function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
 document.querySelectorAll("[data-ai-run]").forEach(b=>b.onclick=()=>generateAIReport(b.dataset.aiRun));
-$("#copyAIResult")?.addEventListener("click",async()=>{
-  if(!state.aiResult?.text)return;
-  try{await navigator.clipboard.writeText(state.aiResult.text);toast("Analiz metni kopyalandı.")}
-  catch{toast("Kopyalama başarısız. Metni seçerek kopyalayın.")}
+document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>sendAIRequest("chat",b.dataset.aiQuestion));
+$("#aiClearChat")?.addEventListener("click",()=>{
+ if(state.aiLoading)return;
+ state.aiMessages=[];state.aiLastTopic="overview";render();
 });
+$("#aiChatForm")?.addEventListener("submit",e=>{
+ e.preventDefault();
+ const input=$("#aiChatInput");
+ const text=input?.value||"";
+ if(text.trim())sendAIRequest("chat",text);
+});
+$("#aiChatInput")?.addEventListener("keydown",e=>{
+ if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){
+  e.preventDefault();
+  if(e.currentTarget.value.trim())sendAIRequest("chat",e.currentTarget.value);
+ }
+});
+if(state.view==="ai")scrollAIChat();
 $("#newTask")?.addEventListener("click",()=>openModal("task"));
 $("#newCatalogItem")?.addEventListener("click",()=>openModal("catalog"));
 [["catalogStreamFilter","catalogStream"],["catalogCadenceFilter","catalogCadence"],["catalogStatusFilter","catalogStatus"]].forEach(([id,key])=>
