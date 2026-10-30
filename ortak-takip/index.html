@@ -35,7 +35,7 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -86,7 +86,17 @@ async function fetchAll(){const q=[sb.from("workstreams").select("*").eq("worksp
 const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
 [state.streams,state.tasks,state.goals,state.events,state.members,state.invites,state.notificationQueue,state.notifyPrefs]=r.map(a=>a.data||[]);
 let ids=state.members.map(x=>x.user_id);
-state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name").in("id",ids);if(!p.error)state.profiles=p.data||[]}
+state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name,position_title").in("id",ids);if(!p.error)state.profiles=p.data||[]}
+if(state.role==="owner"){
+ try{
+  const {data}=await sb.auth.getSession(),token=data?.session?.access_token;
+  if(token){
+   const response=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-admin",{headers:{"Authorization":"Bearer "+token}});
+   if(response.ok){const data=await response.json();state.teamEmails=Object.fromEntries((data.members||[]).map(x=>[x.user_id,x]));}
+   else console.warn("Admin kullanıcı e-postaları alınamadı:",response.status);
+  }
+ }catch(e){console.warn("Admin bilgileri okunamadı")}
+}
 }
 async function boot(){if(recoveryMode){showRecoveryScreen();return}const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
@@ -352,9 +362,27 @@ async function sendNotificationBatch(){
 }
 
 function membersView(){
-const active=state.members.map(m=>'<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div><div style="flex:1"><strong>'+esc(memberName(m.user_id))+'</strong><div class="small muted">'+(m.is_active?"Aktif":"Pasif")+'</div></div><span class="tag">'+esc(labels[m.role]||m.role)+'</span></div>').join("");
+const active=state.members.map(m=>{
+ const profile=state.profiles.find(p=>p.id===m.user_id)||{};
+ const email=state.teamEmails[m.user_id]?.email||(m.user_id===state.user?.id?state.user?.email:"");
+ return '<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
+ '<div style="flex:1;min-width:0"><strong>'+esc(memberName(m.user_id))+'</strong>'+
+ '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+' · '+(m.is_active?"Aktif":"Pasif")+'</div>'+
+ (state.role==="owner"&&email?'<div class="small muted">'+esc(email)+'</div>':"")+
+ '</div><span class="tag">'+esc(labels[m.role]||m.role)+'</span>'+
+ (state.role==="owner"?'<div class="actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
+ (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+'</div>';
+}).join("");
 const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
-return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':'')+'</div><section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+(state.role==="owner"?ownerPasswordView():"")+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+'<p class="muted small">Bekleyen davetler giriş yetkisi vermez. Kullanıcının hesap oluşturup e-postasını doğrulaması gerekir. Sadece davet kaydı oluşturmak otomatik e-posta göndermez.</p></section>':'')+'<p class="muted small">Yetki seviyeleri: Admin, Yönetici, Üye ve İzleyici. Kullanıcılar kendi hesaplarıyla giriş yapar.</p>'
+return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Kullanıcı Davet Et</button>':"")+'</div>'+
+'<section class="panel"><h2>Mevcut Ekip ('+state.members.length+')</h2>'+
+(state.role==="owner"?'<p class="small muted">Admin, ad, pozisyon, e-posta ve yetki düzenleyebilir. Mevcut şifreler görüntülenemez; yeni şifre belirlenebilir.</p>':"")+
+(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+
+(state.role==="owner"?ownerPasswordView():"")+
+(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+
+(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+
+'<p class="muted small">Kullanıcı hesap oluşturup e-postasını doğrulamalıdır.</p></section>':"")+
+'<p class="muted small">Yetki seviyeleri: Admin, Yönetici, Üye ve İzleyici.</p>';
 }
 function taskOccursOnDay(t,day){
   if(t.status==="iptal")return false;
@@ -380,8 +408,12 @@ function calendarView(){
     (t.description?'<div class="small" style="margin-top:6px;white-space:pre-wrap">'+esc(t.description)+'</div>':"")+
     '<div class="small muted" style="margin-top:5px">Başlangıç: '+esc(date(t.start_date))+' · Bitiş: '+esc(date(t.due_date))+' · İlerleme: %'+esc(t.progress)+'</div></div>'+
     (state.role!=="viewer"?'<button type="button" class="btn sm" data-calendar-task="'+esc(t.id)+'">Aç / Düzenle</button>':"")+'</div>').join("");
-  const eventRows=selectedEvents.map(e=>'<div class="calendar-task"><div><strong>Etkinlik: '+esc(e.title)+'</strong><div class="small muted">'+esc(new Date(e.starts_at).toLocaleString("tr-TR"))+' – '+esc(new Date(e.ends_at).toLocaleString("tr-TR"))+'</div>'+(e.details?'<p class="small">'+esc(e.details)+'</p>':"")+'</div></div>').join("");
-  const dayPanel=day?'<section class="panel calendar-detail" id="calendarDayDetail"><div class="row"><div><h2>'+esc(date(day))+' · Günlük Görevler</h2><div class="small muted">'+selectedTasks.length+' görev · '+selectedEvents.length+' etkinlik</div></div>'+(state.role!=="viewer"?'<button class="btn sm primary" id="newTaskOnDay">+ Bu Güne Görev</button>':"")+'</div>'+
+  const eventRows=selectedEvents.map(e=>'<div class="calendar-task"><div style="flex:1"><strong>Etkinlik: '+esc(e.title)+'</strong>'+
+ '<div class="small muted">'+esc(new Date(e.starts_at).toLocaleString("tr-TR"))+' – '+esc(new Date(e.ends_at).toLocaleString("tr-TR"))+'</div>'+
+ (e.details?'<p class="small">'+esc(e.details)+'</p>':"")+'</div>'+
+ ((state.role==="owner"||e.created_by===state.user?.id)?'<button type="button" class="btn sm" data-calendar-event="'+esc(e.id)+'">Etkinliği Düzenle</button>':"")+
+ '</div>').join("");
+const dayPanel=day?'<section class="panel calendar-detail" id="calendarDayDetail"><div class="row"><div><h2>'+esc(date(day))+' · Günlük Görevler</h2><div class="small muted">'+selectedTasks.length+' görev · '+selectedEvents.length+' etkinlik</div></div>'+(state.role!=="viewer"?'<button class="btn sm primary" id="newTaskOnDay">+ Bu Güne Görev</button>':"")+'</div>'+
      (taskRows||'<p class="small muted">Bu tarihte görev bulunmuyor. Yeni görev oluşturabilirsiniz.</p>')+eventRows+'</section>':"";
   const unscheduled=state.tasks.filter(t=>!t.start_date&&!t.due_date&&t.status!=="iptal");
   const unscheduledPanel=unscheduled.length?'<section class="panel"><h2>Tarihi Belirlenmemiş Görevler ('+unscheduled.length+')</h2><p class="small muted">Takvimde görünmeleri için başlangıç veya bitiş tarihi atayın.</p>'+unscheduled.slice(0,12).map(t=>'<div class="calendar-task"><div style="flex:1"><strong>'+esc(t.title)+'</strong><div class="small muted">'+esc(memberName(t.assigned_to))+'</div></div>'+(state.role!=="viewer"?'<button class="btn sm" data-calendar-task="'+esc(t.id)+'">Tarih Ekle</button>':"")+'</div>').join("")+'</section>':"";
@@ -390,6 +422,19 @@ function calendarView(){
 }
 
 function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));
+document.querySelectorAll("[data-edit-member]").forEach(b=>b.addEventListener("click",()=>{
+ if(state.role!=="owner")return;
+ const m=state.members.find(x=>x.user_id===b.dataset.editMember);
+ if(!m)return;
+ const email=state.teamEmails[m.user_id]?.email||(m.user_id===state.user?.id?state.user.email:"");
+ if(!email){toast("E-posta bilgisi alınamadı. Sayfayı yenileyin.");return}
+ openModal("memberEdit",m);
+}));
+document.querySelectorAll("[data-member-password]").forEach(b=>b.addEventListener("click",()=>{
+ if(state.role!=="owner")return;
+ const m=state.members.find(x=>x.user_id===b.dataset.memberPassword);
+ if(m)openModal("memberPassword",m);
+}));
 document.querySelectorAll("[data-notify-setting]").forEach(c=>c.addEventListener("change",()=>saveNotifySetting(c.dataset.notifySetting,c.checked,c)));
 $("#sendNotificationBatch")?.addEventListener("click",sendNotificationBatch);
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
@@ -401,21 +446,54 @@ document.querySelectorAll("[data-calendar-day]").forEach(cell=>{
  cell.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectCalendarDay(cell.dataset.calendarDay)}});
 });
 document.querySelectorAll("[data-calendar-task]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const task=state.tasks.find(t=>t.id===b.dataset.calendarTask);if(task)openModal("task",task)}));
+document.querySelectorAll("[data-calendar-event]").forEach(b=>b.addEventListener("click",e=>{
+ e.stopPropagation();
+ const item=state.events.find(x=>x.id===b.dataset.calendarEvent);
+ if(item&&(state.role==="owner"||item.created_by===state.user?.id))openModal("event",item);
+}));
 $("#newTaskOnDay")?.addEventListener("click",()=>{openModal("task");const field=$("#modalForm [name=due_date]");if(field)field.value=state.calendarDay||""});
 $("#calendarToday")?.addEventListener("click",()=>selectCalendarDay(iso(new Date())));
 $("#prevMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);render()});$("#nextMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);render()})}
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});
 let editing=null,modalKind="";
+const toDatetimeLocal=v=>{if(!v)return "";const d=new Date(v);return iso(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(val??"")+'" '+extra+'></label>';
 const multiPeopleField=(name,selected=[],exclude=null)=>'<div class="span2 multi-people"><strong>Ortak Sorumlular</strong><div class="multi-person-grid">'+state.members.filter(m=>m.is_active&&m.user_id!==exclude).map(m=>'<label><input type="checkbox" name="'+name+'" value="'+esc(m.user_id)+'"'+(selected.includes(m.user_id)?' checked':'')+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><div class="small muted">İlgili kişiler işaretlenerek ortak görev tanımlanabilir.</div></div>';
 const sel=(name,label,opts,val)=>'<label>'+label+'<select name="'+name+'">'+options(opts,val)+'</select></label>';
-function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Hedefi Düzenle":"Yeni Hedef",stream:"İş Grubunu Düzenle",event:"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti"})[kind];
+function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Hedefi Düzenle":"Yeni Hedef",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle"})[kind];
 if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+(item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
 if(kind==="stream")f.innerHTML='<div class="span2">'+field("name","Bölüm adı *",item?.name||"","text","required minlength=3 maxlength=180")+'</div><label class="span2">Kapsam ve sorumluluklar<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("lead_user_id","Bölüm Yöneticisi",people,item?.lead_user_id)+multiPeopleField("shared_users",item?.collaborator_user_ids||[],item?.lead_user_id);
 if(kind==="goal")f.innerHTML='<div class="span2">'+field("title","Hedef adı *",item?.title||"","text","required")+'</div>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("owner_id","Sorumlu",people,item?.owner_id)+field("target_value","Hedef değer",item?.target_value??0,"number",'min=0 step=any')+field("actual_value","Gerçekleşen",item?.actual_value??0,"number",'min=0 step=any')+field("unit","Birim",item?.unit||"adet")+field("period_start","Dönem başlangıcı",item?.period_start||"","date")+field("period_end","Dönem bitişi",item?.period_end||"","date");
-if(kind==="event")f.innerHTML='<div class="span2">'+field("title","Etkinlik adı *","","text","required")+'</div><label class="span2">Açıklama<textarea name="details" rows="3"></textarea></label>'+field("starts_at","Başlangıç *","","datetime-local","required")+field("ends_at","Bitiş *","","datetime-local","required")+sel("assigned_to","Sorumlu",people,"");
+if(kind==="event")f.innerHTML='<div class="span2">'+field("title","Etkinlik adı *",item?.title||"","text","required")+'</div>'+
+'<label class="span2">Açıklama<textarea name="details" rows="3">'+esc(item?.details||"")+'</textarea></label>'+
+field("starts_at","Başlangıç *",toDatetimeLocal(item?.starts_at),"datetime-local","required")+
+field("ends_at","Bitiş *",toDatetimeLocal(item?.ends_at),"datetime-local","required")+
+sel("assigned_to","Sorumlu",people,item?.assigned_to||"")+
+(state.role==="owner"?'<p class="span2 small muted">Admin herkesin geçmiş, bugünkü ve gelecekteki etkinliklerini düzenleyebilir.</p>':"");
+if(kind==="memberEdit"){
+ const p=state.profiles.find(x=>x.id===item.user_id)||{};
+ const email=state.teamEmails[item.user_id]?.email||(item.user_id===state.user?.id?state.user?.email:"");
+ const roleOptions=item.role==="owner"?[["owner","Admin"]]:[["manager","Yönetici"],["member","Üye"],["viewer","İzleyici"]];
+ f.innerHTML='<div class="span2">'+field("full_name","Ad soyad *",p.full_name||memberName(item.user_id),"text","required minlength=2 maxlength=120")+'</div>'+
+ '<div class="span2">'+field("position_title","Pozisyon / unvan",p.position_title||"","text","maxlength=120")+'</div>'+
+ '<div class="span2">'+field("email","Giriş e-posta adresi *",email,"email","required")+'</div>'+
+ sel("role","Sistem yetkisi",roleOptions,item.role)+
+ '<p class="span2 small muted">E-posta değişince kullanıcı yeni adresle giriş yapar. Admin yetkisi bu ekrandan devredilemez.</p>';
+}
+if(kind==="memberPassword"){
+ f.innerHTML='<p class="span2 small muted">Kullanıcı: '+esc(memberName(item.user_id))+
+ '. Eski şifreler görüntülenemez. Yeni şifre belirlendiğinde eskisinin yerini alır.</p>'+
+ '<div class="span2">'+field("password","Yeni şifre *","","password","required minlength=12 maxlength=128 autocomplete=new-password")+'</div>'+
+ '<div class="span2">'+field("confirm_password","Yeni şifre (tekrar) *","","password","required minlength=12 maxlength=128 autocomplete=new-password")+'</div>'+
+ '<label class="span2 password-toggle"><input type="checkbox" id="showMemberNewPassword"> Yeni yazdığım şifreyi göster</label>'+
+ '<p class="span2 small muted">En az 12 karakter; harf, rakam ve özel işaret içermelidir.</p>';
+}
 if(kind==="member")f.innerHTML='<div class="span2">'+field("email","E-posta adresi *","","email","required")+'</div><div class="span2">'+field("full_name","Ad soyad *","","text","required")+'</div>'+sel("role","Yetki",[["member","Üye"],["viewer","İzleyici"],...(state.role==="owner"?[["manager","Yönetici"]]:[])],"member")+'<p class="span2 muted small">Davetiye e-posta adresine gönderilir. Kişi kendi şifresini belirler.</p>';
-$("#modalscrim").classList.remove("hide")}
+$("#modalscrim").classList.remove("hide");
+$("#showMemberNewPassword")?.addEventListener("change",e=>{
+ f.querySelectorAll('input[name="password"],input[name="confirm_password"]').forEach(x=>x.type=e.target.checked?"text":"password");
+});
+}
 function closeModal(){$("#modalscrim").classList.add("hide");editing=null}
 $("#closeModal").onclick=closeModal;$("#cancelModal").onclick=closeModal;$("#modalscrim").addEventListener("click",e=>{if(e.target.id==="modalscrim")closeModal()});
 async function requireActiveSession(){
@@ -435,6 +513,23 @@ async function requireActiveSession(){
 }
 $("#modalForm").onsubmit=async ev=>{ev.preventDefault();const b=$("#modalForm button[type=submit]");b.disabled=true;const fd=new FormData(ev.target);const data=Object.fromEntries(fd);const shared=[...new Set(fd.getAll("shared_users"))].filter(id=>state.members.some(m=>m.user_id===id&&m.is_active));delete data.shared_users;try{
 const session=await requireActiveSession();
+if(modalKind==="memberEdit"||modalKind==="memberPassword"){
+ if(state.role!=="owner"||!editing?.user_id)throw Error("Bu işlem yalnızca Admin tarafından yapılabilir.");
+ const body=modalKind==="memberEdit"?
+  {action:"update_member",user_id:editing.user_id,full_name:data.full_name,position_title:data.position_title,email:data.email,role:data.role}:
+  {action:"set_password",user_id:editing.user_id,password:data.password};
+ if(modalKind==="memberPassword"){
+  if(data.password!==data.confirm_password)throw Error("Şifreler eşleşmiyor.");
+  if(!window.confirm(memberName(editing.user_id)+" kullanıcısının şifresini değiştirmek istiyor musunuz?"))return;
+ }
+ const res=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-admin",{
+  method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify(body)
+ });
+ const answer=await res.json();
+ if(!res.ok)throw Error(answer.error||"İşlem başarısız");
+ closeModal();toast(answer.message||"Bilgiler güncellendi.");await refresh();
+ return;
+}
 if(modalKind==="member"){const r=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-panel?api=invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({workspace_id:WS,email:data.email.trim(),full_name:data.full_name.trim(),role:data.role})});const d=await r.json();if(!r.ok)throw Error(d.error||"Davet gönderilemedi");toast("Davet gönderildi")}
 else if(modalKind==="stream"){if(!canManage()||!editing)throw Error("Bu işlem için yönetici yetkisi gereklidir.");const payload={name:data.name.trim(),description:data.description||"",lead_user_id:data.lead_user_id||null,collaborator_user_ids:shared.filter(x=>x!==data.lead_user_id)};const r=await sb.from("workstreams").update(payload).eq("id",editing.id).eq("workspace_id",WS);if(r.error)throw r.error;toast("Bölüm bilgileri güncellendi")}
 else{const table=modalKind==="task"?"tasks":modalKind==="goal"?"goals":"calendar_events";const payload={...data,workspace_id:WS};for(const k of ["workstream_id","assigned_to","owner_id","start_date","due_date","period_start","period_end"])if(k in payload&&!payload[k])payload[k]=null;
