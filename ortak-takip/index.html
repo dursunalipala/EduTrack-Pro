@@ -146,8 +146,7 @@ function shareTaskWhatsApp(id){
  const digits=whatsAppDigits(memberWhatsAppPhone(t.assigned_to));
  const recipient=(digits.length>=8&&digits.length<=15)?digits:"";
  const url="https://wa.me/"+recipient+"?text="+encodeURIComponent(message);
- const popup=window.open(url,"_blank","noopener,noreferrer");
- if(!popup)window.location.href=url;
+ window.open(url,"_blank","noopener,noreferrer");
 }
 function openTaskFromSharedLink(){
  const id=new URLSearchParams(window.location.search).get("task");
@@ -598,7 +597,8 @@ function calendarView(){
   const taskRows=selectedTasks.map(t=>'<div class="calendar-task"><div style="flex:1;min-width:0"><strong>'+esc(t.title)+'</strong><div class="small muted">'+esc(streamName(t.workstream_id))+' · '+esc(memberName(t.assigned_to))+' · '+esc(labels[t.status]||t.status)+'</div>'+
     (t.description?'<div class="small" style="margin-top:6px;white-space:pre-wrap">'+esc(t.description)+'</div>':"")+
     '<div class="small muted" style="margin-top:5px">Başlangıç: '+esc(date(t.start_date))+' · Bitiş: '+esc(date(t.due_date))+' · İlerleme: %'+esc(t.progress)+'</div></div>'+
-    (state.role!=="viewer"?'<button type="button" class="btn sm" data-calendar-task="'+esc(t.id)+'">Aç / Düzenle</button>':"")+'</div>').join("");
+    (state.role!=="viewer"?'<button type="button" class="btn sm" data-calendar-task="'+esc(t.id)+'">Aç / Düzenle</button>':"")+
+    '<button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button>'+'</div>').join("");
   const eventRows=selectedEvents.map(e=>'<div class="calendar-task"><div style="flex:1"><strong>Etkinlik: '+esc(e.title)+'</strong>'+
  '<div class="small muted">'+esc(new Date(e.starts_at).toLocaleString("tr-TR"))+' – '+esc(new Date(e.ends_at).toLocaleString("tr-TR"))+'</div>'+
  (e.details?'<p class="small">'+esc(e.details)+'</p>':"")+'</div>'+
@@ -653,8 +653,18 @@ document.querySelectorAll("[data-notify-setting]").forEach(c=>c.addEventListener
 $("#sendNotificationBatch")?.addEventListener("click",sendNotificationBatch);
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
 $("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
-$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});
-document.querySelectorAll("[data-wa-task]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();shareTaskWhatsApp(b.dataset.waTask)}));
+$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{
+ const share=e.target.closest("[data-wa-task]");
+ if(share){e.stopPropagation();shareTaskWhatsApp(share.dataset.waTask);return}
+ const b=e.target.closest("[data-edit-task]");
+ if(!b)return;
+ const task=state.tasks.find(t=>t.id===b.dataset.editTask);
+ if(task)openModal("task",task);
+});
+document.querySelectorAll("[data-wa-task]").forEach(b=>{
+ if(b.closest("#taskBody"))return;
+ b.addEventListener("click",e=>{e.stopPropagation();shareTaskWhatsApp(b.dataset.waTask)});
+});
 document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));
  document.querySelectorAll("[data-goal-actual]").forEach(b=>b.onclick=()=>openModal("goalActual",state.goals.find(g=>g.id===b.dataset.goalActual)));
  [["data-goal-submit","pending"],["data-goal-approve","approved"],["data-goal-return","draft"],["data-goal-reopen","draft"]].forEach(([attr,next])=>
@@ -685,7 +695,9 @@ const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input na
 const multiPeopleField=(name,selected=[],exclude=null)=>'<div class="span2 multi-people"><strong>Ortak Sorumlular</strong><div class="multi-person-grid">'+state.members.filter(m=>m.is_active&&m.user_id!==exclude).map(m=>'<label><input type="checkbox" name="'+name+'" value="'+esc(m.user_id)+'"'+(selected.includes(m.user_id)?' checked':'')+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><div class="small muted">İlgili kişiler işaretlenerek ortak görev tanımlanabilir.</div></div>';
 const sel=(name,label,opts,val)=>'<label>'+label+'<select name="'+name+'">'+options(opts,val)+'</select></label>';
 function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Taslak Hedefi Düzenle":"Yeni Taslak Hedef",goalActual:"Gerçekleşeni Güncelle",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle"})[kind];
-if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+(item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
+if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+
+ (item?.id?'<div class="span2"><button type="button" class="btn teal" id="modalShareWhatsApp">WhatsApp ile Paylaş</button><p class="small muted">Mesaj WhatsApp üzerinde taslak olarak açılır, gönderme işlemi kullanıcıya aittir.</p></div>':"")+
+ (item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
 if(kind==="stream")f.innerHTML='<div class="span2">'+field("name","Bölüm adı *",item?.name||"","text","required minlength=3 maxlength=180")+'</div><label class="span2">Kapsam ve sorumluluklar<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("lead_user_id","Bölüm Yöneticisi",people,item?.lead_user_id)+multiPeopleField("shared_users",item?.collaborator_user_ids||[],item?.lead_user_id);
 if(kind==="goalActual"){
  if(!item||item.approval_status!=="approved")return;
@@ -738,6 +750,7 @@ if(kind==="memberPassword"){
 }
 if(kind==="member")f.innerHTML='<div class="span2">'+field("email","E-posta adresi *","","email","required")+'</div><div class="span2">'+field("full_name","Ad soyad *","","text","required")+'</div>'+sel("role","Yetki",[["member","Üye"],["viewer","İzleyici"],...(state.role==="owner"?[["manager","Yönetici"]]:[])],"member")+'<p class="span2 muted small">Davetiye e-posta adresine gönderilir. Kişi kendi şifresini belirler.</p>';
 $("#modalscrim").classList.remove("hide");
+$("#modalShareWhatsApp")?.addEventListener("click",()=>{if(item?.id)shareTaskWhatsApp(item.id)});
 $("#showMemberNewPassword")?.addEventListener("change",e=>{
  f.querySelectorAll('input[name="password"],input[name="confirm_password"]').forEach(x=>x.type=e.target.checked?"text":"password");
 });
