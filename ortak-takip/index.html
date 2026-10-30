@@ -47,6 +47,7 @@ const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v?
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
 const canManage=()=>["owner","manager"].includes(state.role);
+const PANEL_URL="https://takip.elitkoleji.com.tr/";
 const allowedPanelOrigins=new Set(["https://ortak-takip.onrender.com","https://takip.elitkoleji.com.tr"]);
 const authRedirectUrl=()=>allowedPanelOrigins.has(window.location.origin)?window.location.origin+"/":"https://ortak-takip.onrender.com/";
 
@@ -113,7 +114,7 @@ async function fetchAll(){const q=[sb.from("workstreams").select("*").eq("worksp
 const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
 [state.streams,state.tasks,state.goals,state.events,state.members,state.invites,state.notificationQueue,state.notifyPrefs]=r.map(a=>a.data||[]);
 let ids=state.members.map(x=>x.user_id);
-state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name,position_title").in("id",ids);if(!p.error)state.profiles=p.data||[]}
+state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);if(!p.error)state.profiles=p.data||[]}
 if(state.role==="owner"){
  try{
   const {data}=await sb.auth.getSession(),token=data?.session?.access_token;
@@ -128,9 +129,34 @@ if(state.role==="owner"){
 async function boot(){if(recoveryMode){showRecoveryScreen();return}const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#authmsg").textContent="Giriş yapıldı ancak Ortak Takip çalışma alanı yetkiniz henüz tanımlanmamış. Yöneticiye başvurunuz.";return}
-state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide")}
+state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");openTaskFromSharedLink()}
 async function refresh(){try{await fetchAll();render()}catch(e){error(e)}}
 const streamName=id=>state.streams.find(s=>s.id===id)?.name||"Genel",memberName=id=>state.profiles.find(p=>p.id===id)?.full_name||state.members.find(m=>m.user_id===id)?.user_id.slice(0,8)||"Atanmadı";
+
+const memberWhatsAppPhone=id=>state.profiles.find(p=>p.id===id)?.whatsapp_phone||"";
+const whatsAppDigits=phone=>String(phone||"").replace(/[^0-9]/g,"");
+function shareTaskWhatsApp(id){
+ const t=state.tasks.find(x=>x.id===id);if(!t){toast("Görev bulunamadı.");return}
+ const message=["📋 *ORTAK TAKİP | GÖREV*","*Görev:* "+t.title,
+ "*Sorumlu:* "+memberName(t.assigned_to),"*İş grubu:* "+streamName(t.workstream_id),
+ "*Durum:* "+(labels[t.status]||t.status),"*Öncelik:* "+(labels[t.priority]||t.priority),
+ "*Son tarih:* "+(t.due_date?date(t.due_date):"Belirlenmedi"),"",
+ "*Görevi aç:* "+PANEL_URL+"?task="+encodeURIComponent(t.id),
+ "Ayrıntılar için Ortak Takip'e giriş yapın."].join("\n");
+ const digits=whatsAppDigits(memberWhatsAppPhone(t.assigned_to));
+ const recipient=(digits.length>=8&&digits.length<=15)?digits:"";
+ const url="https://wa.me/"+recipient+"?text="+encodeURIComponent(message);
+ const popup=window.open(url,"_blank","noopener,noreferrer");
+ if(!popup)window.location.href=url;
+}
+function openTaskFromSharedLink(){
+ const id=new URLSearchParams(window.location.search).get("task");
+ if(!id||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return;
+ const t=state.tasks.find(x=>x.id.toLowerCase()===id.toLowerCase());
+ if(!t){toast("Görev bulunamadı veya erişim yetkiniz yok.");return}
+ resetTaskFilters();state.search=t.title;state.view="tasks";render();
+ if(["owner","manager"].includes(state.role)||t.assigned_to===state.user?.id||t.created_by===state.user?.id)openModal("task",t);
+}
 function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,members:membersView})[state.view]();bindView()}
 const dashboardTaskFilters=[["all","Tüm görevler"],["active","Devam edenler"],["completed","Tamamlananlar"],["overdue","Gecikenler"],["critical","Kritik görevler"]];
 function matchesTaskQuickFilter(task,filter=state.quickFilter){
@@ -178,7 +204,7 @@ function tasksView(){const can=state.role!=="viewer";
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
   '<section class="panel tablewrap" style="padding:7px"><table><thead><tr><th>Görev</th><th>İş Grubu</th><th>Sorumlu</th><th>Öncelik</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th><th></th></tr></thead><tbody id="taskBody"></tbody></table></section>';
 }
-function renderTaskRows(){const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
+function renderTaskRows(){const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button> <button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
 function goalsView(){
  const range=performanceWindow(),today=iso(new Date());
  const tasks=state.tasks.filter(t=>t.status!=="iptal"&&
@@ -528,10 +554,12 @@ function membersView(){
 const active=state.members.map(m=>{
  const profile=state.profiles.find(p=>p.id===m.user_id)||{};
  const email=state.teamEmails[m.user_id]?.email||(m.user_id===state.user?.id?state.user?.email:"");
+ const phone=profile.whatsapp_phone||"";
  return '<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
  '<div style="flex:1;min-width:0"><strong>'+esc(memberName(m.user_id))+'</strong>'+
  '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+' · '+(m.is_active?"Aktif":"Pasif")+'</div>'+
  (state.role==="owner"&&email?'<div class="small muted">'+esc(email)+'</div>':"")+
+ (phone?'<div class="small muted">WhatsApp: '+esc(phone)+'</div>':'<div class="small muted">WhatsApp telefonu eklenmedi</div>')+
  '</div><span class="tag">'+esc(labels[m.role]||m.role)+'</span>'+
  (state.role==="owner"?'<div class="actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
  (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+'</div>';
@@ -625,7 +653,9 @@ document.querySelectorAll("[data-notify-setting]").forEach(c=>c.addEventListener
 $("#sendNotificationBatch")?.addEventListener("click",sendNotificationBatch);
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
 $("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
-$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));
+$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});
+document.querySelectorAll("[data-wa-task]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();shareTaskWhatsApp(b.dataset.waTask)}));
+document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));
  document.querySelectorAll("[data-goal-actual]").forEach(b=>b.onclick=()=>openModal("goalActual",state.goals.find(g=>g.id===b.dataset.goalActual)));
  [["data-goal-submit","pending"],["data-goal-approve","approved"],["data-goal-return","draft"],["data-goal-reopen","draft"]].forEach(([attr,next])=>
   document.querySelectorAll("["+attr+"]").forEach(b=>b.onclick=()=>changeGoalApproval(b.getAttribute(attr),next,b)));$("#quickFilter")?.addEventListener("change",e=>{state.quickFilter=e.target.value;render()});
@@ -695,7 +725,8 @@ if(kind==="memberEdit"){
  '<div class="span2">'+field("position_title","Pozisyon / unvan",p.position_title||"","text","maxlength=120")+'</div>'+
  '<div class="span2">'+field("email","Giriş e-posta adresi *",email,"email","required")+'</div>'+
  sel("role","Sistem yetkisi",roleOptions,item.role)+
- '<p class="span2 small muted">E-posta değişince kullanıcı yeni adresle giriş yapar. Admin yetkisi bu ekrandan devredilemez.</p>';
+ '<div class="span2">'+field("whatsapp_phone","WhatsApp telefonu",p.whatsapp_phone||"","tel",'placeholder="05xx xxx xx xx" autocomplete="off"')+'</div>'+
+ '<p class="span2 small muted">Telefon numarası 05xx, 5xx veya +90 biçiminde yazılabilir; boş bırakılabilir. E-posta değişince kullanıcı yeni adresle giriş yapar. Admin yetkisi bu ekrandan devredilemez.</p>';
 }
 if(kind==="memberPassword"){
  f.innerHTML='<p class="span2 small muted">Kullanıcı: '+esc(memberName(item.user_id))+
@@ -733,7 +764,7 @@ const session=await requireActiveSession();
 if(modalKind==="memberEdit"||modalKind==="memberPassword"){
  if(state.role!=="owner"||!editing?.user_id)throw Error("Bu işlem yalnızca Admin tarafından yapılabilir.");
  const body=modalKind==="memberEdit"?
-  {action:"update_member",user_id:editing.user_id,full_name:data.full_name,position_title:data.position_title,email:data.email,role:data.role}:
+  {action:"update_member",user_id:editing.user_id,full_name:data.full_name,position_title:data.position_title,email:data.email,role:data.role,whatsapp_phone:data.whatsapp_phone}:
   {action:"set_password",user_id:editing.user_id,password:data.password};
  if(modalKind==="memberPassword"){
   if(data.password!==data.confirm_password)throw Error("Şifreler eşleşmiyor.");
