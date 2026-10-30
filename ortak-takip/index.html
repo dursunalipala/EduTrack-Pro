@@ -61,7 +61,7 @@ body *{visibility:hidden!important}
 .ai-chat-form textarea{flex:1;min-width:0;min-height:48px;max-height:120px;resize:vertical;border-radius:12px;padding:12px 13px;font-size:14px;line-height:1.4}
 .ai-send{min-width:90px;min-height:48px}
 .ai-hint{font-size:11px;color:#647b8c;margin:8px 3px 0;line-height:1.5}
-.ai-quick{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.ai-quick{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .ai-quick button{border:1px solid #c8dce6;background:#f3f9fc;border-radius:100px;padding:8px 12px;font-size:12px;color:#235370;font-weight:650;max-width:100%;text-align:left}
 .ai-quick button:hover{background:#e6f4f8}
 @media(max-width:780px){.ai-chat-history{height:min(56vh,480px);min-height:280px;padding:12px 10px}.ai-msg{max-width:94%;font-size:13px;padding:11px 12px}.ai-chat-composer{padding:10px}.ai-send{min-width:68px;padding:9px}.ai-hero{margin-bottom:12px}}
@@ -287,25 +287,18 @@ function renderAIMessage(message){
 function aiView(){
  const messages=state.aiMessages.length?state.aiMessages.map(renderAIMessage).join(""):
   '<div class="ai-msg ai-msg-assistant"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Merhaba! Görevler, geciken işler, performans hedefleri ve iş havuzu hakkında soru sorabilirsiniz.\n\nÖrneğin: “Bu hafta hangi işlere öncelik vermeliyiz?”</div>';
- return '<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet</h2>'+
-  '<p>Ortak Takip verilerine dayalı yönetim sohbeti. Sorunuzu doğal dille yazın; öğrenci veya kişisel bilgiler gerektirmeyen güvenli özetler üzerinden yanıt alın.</p></section>'+
-  '<div class="ai-quick">'+aiQuestions.map(q=>'<button type="button" data-ai-question="'+esc(q)+'" '+(state.aiLoading?"disabled":"")+'>'+esc(q)+'</button>').join("")+'</div>'+
+ return '<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
+  '<p>Görevler, hedefler ve iş havuzu hakkında sorunuzu yazın; yönetim verilerine dayalı yanıt alın.</p></section>'+
   '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div><strong>✦ Yönetim Asistanı</strong><div><span>Kurumsal verilerden danışmanlık · Salt okunur</span></div></div>'+
   '<button type="button" class="btn sm" id="aiClearChat" '+(!state.aiMessages.length||state.aiLoading?"disabled":"")+'>Sohbeti Temizle</button></div>'+
   '<div class="ai-chat-history" id="aiChatHistory" role="log" aria-live="polite" aria-relevant="additions">'+messages+
   (state.aiLoading?'<div class="ai-msg ai-msg-assistant ai-msg-waiting"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Yanıt hazırlanıyor…</div>':"")+'</div>'+
-  '<div class="ai-chat-composer"><form id="aiChatForm" class="ai-chat-form">'+
+  '<div class="ai-chat-composer">'+
+  '<div class="ai-quick" aria-label="Örnek sorular">'+aiQuestions.map(q=>'<button type="button" data-ai-question="'+esc(q)+'" '+(state.aiLoading?"disabled":"")+'>'+esc(q)+'</button>').join("")+'</div>'+
+  '<form id="aiChatForm" class="ai-chat-form">'+
   '<textarea id="aiChatInput" name="message" maxlength="350" rows="2" aria-label="Yapay zekâya soru yazın" placeholder="Ortak Takip hakkında bir soru sorun…" '+(state.aiLoading?"disabled":"")+' required></textarea>'+
   '<button type="submit" class="btn primary ai-send" '+(state.aiLoading?"disabled":"")+'>Gönder ➤</button></form>'+
-  '<p class="ai-hint">Enter: gönder · Shift+Enter: alt satır. Mesajlar yalnızca bu açık sayfada tutulur; yenileyince silinir. Cloudflare’e özgün mesajınız değil, yalnızca konusu ve anonim sayısal özetler gönderilir.</p></div></section>'+
-  '<div class="titlebar"><h2>Hazır Yönetim Analizleri</h2></div>'+
-  '<div class="ai-actions">'+aiOptions.map(([key,title,desc])=>
-    '<button type="button" class="ai-action" data-ai-run="'+key+'" '+(state.aiLoading?"disabled":"")+'>'+
-    '<strong>'+esc(title)+'</strong><span>'+esc(desc)+'</span></button>').join("")+'</div>'+
-  '<section class="panel"><h2>Ücretsiz Kullanım ve Gizlilik</h2>'+
-   '<p class="small">Cloudflare ücretsiz kotası ve ek günlük uygulama sınırı kullanılır. Kota dolarsa asistan ücretli işlem yapmaz; ücretsiz yerel yönetim analizi gösterir.</p>'+
-   '<p class="small">Sohbet yalnızca görev durumları, iş grupları, hedef sayıları ve iş havuzu istatistikleri hakkında yanıt verir; genel internet araması yapmaz. Kişi, öğrenci veya mali tutar bilgisi dış hizmete gönderilmez.</p>'+
-   '<p class="small muted">Asistan hiçbir görev, kullanıcı veya hedef kaydını otomatik eklemez, silmez veya değiştirmez.</p></section>';
+  '<p class="ai-hint">Enter: gönder · Shift+Enter: alt satır. Öğrenci veya kişisel bilgi yazmayın. Yalnızca anonim sayısal özetler yapay zekâya aktarılır; ücretsiz kota dolunca yerel analiz kullanılır. Hiçbir kayıt değiştirilmez.</p></div></section>';
 }
 function scrollAIChat(){
  const e=$("#aiChatHistory");
