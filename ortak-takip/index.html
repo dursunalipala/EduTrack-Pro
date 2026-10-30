@@ -35,7 +35,7 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"month",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -52,6 +52,7 @@ const numberTR=x=>Number(x||0).toLocaleString("tr-TR",{maximumFractionDigits:2})
 function performanceWindow(period=state.performancePeriod){
  const n=new Date(), y=n.getFullYear(),m=n.getMonth();
  if(period==="all")return {start:null,end:null,label:"Tüm dönemler"};
+ if(period==="2026-11")return {start:"2026-11-01",end:"2026-11-30",label:"Kasım 2026"};
  if(period==="year")return {start:iso(new Date(y,0,1)),end:iso(new Date(y,11,31)),label:y+" yılı"};
  if(period==="week"){const d=(n.getDay()+6)%7,mon=new Date(y,m,n.getDate()-d);return {start:iso(mon),end:iso(new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6)),label:"Bu hafta"};}
  return {start:iso(new Date(y,m,1)),end:iso(new Date(y,m+1,0)),label:"Bu ay"};
@@ -145,26 +146,39 @@ function goalsView(){
  const dated=tasks.filter(t=>!!t.due_date).length;
  const onTimeBase=completed.filter(t=>t.due_date&&t.completed_at);
  const onTime=onTimeBase.filter(t=>iso(new Date(t.completed_at))<=t.due_date).length;
- const goalDone=goals.filter(g=>Number(g.target_value)>0&&Number(g.actual_value)>=Number(g.target_value)).length;
+ const approvedGoals=goals.filter(g=>(g.approval_status||"approved")==="approved"),
+ draftGoals=goals.filter(g=>g.approval_status==="draft").length,
+ pendingGoals=goals.filter(g=>g.approval_status==="pending").length;
+ const goalDone=approvedGoals.filter(g=>g.target_value!==null&&Number(g.target_value)>0&&g.actual_value!==null&&Number(g.actual_value)>=Number(g.target_value)).length;
  const completionPct=tasks.length?Math.round(100*completed.length/tasks.length):null;
  const filters='<div class="filters">'+
- '<select id="performancePeriod" aria-label="Hedef dönemi">'+options([["week","Bu hafta"],["month","Bu ay"],["year","Bu yıl"],["all","Tüm dönemler"]],state.performancePeriod)+'</select>'+
+ '<select id="performancePeriod" aria-label="Hedef dönemi">'+options([["2026-11","Kasım 2026"],["week","Bu hafta"],["month","Bu ay"],["year","Bu yıl"],["all","Tüm dönemler"]],state.performancePeriod)+'</select>'+
  '<select id="performanceSchool" aria-label="Kurum">'+options(schools,state.performanceSchool)+'</select>'+
  '<select id="performanceStream" aria-label="İş grubu">'+options([["all","Tüm iş grupları"],...state.streams.map(x=>[x.id,x.name])],state.performanceStream)+'</select>'+
  '<select id="performancePerson" aria-label="Sorumlu">'+options([["all","Tüm sorumlular"],...state.members.filter(x=>x.is_active).map(x=>[x.user_id,memberName(x.user_id)])],state.performancePerson)+'</select>'+
  '</div>';
  function targetCard(g){
-  const target=Number(g.target_value),actual=Number(g.actual_value),pct=target>0?Math.round(100*actual/target):null;
-  const scope=g.goal_level==="kurumsal"?"Kurum genelinde":g.goal_level==="bireysel"?memberName(g.owner_id):streamName(g.workstream_id);
-  const dates=g.period_start&&g.period_end?date(g.period_start)+" – "+date(g.period_end):"Dönem belirtilmedi";
-  return '<article class="goal"><div class="row"><span class="small muted">'+esc(schoolName(g.school_unit))+' · '+esc(perLabel(g.period_type))+'</span>'+
-  (canManage()?'<button class="btn sm" data-edit-goal="'+esc(g.id)+'">Düzenle</button>':"")+'</div>'+
-  '<h3>'+esc(g.title)+'</h3><p class="small muted">'+esc(scope)+' · '+esc(goalCategories.find(x=>x[0]===g.metric_category)?.[1]||"Operasyon")+'</p>'+
-  '<div class="val">'+numberTR(actual)+' <span class="muted small">/ '+numberTR(target)+' '+esc(g.unit)+'</span></div>'+
-  '<div class="bar" style="margin:12px 0 8px"><i style="width:'+(pct===null?0:Math.min(100,pct))+'%"></i></div>'+
-  '<div class="small muted">'+(pct===null?"Hedef değeri girilmeli":"%"+pct+" gerçekleşme")+' · '+esc(dates)+'</div></article>';
- }
- const sections=goalLevels.map(([key,label])=>{
+ const status=g.approval_status||"approved",target=g.target_value===null?null:Number(g.target_value),actual=g.actual_value===null?null:Number(g.actual_value);
+ const pct=status==="approved"&&target>0&&actual!==null?Math.round(100*actual/target):null;
+ const name={draft:"Taslak",pending:"Onay Bekliyor",approved:"Onaylandı"}[status]||"Taslak";
+ const scope=g.goal_level==="kurumsal"?"Kurum genelinde":g.goal_level==="bireysel"?memberName(g.owner_id):streamName(g.workstream_id);
+ const dates=g.period_start&&g.period_end?date(g.period_start)+" – "+date(g.period_end):"Dönem belirtilmedi";
+ const controls=canManage()?(
+  (status==="draft"?'<button class="btn sm" data-edit-goal="'+esc(g.id)+'">Düzenle</button>':"")+
+  (status==="draft"&&target>0?'<button class="btn sm primary" data-goal-submit="'+esc(g.id)+'">Onaya Gönder</button>':"")+
+  (status==="pending"&&state.role==="owner"?'<button class="btn sm primary" data-goal-approve="'+esc(g.id)+'">Onayla</button><button class="btn sm" data-goal-return="'+esc(g.id)+'">Revizeye İade</button>':"")+
+  (status==="approved"?'<button class="btn sm" data-goal-actual="'+esc(g.id)+'">Gerçekleşeni Güncelle</button>':"")+
+  (status==="approved"&&state.role==="owner"?'<button class="btn sm" data-goal-reopen="'+esc(g.id)+'">Taslağa Al</button>':"")
+ ):"";
+ return '<article class="goal"><div class="row"><span class="small muted">'+esc(schoolName(g.school_unit))+' · '+esc(perLabel(g.period_type))+'</span><span class="tag">'+esc(name)+'</span></div>'+
+ '<h3>'+esc(g.title)+'</h3><p class="small muted">'+esc(scope)+' · Sorumlu: '+esc(memberName(g.owner_id))+'</p>'+
+ (g.measurement_definition?'<p class="small muted" style="white-space:normal">'+esc(g.measurement_definition)+'</p>':"")+
+ '<div class="val">'+(actual===null?"—":numberTR(actual))+' <span class="muted small">/ '+(target===null?"Hedef rakamı belirlenmedi":numberTR(target))+' '+esc(g.unit)+'</span></div>'+
+ '<div class="bar" style="margin:12px 0 8px"><i style="width:'+(pct===null?0:Math.min(100,Math.max(0,pct)))+'%"></i></div>'+
+ '<div class="small muted">'+(status!=="approved"?"Onaylanmadan performansa dahil edilmez":pct===null?"Gerçekleşme girilmedi":"%"+pct+" gerçekleşme")+' · '+esc(dates)+'</div>'+
+ (controls?'<div class="actions" style="margin-top:12px">'+controls+'</div>':"")+'</article>';
+}
+const sections=goalLevels.map(([key,label])=>{
   const found=goals.filter(g=>(g.goal_level||"bolum")===key);
   return '<section style="margin:22px 0"><div class="titlebar"><h2>'+esc(label)+' Hedefler ('+found.length+')</h2></div>'+
    (found.length?'<div class="gridcards">'+found.map(targetCard).join("")+'</div>':
@@ -192,8 +206,10 @@ function goalsView(){
  '<p class="small muted">Haftalık, aylık ve yıllık hedefler; kayıt, tanıtım, eğitim, mali işler ve görev başarısı ayrı ayrı izlenir.</p>'+
  filters+'<div class="small muted" style="margin-bottom:15px">Seçili dönem: '+esc(range.label)+(range.start?' ('+date(range.start)+' – '+date(range.end)+')':"")+'</div>'+
  '<div class="kpi">'+
- stat("Tanımlı hedef",goals.length,"Seçilen kapsam")+
- stat("Ulaşılan hedef",goalDone,"Sayıya dayalı hedef")+
+ stat("Taslak hedef",draftGoals,"Henüz onaylanmadı")+
+ stat("Onay bekleyen",pendingGoals,"Admin onayı gerekli")+
+ stat("Onaylanan",approvedGoals.length,goalDone+" hedef gerçekleşti")+
+
  stat("Görev tamamlanma",completionPct===null?"—":"%"+completionPct,completed.length+"/"+tasks.length+" görev")+
  stat("Geciken görev",overdue,"Bitiş tarihi geçmiş")+
  stat("Tarihli görev",dated+"/"+tasks.length,"Son tarihi belirlenmiş")+
@@ -518,6 +534,24 @@ const dayPanel=day?'<section class="panel calendar-detail" id="calendarDayDetail
   '<section class="panel" style="padding:12px"><div class="calgrid">'+head+grid+'</div></section><div class="small muted">Güne dokunun: görevler ve etkinlikler açılır. Turkuaz: görev · Mor: etkinlik.</div>'+dayPanel+unscheduledPanel;
 }
 
+async function changeGoalApproval(id,status,btn){
+ const g=state.goals.find(x=>x.id===id);if(!g||!canManage())return;
+ const current=g.approval_status||"approved";
+ const allowed=(current==="draft"&&status==="pending"&&g.target_value!==null&&Number(g.target_value)>0)||
+ (current==="pending"&&state.role==="owner"&&["approved","draft"].includes(status))||
+ (current==="approved"&&state.role==="owner"&&status==="draft");
+ if(!allowed){toast("Bu durum değişikliği için yetkiniz yok veya hedef rakamı eksik.");return}
+ const msg=status==="pending"?"Hedef Admin onayına gönderilsin mi?":status==="approved"?"Hedefi onaylıyor musunuz?":"Hedef yeniden taslağa alınsın mı?";
+ if(!window.confirm(msg))return;btn.disabled=true;
+ try{
+  await requireActiveSession();
+  const {data,error:e}=await sb.from("goals").update({approval_status:status,updated_at:new Date().toISOString()})
+   .eq("id",id).eq("workspace_id",WS).eq("approval_status",current).select("id").single();
+  if(e||!data)throw Error(e?.message||"Hedef durumu güncellenemedi");
+  toast(status==="approved"?"Hedef onaylandı.":status==="pending"?"Admin onayına gönderildi.":"Taslağa alındı.");
+  await refresh();
+ }catch(e){error(e)}finally{btn.disabled=false}
+}
 function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});$("#newTask")?.addEventListener("click",()=>openModal("task"));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));
 [["performancePeriod","performancePeriod"],["performanceSchool","performanceSchool"],["performanceStream","performanceStream"],["performancePerson","performancePerson"]].forEach(([id,prop])=>{
  $("#"+id)?.addEventListener("change",e=>{state[prop]=e.target.value;render()});
@@ -539,7 +573,10 @@ document.querySelectorAll("[data-notify-setting]").forEach(c=>c.addEventListener
 $("#sendNotificationBatch")?.addEventListener("click",sendNotificationBatch);
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
 $("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
-$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));$("#taskSearch")?.addEventListener("input",e=>{state.search=e.target.value;renderTaskRows()});$("#statusFilter")?.addEventListener("change",e=>{state.status=e.target.value;renderTaskRows()});$("#streamFilter")?.addEventListener("change",e=>{state.stream=e.target.value;renderTaskRows()});renderTaskRows();
+$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{const b=e.target.closest("[data-edit-task]");if(!b)return;const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task)});document.querySelectorAll("[data-edit-goal]").forEach(b=>b.onclick=()=>openModal("goal",state.goals.find(g=>g.id===b.dataset.editGoal)));
+ document.querySelectorAll("[data-goal-actual]").forEach(b=>b.onclick=()=>openModal("goalActual",state.goals.find(g=>g.id===b.dataset.goalActual)));
+ [["data-goal-submit","pending"],["data-goal-approve","approved"],["data-goal-return","draft"],["data-goal-reopen","draft"]].forEach(([attr,next])=>
+  document.querySelectorAll("["+attr+"]").forEach(b=>b.onclick=()=>changeGoalApproval(b.getAttribute(attr),next,b)));$("#taskSearch")?.addEventListener("input",e=>{state.search=e.target.value;renderTaskRows()});$("#statusFilter")?.addEventListener("change",e=>{state.status=e.target.value;renderTaskRows()});$("#streamFilter")?.addEventListener("change",e=>{state.stream=e.target.value;renderTaskRows()});renderTaskRows();
 const selectCalendarDay=(key)=>{state.calendarDay=key;const y=Number(key.slice(0,4)),m=Number(key.slice(5,7))-1;if(state.month.getMonth()!==m||state.month.getFullYear()!==y)state.month=new Date(y,m,1);render();requestAnimationFrame(()=>$("#calendarDayDetail")?.scrollIntoView({behavior:"smooth",block:"nearest"}))};
 document.querySelectorAll("[data-calendar-day]").forEach(cell=>{
  cell.addEventListener("click",e=>{if(e.target.closest("[data-calendar-task]"))return;selectCalendarDay(cell.dataset.calendarDay)});
@@ -560,23 +597,30 @@ const toDatetimeLocal=v=>{if(!v)return "";const d=new Date(v);return iso(d)+"T"+
 const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(val??"")+'" '+extra+'></label>';
 const multiPeopleField=(name,selected=[],exclude=null)=>'<div class="span2 multi-people"><strong>Ortak Sorumlular</strong><div class="multi-person-grid">'+state.members.filter(m=>m.is_active&&m.user_id!==exclude).map(m=>'<label><input type="checkbox" name="'+name+'" value="'+esc(m.user_id)+'"'+(selected.includes(m.user_id)?' checked':'')+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><div class="small muted">İlgili kişiler işaretlenerek ortak görev tanımlanabilir.</div></div>';
 const sel=(name,label,opts,val)=>'<label>'+label+'<select name="'+name+'">'+options(opts,val)+'</select></label>';
-function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Hedefi Düzenle":"Yeni Hedef",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle"})[kind];
+function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Taslak Hedefi Düzenle":"Yeni Taslak Hedef",goalActual:"Gerçekleşeni Güncelle",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle"})[kind];
 if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+(item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
 if(kind==="stream")f.innerHTML='<div class="span2">'+field("name","Bölüm adı *",item?.name||"","text","required minlength=3 maxlength=180")+'</div><label class="span2">Kapsam ve sorumluluklar<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("lead_user_id","Bölüm Yöneticisi",people,item?.lead_user_id)+multiPeopleField("shared_users",item?.collaborator_user_ids||[],item?.lead_user_id);
+if(kind==="goalActual"){
+ if(!item||item.approval_status!=="approved")return;
+ f.innerHTML='<div class="span2"><strong>'+esc(item.title)+'</strong></div>'+
+ field("actual_value","Gerçekleşen değer",item.actual_value??"","number","min=0 step=any")+
+ '<p class="span2 small muted">Onaylı hedefte sadece gerçekleşen değer güncellenebilir.</p>';
+}
 if(kind==="goal"){
- const win=performanceWindow(state.performancePeriod==="all"?"month":state.performancePeriod);
+ const win=performanceWindow(["all","2026-11"].includes(state.performancePeriod)?"month":state.performancePeriod);
  f.innerHTML='<div class="span2">'+field("title","Hedef adı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div>'+
  sel("goal_level","Hedef seviyesi",goalLevels,item?.goal_level||"bolum")+
  sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||(state.performanceSchool!=="all"?state.performanceSchool:"ortak"))+
  sel("metric_category","Performans alanı",goalCategories,item?.metric_category||"operasyon")+
- sel("period_type","Dönem sıklığı",periodTypes,item?.period_type||(state.performancePeriod==="all"?"month":state.performancePeriod))+
+ sel("period_type","Dönem sıklığı",periodTypes,item?.period_type||(["all","2026-11"].includes(state.performancePeriod)?"month":state.performancePeriod))+
  sel("workstream_id","İş Grubu",streams,item?.workstream_id||(state.performanceStream!=="all"?state.performanceStream:""))+
  sel("owner_id","Sorumlu",people,item?.owner_id||(state.performancePerson!=="all"?state.performancePerson:""))+
- field("target_value","Hedef değer *",item?.target_value??0,"number","required min=0 step=any")+
- field("actual_value","Gerçekleşen değer *",item?.actual_value??0,"number","required min=0 step=any")+
+ field("target_value","Hedef değer (taslakta boş kalabilir)",item?.target_value??"","number","min=0 step=any")+
+ field("actual_value","Gerçekleşen değer (taslakta boş kalabilir)",item?.actual_value??"","number","min=0 step=any")+
  field("unit","Birim (adet, öğrenci, TL vb.) *",item?.unit||"adet","text","required maxlength=30")+
  field("period_start","Dönem başlangıcı *",item?.period_start||win.start||"","date","required")+
  field("period_end","Dönem bitişi *",item?.period_end||win.end||"","date","required")+
+ '<label class="span2">Ölçüm yöntemi<textarea name="measurement_definition" rows="3">'+esc(item?.measurement_definition||"")+'</textarea></label>'+
  '<p class="span2 small muted">Kurumsal hedef tüm işletmeye; bölüm hedefi ilgili iş grubuna; bireysel hedef seçilen sorumluya aittir. Hedef ve gerçekleşen değerler birbirinden bağımsız olarak kaydedilir.</p>';
 }
 
@@ -646,20 +690,31 @@ if(modalKind==="memberEdit"||modalKind==="memberPassword"){
  closeModal();toast(answer.message||"Bilgiler güncellendi.");await refresh();
  return;
 }
+if(modalKind==="goalActual"){
+ if(!editing||editing.approval_status!=="approved")throw Error("Onaylı hedef bulunamadı.");
+ const v=data.actual_value===""?null:Number(data.actual_value);
+ if(v!==null&&(!Number.isFinite(v)||v<0))throw Error("Gerçekleşen değer geçersiz.");
+ const {data:updated,error:e}=await sb.from("goals").update({actual_value:v,updated_at:new Date().toISOString()})
+  .eq("id",editing.id).eq("workspace_id",WS).eq("approval_status","approved").select("id").single();
+ if(e||!updated)throw Error(e?.message||"Güncelleme başarısız.");
+ closeModal();toast("Gerçekleşen değer kaydedildi.");await refresh();return;
+}
 if(modalKind==="member"){const r=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-panel?api=invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({workspace_id:WS,email:data.email.trim(),full_name:data.full_name.trim(),role:data.role})});const d=await r.json();if(!r.ok)throw Error(d.error||"Davet gönderilemedi");toast("Davet gönderildi")}
 else if(modalKind==="stream"){if(!canManage()||!editing)throw Error("Bu işlem için yönetici yetkisi gereklidir.");const payload={name:data.name.trim(),description:data.description||"",lead_user_id:data.lead_user_id||null,collaborator_user_ids:shared.filter(x=>x!==data.lead_user_id)};const r=await sb.from("workstreams").update(payload).eq("id",editing.id).eq("workspace_id",WS);if(r.error)throw r.error;toast("Bölüm bilgileri güncellendi")}
 else{const table=modalKind==="task"?"tasks":modalKind==="goal"?"goals":"calendar_events";const payload={...data,workspace_id:WS};for(const k of ["workstream_id","assigned_to","owner_id","start_date","due_date","period_start","period_end"])if(k in payload&&!payload[k])payload[k]=null;
 if(modalKind==="task"){payload.collaborator_user_ids=canManage()?shared:(editing?.collaborator_user_ids||[]);if(editing&&editing.assigned_to!==payload.assigned_to&&canManage()){payload.last_delegated_at=new Date().toISOString();payload.last_delegated_by=state.user.id}payload.progress=Number(payload.progress);if(payload.status==="tamamlandi"){payload.progress=100;payload.completed_at=new Date().toISOString()}else if(editing?.status==="tamamlandi")payload.completed_at=null}
 if(modalKind==="goal"){
- payload.target_value=Number(payload.target_value);payload.actual_value=Number(payload.actual_value);
- if(!Number.isFinite(payload.target_value)||!Number.isFinite(payload.actual_value)||payload.target_value<0||payload.actual_value<0)
+ if(editing?.approval_status&&editing.approval_status!=="draft")throw Error("Yalnızca taslak hedef düzenlenebilir.");
+ payload.target_value=payload.target_value===""?null:Number(payload.target_value);
+ payload.actual_value=payload.actual_value===""?null:Number(payload.actual_value);
+ if((payload.target_value!==null&&(!Number.isFinite(payload.target_value)||payload.target_value<0))||
+    (payload.actual_value!==null&&(!Number.isFinite(payload.actual_value)||payload.actual_value<0)))
   throw Error("Hedef ve gerçekleşen değerler sıfırdan küçük olamaz.");
  if(!payload.period_start||!payload.period_end||payload.period_end<payload.period_start)
   throw Error("Geçerli bir başlangıç ve bitiş dönemi seçin.");
  if(payload.goal_level==="bolum"&&!payload.workstream_id)throw Error("Bölüm hedefi için iş grubu seçin.");
  if(payload.goal_level==="bireysel"&&!payload.owner_id)throw Error("Bireysel hedef için sorumlu seçin.");
  if(payload.goal_level==="kurumsal"){payload.workstream_id=null;payload.owner_id=null;}
- if(payload.goal_level==="bolum")payload.owner_id=null;
  payload.title=String(payload.title||"").trim();payload.unit=String(payload.unit||"").trim();
  if(payload.title.length<3||!payload.unit)throw Error("Hedef adı ve birim zorunludur.");
 }
