@@ -30,10 +30,22 @@ body *{visibility:hidden!important}
 #printReport th{background:#e7eff9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 #printReport thead{display:table-header-group}
 #printReport tr{break-inside:avoid}
-} .calendar-day{cursor:pointer;transition:background .15s,border-color .15s}.calendar-day:hover,.calendar-day:focus-visible{background:#eef8f9;outline:2px solid #179aa2;outline-offset:1px}.day.selected-day{border:2px solid #155b7b;background:#e8f6f7}.calendar-count{font-size:10px;padding:2px 5px;border-radius:20px;background:#d5f2f1;color:#17647c}.calendar-detail{margin-top:14px}.calendar-task{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #e8edf3;padding:13px 0}.calendar-task:last-child{border:0}@media(max-width:780px){.calendar-task{flex-wrap:wrap}.calendar-task .btn{width:100%}} .password-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.password-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;border:1px solid #dae4ed;border-radius:12px;padding:16px;min-width:0}.password-form h3{margin:0;font-size:16px}.password-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.password-form label.password-toggle{flex-direction:row;align-items:center}.password-form .password-toggle input{width:auto;margin:0}.password-form p[role=status]{min-height:18px;margin:4px 0;color:#245675}.password-form input{width:100%}@media(max-width:780px){.password-admin-grid{grid-template-columns:1fr}} .notify-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:10px 0}.notify-settings label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px}.notify-settings input{width:auto;flex:none}@media(max-width:780px){.notify-settings{grid-template-columns:1fr}} </style></head>
+} .calendar-day{cursor:pointer;transition:background .15s,border-color .15s}.calendar-day:hover,.calendar-day:focus-visible{background:#eef8f9;outline:2px solid #179aa2;outline-offset:1px}.day.selected-day{border:2px solid #155b7b;background:#e8f6f7}.calendar-count{font-size:10px;padding:2px 5px;border-radius:20px;background:#d5f2f1;color:#17647c}.calendar-detail{margin-top:14px}.calendar-task{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #e8edf3;padding:13px 0}.calendar-task:last-child{border:0}@media(max-width:780px){.calendar-task{flex-wrap:wrap}.calendar-task .btn{width:100%}} .password-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.password-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;border:1px solid #dae4ed;border-radius:12px;padding:16px;min-width:0}.password-form h3{margin:0;font-size:16px}.password-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.password-form label.password-toggle{flex-direction:row;align-items:center}.password-form .password-toggle input{width:auto;margin:0}.password-form p[role=status]{min-height:18px;margin:4px 0;color:#245675}.password-form input{width:100%}@media(max-width:780px){.password-admin-grid{grid-template-columns:1fr}} .notify-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:10px 0}.notify-settings label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px}.notify-settings input{width:auto;flex:none}@media(max-width:780px){.notify-settings{grid-template-columns:1fr}} .ai-hero{background:linear-gradient(125deg,#142c49,#165a74);border-radius:16px;color:#fff;padding:25px 26px;margin-bottom:18px}
+.ai-hero h2{color:#fff;margin:0 0 8px;font-size:21px}
+.ai-hero p{color:#e1eff7;margin:0;line-height:1.6;font-size:13px}
+.ai-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.ai-action{border:1px solid #d6e6f0;border-radius:14px;background:#fff;color:#184261;text-align:left;padding:18px;min-height:115px;cursor:pointer;font:inherit;box-shadow:0 4px 14px #142c4908}
+.ai-action:hover,.ai-action:focus-visible{outline:2px solid #2ca4b3;outline-offset:1px}
+.ai-action strong{display:block;font-size:15px;margin-bottom:8px}.ai-action span{font-size:12px;line-height:1.5;color:#648199}
+.ai-action:disabled{opacity:.55;cursor:wait}
+.ai-answer{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-source{font-size:12px;font-weight:700;color:#0d7772;margin-bottom:12px}
+.ai-note{background:#f1f7fb;border-left:4px solid #23a5ab;padding:12px 15px;border-radius:8px;margin:14px 0;color:#33516b;font-size:13px}
+@media(max-width:800px){.ai-actions{grid-template-columns:1fr}.ai-action{min-height:0}.ai-hero{padding:20px}}
+</style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
-<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
+<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="ai"><span class="ic">✦</span> Yapay Zekâ Asistanı</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
@@ -41,7 +53,7 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -156,7 +168,57 @@ function openTaskFromSharedLink(){
  resetTaskFilters();state.search=t.title;state.view="tasks";render();
  if(["owner","manager"].includes(state.role)||t.assigned_to===state.user?.id||t.created_by===state.user?.id)openModal("task",t);
 }
-function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],catalog:["İş ve Görev Havuzu","İş tanımları, tekrar kuralları ve görev oluşturma"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,catalog:catalogView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,members:membersView})[state.view]();bindView()}
+
+const aiOptions=[
+ ["agenda","Günlük Yönetim Ajandası","Açık, geciken ve kritik işleri günlük önceliklere dönüştürür."],
+ ["suggestions","Görev Önerileri","Dört iş grubuna göre görev yoğunluğu ve havuz kullanımını değerlendirir."],
+ ["report","Yönetim Raporu","İş grubu sonuçlarını ve hedef sayılarını toplantı özeti hâline getirir."]
+];
+function aiView(){
+ const result=state.aiResult;
+ return '<section class="ai-hero"><h2>✦ Ortak Takip Yönetim Asistanı</h2>'+
+  '<p>Görev Takibi, İş ve Görev Havuzu ve Performans ve Hedefler alanlarındaki sayısal durumları analiz eder. Öğrenci veya personel kimlik bilgileri dış hizmete aktarılmaz; hiçbir kayıt otomatik değiştirilmez.</p></section>'+
+  '<div class="ai-actions">'+aiOptions.map(([key,title,desc])=>
+    '<button type="button" class="ai-action" data-ai-run="'+key+'" '+(state.aiLoading?"disabled":"")+'>'+
+    '<strong>'+esc(title)+'</strong><span>'+esc(desc)+'</span></button>').join("")+'</div>'+
+  '<section class="panel"><div class="titlebar"><h2>Analiz Sonucu</h2>'+
+   (result?'<button type="button" class="btn sm" id="copyAIResult">Metni Kopyala</button>':"")+'</div>'+
+  (state.aiLoading?'<p class="muted">Yönetim verileri güvenli biçimde özetleniyor...</p>':
+    result?
+      '<div class="ai-source">'+(result.source==="cloudflare"?"Cloudflare Workers AI · Ücretsiz kullanım":"Ücretsiz Yerel Analiz · Yapay zekâ bağlantısı gerekmez")+'</div>'+
+      '<div class="ai-answer">'+esc(result.text||"")+'</div>'+
+      '<div class="ai-note">'+esc(result.notice||"Sonuçlar bilgilendirme amaçlıdır.")+'</div>'+
+      '<p class="small muted">Kaynak: '+esc(result.stats?.tasks??0)+' görev, '+esc(result.stats?.goalTotal??0)+
+       ' hedef, '+esc(result.stats?.catalogTotal??0)+' havuz işi. Bu işlem kayıtları değiştirmez.</p>':
+      '<p class="muted small">Yukarıdaki üç analizden birini seçin. Cloudflare bağlantısı henüz yapılandırılmamışsa sistem ücretsiz, sayısal/kural tabanlı bir değerlendirme sunar.</p>')+
+  '</section>'+
+  '<section class="panel"><h2>Ücretsiz Kullanım ve Gizlilik</h2>'+
+   '<p class="small">Cloudflare Free planında günlük 10.000 Neuron ücretsizdir. Cloudflare AI bağlantısı etkinleştirildiğinde uygulama ayrıca çalışma alanı için en fazla 12, kullanıcı başına en fazla 4 AI isteğini günlük olarak kabul eder; limitte ek ücret oluşturmaz, yerel analize geçer.</p>'+
+   '<p class="small">Cloudflare’e yalnızca iş grubu bazlı sayılar, tamamlanma/gecikme istatistikleri ve toplu hedef sayıları gönderilebilir. Görev başlıkları, öğrenci verileri, kişiler, telefonlar ve mali tutarlar gönderilmez.</p>'+
+   '<p class="small muted">AI önerileri karar destek niteliğindedir. Görev atama, silme, güncelleme veya hedef onaylama yetkisi yoktur.</p></section>';
+}
+async function generateAIReport(mode){
+ if(!aiOptions.some(([key])=>key===mode)||state.aiLoading)return;
+ state.aiMode=mode;state.aiLoading=true;state.aiResult=null;render();
+ try{
+  const session=await requireActiveSession();
+  const response=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-ai",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+    body:JSON.stringify({mode})
+  });
+  let result={};
+  try{result=await response.json()}catch{}
+  if(!response.ok)throw Error(result.error||"Yapay zekâ analizi alınamadı.");
+  state.aiResult=result;
+ }catch(e){
+  error(e);
+ }finally{
+  state.aiLoading=false;
+  if(state.view==="ai")render();
+ }
+}
+function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],catalog:["İş ve Görev Havuzu","İş tanımları, tekrar kuralları ve görev oluşturma"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],ai:["Yapay Zekâ Yönetim Asistanı","Günlük ajanda, görev önerileri ve yönetim raporu"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,catalog:catalogView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,ai:aiView,members:membersView})[state.view]();bindView()}
 
 const catalogCadences=[["once","Tek seferlik"],["daily","Günlük"],["weekly","Haftalık"],["monthly","Aylık"],["yearly","Yıllık"]];
 const weekDays=[["1","Pazartesi"],["2","Salı"],["3","Çarşamba"],["4","Perşembe"],["5","Cuma"],["6","Cumartesi"],["7","Pazar"]];
@@ -688,6 +750,12 @@ async function changeGoalApproval(id,status,btn){
 }
 function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
+document.querySelectorAll("[data-ai-run]").forEach(b=>b.onclick=()=>generateAIReport(b.dataset.aiRun));
+$("#copyAIResult")?.addEventListener("click",async()=>{
+  if(!state.aiResult?.text)return;
+  try{await navigator.clipboard.writeText(state.aiResult.text);toast("Analiz metni kopyalandı.")}
+  catch{toast("Kopyalama başarısız. Metni seçerek kopyalayın.")}
+});
 $("#newTask")?.addEventListener("click",()=>openModal("task"));
 $("#newCatalogItem")?.addEventListener("click",()=>openModal("catalog"));
 [["catalogStreamFilter","catalogStream"],["catalogCadenceFilter","catalogCadence"],["catalogStatusFilter","catalogStatus"]].forEach(([id,key])=>
