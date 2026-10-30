@@ -183,7 +183,7 @@ function catalogView(){
      '<strong>'+esc(c.title)+'</strong><p class="small muted">'+esc(catalogScheduleText(c))+' · '+esc(schoolName(c.school_unit))+
      ' · Sorumlu: '+esc(memberName(c.assigned_to||w.lead_user_id))+'</p>'+
      (c.description?'<p class="small muted" style="white-space:pre-wrap">'+esc(c.description)+'</p>':"")+
-     '<p class="small muted">'+count+' oluşturulmuş görev · '+(c.is_active?"Aktif":"Taslak / Pasif")+'</p></div>'+
+     '<p class="small muted">'+count+' oluşturulmuş görev · '+(c.is_active?"Aktif":"Taslak / Pasif")+(c.auto_enabled?" · Otomatik 07.10":" · Manuel üretim")+'</p></div>'+
      '<div class="actions">'+(manage?'<button class="btn sm" data-catalog-edit="'+esc(c.id)+'">Düzenle</button>':"")+
      (manage?'<button class="btn sm" data-catalog-toggle="'+esc(c.id)+'">'+(c.is_active?"Arşivle":"Aktifleştir")+'</button>':"")+
      (manage&&c.is_active?'<button class="btn sm primary" data-catalog-generate="'+esc(c.id)+'">Görev Oluştur</button>':"")+
@@ -202,7 +202,7 @@ function catalogView(){
   '<select id="catalogStatusFilter">'+options([["all","Tüm durumlar"],["active","Aktif"],["inactive","Taslak / Pasif"]],state.catalogStatus)+'</select></div>'+
   (groups||'<section class="panel">Bu filtrede iş tanımı yok.</section>')+
   '<section class="panel"><h2>Havuzun Kullanımı</h2><p class="small">İşi tanımla → Sorumlu, sıklık ve tarihleri düzenle → Aktifleştir → Görev Oluştur → Takvim ve Görev Takibi’nden izle.</p>'+
-  '<p class="small muted">Aynı iş aynı tarih için iki kez oluşturulmaz. Şu anda görev üretimi yönetici onayıyla manuel yapılır; otomatik zamanlama kuralları ilk gözden geçirme sonrasında açılacaktır.</p></section>';
+  '<p class="small muted">Aynı iş aynı tarih için ikinci kez oluşturulmaz. İsterseniz iş tanımında otomatik üretimi ayrıca açın; sistem yalnızca bu işler için her gün Türkiye saatiyle 07.10’da görev oluşturur.</p></section>';
 }
 async function toggleCatalogItem(id){
  const item=state.catalog.find(c=>c.id===id);if(!item||!canEditCatalog(item))return;
@@ -776,7 +776,8 @@ if(kind==="catalog"){
  field("due_offset_days","Görev süresi (gün)",item?.due_offset_days??0,"number","required min=0 max=90")+
  multiPeopleField("shared_users",item?.collaborator_user_ids||[])+
  '<label class="span2"><input type="checkbox" name="is_active" value="yes" '+(item?.is_active?"checked":"")+'> <strong>İş aktif</strong> (görev oluşturulabilir)</label>'+
- '<p class="span2 small muted">Haftalık için haftanın günü; aylık için ayın günü; yıllık için ay ve gün seçin. 29–31 gibi tarihler bulunmayan aylarda o ayın görevi atlanır. Otomatik zamanlama henüz kapalıdır.</p>';
+ '<label class="span2"><input type="checkbox" name="auto_enabled" value="yes" '+(item?.auto_enabled?"checked":"")+'> <strong>Otomatik oluştur</strong> (her gün 07.10, yalnızca tekrar günü geldiğinde)</label>'+
+ '<p class="span2 small muted">Haftalık için haftanın günü; aylık için ayın günü; yıllık için ay ve gün seçin. 29–31 gibi tarihler bulunmayan aylarda o ayın görevi atlanır. Otomatik oluşturma seçeneği etkin değilse yalnızca Görev Oluştur düğmesiyle işlem yapılır.</p>';
 }
 if(kind==="catalogGenerate"){
  if(!item?.is_active){toast("Önce iş tanımını etkinleştirin");return}
@@ -883,8 +884,11 @@ if(modalKind==="catalog"){
  priority:data.priority||"normal",cadence,weekday:weekly?Number(data.weekday):null,
  month_day:monthly?Number(data.month_day):null,year_month:yearly?Number(data.year_month):null,
  start_on:data.start_on||null,end_on:data.end_on||null,due_offset_days:Number(data.due_offset_days)||0,
- is_active:fd.has("is_active"),auto_enabled:false,updated_at:new Date().toISOString()};
+ is_active:fd.has("is_active"),auto_enabled:fd.has("auto_enabled"),updated_at:new Date().toISOString()};
  if(payload.is_active&&!payload.start_on&&cadence==="once")throw Error("Tek seferlik işin tarihini girin");
+ if(payload.auto_enabled&&(!payload.is_active||!payload.start_on))throw Error("Otomatik görev için iş aktif ve başlangıç tarihi belirlenmiş olmalıdır");
+ if(payload.auto_enabled&&!editing?.auto_enabled&&
+    !window.confirm("Bu iş otomatik görev oluşturacak. Her ilgili gün saat 07.10’da görev açılması için onaylıyor musunuz?"))return;
  const save=editing?await sb.from("task_catalog").update(payload).eq("id",editing.id).eq("workspace_id",WS).select("id").single():
  await sb.from("task_catalog").insert({...payload,created_by:state.user.id}).select("id").single();
  if(save.error||!save.data)throw Error(save.error?.message||"Havuz kaydı oluşturulamadı");
