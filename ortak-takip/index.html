@@ -42,6 +42,53 @@ body *{visibility:hidden!important}
 .ai-source{font-size:12px;font-weight:700;color:#0d7772;margin-bottom:12px}
 .ai-note{background:#f1f7fb;border-left:4px solid #23a5ab;padding:12px 15px;border-radius:8px;margin:14px 0;color:#33516b;font-size:13px}
 @media(max-width:800px){.ai-actions{grid-template-columns:1fr}.ai-action{min-height:0}.ai-hero{padding:20px}}
+
+/* Mobile: every navigation title stays visible without horizontal scrolling. */
+@media (max-width:780px){
+  aside{padding:12px 12px 14px}
+  .brand{margin:0 0 12px;font-size:18px}
+  #nav.nav{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-flow:row;
+    gap:7px;
+    overflow:visible;
+    width:100%;
+  }
+  #nav.nav button{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:4px;
+    min-width:0;
+    width:100%;
+    min-height:47px;
+    padding:9px 9px;
+    text-align:left;
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:normal;
+    font-size:12.5px;
+    line-height:1.3;
+    background:#1d3958;
+    border:1px solid #365471;
+    border-radius:10px;
+  }
+  #nav.nav button.active{background:#295979;border-color:#4bc1c7;color:#fff}
+  #nav.nav button:focus-visible{outline:2px solid #6bd9da;outline-offset:2px}
+  #nav.nav .ic{
+    display:inline-block;
+    min-width:20px;
+    width:20px;
+    flex:0 0 20px;
+    text-align:center;
+    font-size:14px;
+  }
+}
+@media(max-width:370px){
+  #nav.nav button{padding:8px 7px;font-size:11.8px;gap:2px}
+  #nav.nav .ic{min-width:18px;width:18px;flex-basis:18px}
+}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
