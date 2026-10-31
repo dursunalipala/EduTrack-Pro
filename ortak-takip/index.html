@@ -824,7 +824,7 @@ function simpleTaskRows(){
 const simpleTaskCard=t=>{
  const day=iso(new Date()),late=t.due_date&&t.due_date<day&&openTask(t);
  return '<div class="simple-task"><div class="simple-task-info"><div class="simple-task-name">'+esc(t.title)+'</div>'+
-  '<div class="simple-task-meta">'+esc(memberName(t.assigned_to))+' · '+(late?"Gecikti · ":"")+
+  '<div class="simple-task-meta">Üst: '+esc(memberName(t.assigned_to))+' · Uygulayıcı: '+esc(memberName(t.executor_id))+' · '+(late?"Gecikti · ":"")+
   (t.due_date?date(t.due_date):"Tarih belirlenmedi")+' · '+esc(labels[t.status]||t.status)+'</div></div>'+
   '<button type="button" class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button></div>';
 };
@@ -1465,7 +1465,7 @@ document.querySelectorAll("[data-calendar-day]").forEach(cell=>{
  cell.addEventListener("click",e=>{if(e.target.closest("[data-calendar-task]"))return;selectCalendarDay(cell.dataset.calendarDay)});
  cell.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectCalendarDay(cell.dataset.calendarDay)}});
 });
-document.querySelectorAll("[data-calendar-task]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const task=state.tasks.find(t=>t.id===b.dataset.calendarTask);if(task)openModal("task",task)}));
+document.querySelectorAll("[data-calendar-task]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const task=state.tasks.find(t=>t.id===b.dataset.calendarTask);if(task)openTaskDetail(task)}));
 document.querySelectorAll("[data-calendar-event]").forEach(b=>b.addEventListener("click",e=>{
  e.stopPropagation();
  const item=state.events.find(x=>x.id===b.dataset.calendarEvent);
@@ -1516,9 +1516,26 @@ if(kind==="catalogGenerate"){
  field("generate_end","Oluşturma bitiş tarihi *",end,"date","required")+
  '<p class="span2 small muted">Aralıktaki tekrar günlerine görev eklenir. 366 günden uzun aralık kullanılamaz. Zaten oluşturulmuş günler tekrar eklenmez. İşlemden sonra görevler takvimde görünür.</p>';
 }
-if(kind==="task")f.innerHTML='<div class="span2">'+field("title","Görev başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div><label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+sel("assigned_to","Sorumlu",people,item?.assigned_to)+sel("status","Durum",[["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],item?.status||"taslak")+sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+field("start_date","Başlangıç tarihi",item?.start_date||"","date")+field("due_date","Bitiş tarihi",item?.due_date||"","date")+field("progress","İlerleme (%)",item?.progress??0,"number",'min=0 max=100')+multiPeopleField("shared_users",item?.collaborator_user_ids||[])+
- (item?.id?'<div class="span2"><button type="button" class="btn teal" id="modalShareWhatsApp">WhatsApp ile Paylaş</button><p class="small muted">Mesaj WhatsApp üzerinde taslak olarak açılır, gönderme işlemi kullanıcıya aittir.</p></div>':"")+
- (item?.last_delegated_at?'<div class="span2 small muted">Son devir: '+esc(memberName(item.last_delegated_by))+' · '+date(item.last_delegated_at)+'</div>':"");
+if(kind==="task"){
+ const leads=[["","Seçiniz"],...state.members.filter(m=>m.is_active&&["owner","manager"].includes(m.role)).map(m=>[m.user_id,memberName(m.user_id)])];
+ const all=[["","Seçiniz"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])];
+ const executor=item?.executor_id||item?.assigned_to||state.user?.id;
+ const reviewer=state.members.find(m=>m.is_active&&["owner","manager"].includes(m.role)&&m.user_id!==executor)?.user_id;
+ f.innerHTML='<div class="span2">'+field("title","Görev Başlığı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div>'+
+ '<label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+
+ sel("workstream_id","İş Grubu",streams,item?.workstream_id)+sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+
+ sel("assigned_to","Üst Sorumlu *",leads,item?.assigned_to||state.user?.id)+
+ sel("executor_id","Ana Uygulayıcı *",all,executor)+
+ sel("reviewer_id","Kontrol Eden Yönetici *",leads,item?.reviewer_id||reviewer)+
+ sel("status","Durum",[["taslak","Planlandı"],["beklemede","Bekliyor"],["devam_ediyor","Devam Ediyor"],["kontrol_bekliyor","Kontrol Bekliyor"],["tamamlandi","Tamamlandı"],["iptal","İptal Edildi"]],item?.status||"beklemede")+
+ sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+
+ field("start_date","Başlangıç Tarihi",item?.start_date||"","date")+field("due_date","Hedef Bitiş Tarihi",item?.due_date||"","date")+
+ field("progress","İlerleme (%)",item?.progress??0,"number","min=0 max=100")+
+ '<div class="span2 multi-people"><strong>Yardımcı Personeller</strong><div class="multi-person-grid">'+
+ state.members.filter(m=>m.is_active).map(m=>'<label><input type="checkbox" name="helper_users" value="'+esc(m.user_id)+'"'+((item?.helper_user_ids||[]).includes(m.user_id)?" checked":"")+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><p class="small muted">Bir ana uygulayıcıya ek yardımcılar seçilebilir.</p></div>'+
+ (item?.id?'<div class="span2"><button type="button" class="btn teal" id="modalShareWhatsApp">WhatsApp ile Paylaş</button></div>':"")+
+ '<p class="span2 small muted">Personelin bitirdiğini bildirdiği görev Kontrol Bekliyor olur. Ancak kontrol eden yönetici onayladıktan sonra Tamamlandı sayılır.</p>';
+}
 if(kind==="stream")f.innerHTML='<div class="span2">'+field("name","Bölüm adı *",item?.name||"","text","required minlength=3 maxlength=180")+'</div><label class="span2">Kapsam ve sorumluluklar<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+sel("lead_user_id","Bölüm Yöneticisi",people,item?.lead_user_id)+multiPeopleField("shared_users",item?.collaborator_user_ids||[],item?.lead_user_id);
 if(kind==="goalActual"){
  if(!item||item.approval_status!=="approved")return;
@@ -1635,7 +1652,7 @@ async function requireActiveSession(){
   }
   return result.data.session;
 }
-$("#modalForm").onsubmit=async ev=>{ev.preventDefault();const b=$("#modalForm button[type=submit]");b.disabled=true;const fd=new FormData(ev.target);const data=Object.fromEntries(fd);const shared=[...new Set(fd.getAll("shared_users"))].filter(id=>state.members.some(m=>m.user_id===id&&m.is_active));delete data.shared_users;try{
+$("#modalForm").onsubmit=async ev=>{ev.preventDefault();const b=$("#modalForm button[type=submit]");b.disabled=true;const fd=new FormData(ev.target);const data=Object.fromEntries(fd);const shared=[...new Set(fd.getAll("shared_users"))].filter(id=>state.members.some(m=>m.user_id===id&&m.is_active));delete data.shared_users;const helpers=[...new Set(fd.getAll("helper_users"))].filter(id=>state.members.some(m=>m.user_id===id&&m.is_active));delete data.helper_users;try{
 const session=await requireActiveSession();
 if(modalKind==="catalog"){
  if(editing&&!canEditCatalog(editing))throw Error("Bu işi düzenleme yetkiniz bulunmuyor.");
@@ -1707,7 +1724,22 @@ if(modalKind==="goalActual"){
 if(modalKind==="member"){const r=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-panel?api=invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({workspace_id:WS,email:data.email.trim(),full_name:data.full_name.trim(),role:data.role})});const d=await r.json();if(!r.ok)throw Error(d.error||"Davet gönderilemedi");toast("Davet gönderildi")}
 else if(modalKind==="stream"){if(!canManage()||!editing)throw Error("Bu işlem için yönetici yetkisi gereklidir.");const payload={name:data.name.trim(),description:data.description||"",lead_user_id:data.lead_user_id||null,collaborator_user_ids:shared.filter(x=>x!==data.lead_user_id)};const r=await sb.from("workstreams").update(payload).eq("id",editing.id).eq("workspace_id",WS);if(r.error)throw r.error;toast("Bölüm bilgileri güncellendi")}
 else{const table=modalKind==="task"?"tasks":modalKind==="goal"?"goals":"calendar_events";const payload={...data,workspace_id:WS};for(const k of ["workstream_id","assigned_to","owner_id","start_date","due_date","period_start","period_end"])if(k in payload&&!payload[k])payload[k]=null;
-if(modalKind==="task"){payload.collaborator_user_ids=canManage()?shared:(editing?.collaborator_user_ids||[]);if(editing&&editing.assigned_to!==payload.assigned_to&&canManage()){payload.last_delegated_at=new Date().toISOString();payload.last_delegated_by=state.user.id}payload.progress=Number(payload.progress);if(payload.status==="tamamlandi"){payload.progress=100;payload.completed_at=new Date().toISOString()}else if(editing?.status==="tamamlandi")payload.completed_at=null}
+if(modalKind==="task"){
+ if(!canManage())throw Error("Görev düzenleme yetkiniz yok");
+ const managers=state.members.filter(m=>m.is_active&&["owner","manager"].includes(m.role)).map(m=>m.user_id);
+ if(!managers.includes(data.assigned_to)||!managers.includes(data.reviewer_id)||!data.executor_id)throw Error("Üst sorumlu, uygulayıcı ve kontrol eden seçin");
+ if(data.executor_id===data.reviewer_id)throw Error("Kontrol eden ana uygulayıcıdan farklı olmalıdır");
+ if(["tamamlandi","kontrol_bekliyor"].includes(data.status)&&data.status!==editing?.status)
+  throw Error("Kontrol ve onay yalnızca görev kartından yapılır");
+ if(editing?.status==="tamamlandi"&&data.status!==editing.status)
+  throw Error("Tamamlanmış görevde durum değiştirilemez");
+ payload.helper_user_ids=helpers.filter(id=>id!==data.executor_id);
+ payload.collaborator_user_ids=editing?.collaborator_user_ids||[];
+ payload.progress=Number(payload.progress);
+ if(editing&&editing.assigned_to!==payload.assigned_to){
+  payload.last_delegated_at=new Date().toISOString();payload.last_delegated_by=state.user.id;
+ }
+}
 if(modalKind==="goal"){
  if(editing?.approval_status&&editing.approval_status!=="draft")throw Error("Yalnızca taslak hedef düzenlenebilir.");
  payload.target_value=payload.target_value===""?null:Number(payload.target_value);
