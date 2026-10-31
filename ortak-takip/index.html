@@ -223,6 +223,25 @@ body *{visibility:hidden!important}
  .ai-chat-history{height:clamp(215px,39vh,420px);min-height:215px;max-height:420px;padding:12px 11px 18px}
 }
 
+
+/* Catalog v2: readable hierarchical source plan on mobile and desktop. */
+.catalog-workstream{padding-bottom:11px}
+.catalog-section{border:1px solid #e2eaf2;border-radius:11px;margin:11px 0;background:#fff;overflow:hidden}
+.catalog-section>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;background:#f3f8fc;color:#173e58;font-size:13px;font-weight:750;line-height:1.45}
+.catalog-section>summary::-webkit-details-marker{display:none}
+.catalog-section>summary:before{content:"+";display:grid;place-items:center;width:22px;min-width:22px;height:22px;border:1px solid #b8d7e5;border-radius:7px;background:#fff;color:#167990;font-weight:800}
+.catalog-section[open]>summary:before{content:"−"}
+.catalog-section>summary:hover{background:#eaf4f9}
+.catalog-section>summary:focus-visible{outline:2px solid #25a3ad;outline-offset:-3px}
+.catalog-section-name{display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow-wrap:anywhere}
+.catalog-code{display:inline-block;background:#d6ecf2;color:#195875;padding:4px 7px;border-radius:6px;font-size:11px;white-space:nowrap;flex:none}
+.catalog-section-count{color:#587890;font-size:11px;white-space:nowrap;flex:none}
+.catalog-section-body{padding:0 14px}
+.catalog-item{padding:17px 0}
+.catalog-item .actions{align-items:flex-start}
+.catalog-evidence{font-size:12px;color:#335b70;background:#f1f8f9;padding:8px 10px;border-radius:7px;line-height:1.5;margin:7px 0}
+#catalogSearchInput{min-width:195px;flex:1;max-width:330px}
+@media(max-width:780px){.catalog-section>summary{padding:12px 9px;font-size:12px;gap:7px}.catalog-section-name{gap:6px}.catalog-code{padding:3px 5px}.catalog-section-body{padding:0 10px}#catalogSearchInput{width:100%;max-width:none}.catalog-item .actions{width:100%}}
 /* Ortak Takip mobile navigation v3: enforce always-visible complete menu. */
 .mobile-menu-caption{display:none}
 @media(max-width:1000px){
@@ -304,7 +323,7 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -509,42 +528,66 @@ const catalogScheduleText=c=>c.cadence==="weekly"?"Her "+(weekDays.find(x=>Numbe
  c.cadence==="monthly"?"Her ayın "+c.month_day+". günü":
  c.cadence==="yearly"?"Her yıl "+c.month_day+"/"+c.year_month:
  c.cadence==="daily"?"Her gün":"Tek seferlik";
+const catalogSections=()=>[...new Map(state.catalog.filter(c=>c.section_code).map(c=>[c.section_code,[c.section_code,c.section_title||"Mevcut Operasyon Şablonları"]])).values()]
+ .sort((a,b)=>{const order=x=>x==="0.0"?99:Number(x.split(".")[0])*100+Number(x.split(".")[1]||0);
+ return order(a[0])-order(b[0]);});
+const catalogSectionOrder=code=>code==="0.0"?9900:code?Number(code.split(".")[0])*100+Number(code.split(".")[1]||0):9999;
 function catalogView(){
+ const search=state.catalogSearch.trim().toLocaleLowerCase("tr-TR");
  const filtered=state.catalog.filter(c=>
   (state.catalogStream==="all"||c.workstream_id===state.catalogStream)&&
+  (state.catalogSection==="all"||c.section_code===state.catalogSection)&&
   (state.catalogCadence==="all"||c.cadence===state.catalogCadence)&&
-  (state.catalogStatus==="all"||(state.catalogStatus==="active"?c.is_active:!c.is_active)));
+  (state.catalogStatus==="all"||(state.catalogStatus==="active"?c.is_active:!c.is_active))&&
+  (!search||[c.title,c.section_title,c.description,c.verification_note].some(v=>String(v||"").toLocaleLowerCase("tr-TR").includes(search))));
  const active=state.catalog.filter(c=>c.is_active).length,total=state.catalog.length;
  const fromCatalog=state.tasks.filter(t=>t.catalog_item_id).length;
+ const planCount=state.catalog.filter(c=>c.source_key&&c.source_key.startsWith("elit-taslak2:")).length;
+ const sectionCount=new Set(state.catalog.filter(c=>c.source_key).map(c=>c.section_code)).size;
  const groups=state.streams.filter(w=>state.catalogStream==="all"||w.id===state.catalogStream).map(w=>{
-  const arr=filtered.filter(c=>c.workstream_id===w.id).sort((a,b)=>a.cadence.localeCompare(b.cadence)||a.title.localeCompare(b.title,"tr"));
+  const arr=filtered.filter(c=>c.workstream_id===w.id).sort((a,b)=>catalogSectionOrder(a.section_code)-catalogSectionOrder(b.section_code)||a.title.localeCompare(b.title,"tr"));
   if(!arr.length)return "";
-  const rows=arr.map(c=>{
+  const sections=[...new Map(arr.map(c=>[c.section_code||"other",c.section_title||"Diğer İş Tanımları"])).entries()]
+   .sort((a,b)=>catalogSectionOrder(a[0])-catalogSectionOrder(b[0]));
+  const sectionHtml=sections.map(([key,heading])=>{
+   const items=arr.filter(c=>(c.section_code||"other")===key);
+   const rows=items.map(c=>{
     const manage=canEditCatalog(c),count=state.tasks.filter(t=>t.catalog_item_id===c.id).length;
-    return '<div class="stream"><div class="row" style="align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px">'+
+    const partnerNames=(c.collaborator_user_ids||[]).map(memberName).filter(Boolean);
+    return '<div class="stream catalog-item"><div class="row" style="align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px">'+
      '<strong>'+esc(c.title)+'</strong><p class="small muted">'+esc(catalogScheduleText(c))+' · '+esc(schoolName(c.school_unit))+
-     ' · Sorumlu: '+esc(memberName(c.assigned_to||w.lead_user_id))+'</p>'+
-     (c.description?'<p class="small muted" style="white-space:pre-wrap">'+esc(c.description)+'</p>':"")+
+     ' · Takip sorumlusu: '+esc(memberName(c.assigned_to||w.lead_user_id))+'</p>'+
+     (partnerNames.length?'<p class="small muted">İş birliği: '+esc(partnerNames.join(", "))+'</p>':"")+
+     (c.verification_note?'<p class="catalog-evidence"><strong>Doğrulama:</strong> '+esc(c.verification_note)+'</p>':"")+
+     (c.description&&c.source_key===null?'<p class="small muted" style="white-space:pre-wrap">'+esc(c.description)+'</p>':"")+
      '<p class="small muted">'+count+' oluşturulmuş görev · '+(c.is_active?"Aktif":"Taslak / Pasif")+(c.auto_enabled?" · Otomatik 07.10":" · Manuel üretim")+'</p></div>'+
      '<div class="actions">'+(manage?'<button class="btn sm" data-catalog-edit="'+esc(c.id)+'">Düzenle</button>':"")+
      (manage?'<button class="btn sm" data-catalog-toggle="'+esc(c.id)+'">'+(c.is_active?"Arşivle":"Aktifleştir")+'</button>':"")+
      (manage&&c.is_active?'<button class="btn sm primary" data-catalog-generate="'+esc(c.id)+'">Görev Oluştur</button>':"")+
      '</div></div></div>';
    }).join("");
-   return '<section class="panel"><h2>'+esc(w.name)+' <span class="muted small">('+arr.length+' iş)</span></h2>'+
-    '<p class="small muted">Bölüm sorumlusu: '+esc(memberName(w.lead_user_id))+'</p>'+rows+'</section>';
+   const open=!!search||state.catalogSection!=="all";
+   return '<details class="catalog-section" '+(open?"open":"")+'><summary><span class="catalog-section-name">'+(key==="0.0"?"":key==="other"?"":'<span class="catalog-code">'+esc(key)+'</span>')+
+     esc(heading)+'</span><span class="catalog-section-count">'+items.length+' iş</span></summary>'+
+     '<div class="catalog-section-body">'+rows+'</div></details>';
+  }).join("");
+  return '<section class="panel catalog-workstream"><h2>'+esc(w.name)+' <span class="muted small">('+arr.length+' iş)</span></h2>'+
+    '<p class="small muted">Bölüm sorumlusu: '+esc(memberName(w.lead_user_id))+'</p>'+sectionHtml+'</section>';
  }).join("");
  return '<div class="titlebar"><h2>İş ve Görev Havuzu</h2>'+
   (editableCatalogStreams().length?'<button class="btn primary" id="newCatalogItem">+ Yeni İş Ekle</button>':"")+'</div>'+
-  '<p class="small muted">İşleri bir kez tanımlayın, günlük/haftalık/aylık/yıllık takvime göre görev üretin. İş tanımının güncellenmesi eski görevleri değiştirmez.</p>'+
-  '<div class="kpi">'+stat("İş tanımı",total,"Havuzdaki işler")+stat("Aktif",active,"Görev üretilebilir")+
-  stat("Taslak / Pasif",total-active,"Gözden geçirilecek")+stat("Oluşturulan görev",fromCatalog,"Havuzdan açılan")+'</div>'+
-  '<div class="filters"><select id="catalogStreamFilter">'+options([["all","Tüm iş grupları"],...state.streams.map(w=>[w.id,w.name])],state.catalogStream)+'</select>'+
-  '<select id="catalogCadenceFilter">'+options([["all","Tüm sıklıklar"],...catalogCadences],state.catalogCadence)+'</select>'+
-  '<select id="catalogStatusFilter">'+options([["all","Tüm durumlar"],["active","Aktif"],["inactive","Taslak / Pasif"]],state.catalogStatus)+'</select></div>'+
-  (groups||'<section class="panel">Bu filtrede iş tanımı yok.</section>')+
-  '<section class="panel"><h2>Havuzun Kullanımı</h2><p class="small">İşi tanımla → Sorumlu, sıklık ve tarihleri düzenle → Aktifleştir → Görev Oluştur → Takvim ve Görev Takibi’nden izle.</p>'+
-  '<p class="small muted">Aynı iş aynı tarih için ikinci kez oluşturulmaz. İsterseniz iş tanımında otomatik üretimi ayrıca açın; sistem yalnızca bu işler için her gün Türkiye saatiyle 07.10’da görev oluşturur.</p></section>';
+  '<p class="small muted">Elit Eğitim Kurumları iş bölümü planı: '+planCount+' ayrıntılı iş, '+sectionCount+' alt başlık, '+(total-planCount)+' başlangıç operasyon şablonu. İşler onaylanana kadar pasiftir.</p>'+
+  '<div class="kpi">'+stat("İş tanımı",total,"Havuzdaki tüm işler")+stat("Aktif",active,"Görev üretilebilir")+
+  stat("Taslak / Pasif",total-active,"Onay bekliyor")+stat("Oluşturulan görev",fromCatalog,"Havuzdan açılan")+'</div>'+
+  '<div class="filters"><select id="catalogStreamFilter" aria-label="Sorumlu bölüm">'+options([["all","Tüm iş grupları"],...state.streams.map(w=>[w.id,w.name])],state.catalogStream)+'</select>'+
+  '<select id="catalogSectionFilter" aria-label="Plan alt başlığı">'+options([["all","Tüm alt başlıklar"],...catalogSections()],state.catalogSection)+'</select>'+
+  '<select id="catalogCadenceFilter" aria-label="Tekrar sıklığı">'+options([["all","Tüm sıklıklar"],...catalogCadences],state.catalogCadence)+'</select>'+
+  '<select id="catalogStatusFilter" aria-label="İş durumu">'+options([["all","Tüm durumlar"],["active","Aktif"],["inactive","Taslak / Pasif"]],state.catalogStatus)+'</select>'+
+  '<input id="catalogSearchInput" type="search" placeholder="Havuzda iş ara…" value="'+esc(state.catalogSearch)+'" aria-label="İş havuzunda arama"></div>'+
+  '<p class="small muted">Gösterilen '+filtered.length+' iş · Alt başlığı açarak işleri, sorumluları ve tamamlanma belgelerini inceleyebilirsiniz.</p>'+
+  (groups||'<section class="panel">Bu filtrede iş tanımı bulunamadı.</section>')+
+  '<section class="panel"><h2>Havuzun Kullanımı</h2><p class="small">Alt başlığı aç → İşin sorumlusunu ve doğrulama bilgisini incele → Tarih ve sıklığı belirle → Aktifleştir → Görev Oluştur.</p>'+
+  '<p class="small muted">Taslak işleri aktifleştirmek veya otomatik görev oluşturmak için ayrıca onay gerekir. Önceden oluşturulan görevler korunur.</p></section>';
 }
 async function toggleCatalogItem(id){
  const item=state.catalog.find(c=>c.id===id);if(!item||!canEditCatalog(item))return;
@@ -1051,8 +1094,19 @@ $("#aiChatInput")?.addEventListener("keydown",e=>{
 if(state.view==="ai")scrollAIChat();
 $("#newTask")?.addEventListener("click",()=>openModal("task"));
 $("#newCatalogItem")?.addEventListener("click",()=>openModal("catalog"));
-[["catalogStreamFilter","catalogStream"],["catalogCadenceFilter","catalogCadence"],["catalogStatusFilter","catalogStatus"]].forEach(([id,key])=>
+[["catalogStreamFilter","catalogStream"],["catalogSectionFilter","catalogSection"],["catalogCadenceFilter","catalogCadence"],["catalogStatusFilter","catalogStatus"]].forEach(([id,key])=>
  $("#"+id)?.addEventListener("change",e=>{state[key]=e.target.value;render()}));
+$("#catalogSearchInput")?.addEventListener("input",e=>{
+ state.catalogSearch=e.target.value;
+ clearTimeout(window.catalogSearchTimer);
+ const cursor=e.target.selectionStart;
+ window.catalogSearchTimer=setTimeout(()=>{
+  if(state.view!=="catalog")return;
+  render();
+  const el=$("#catalogSearchInput");
+  if(el){el.focus();try{el.setSelectionRange(cursor,cursor)}catch{}}
+ },160);
+});
 document.querySelectorAll("[data-catalog-edit]").forEach(b=>b.onclick=()=>openModal("catalog",state.catalog.find(c=>c.id===b.dataset.catalogEdit)));
 document.querySelectorAll("[data-catalog-generate]").forEach(b=>b.onclick=()=>openModal("catalogGenerate",state.catalog.find(c=>c.id===b.dataset.catalogGenerate)));
 document.querySelectorAll("[data-catalog-toggle]").forEach(b=>b.onclick=()=>toggleCatalogItem(b.dataset.catalogToggle));$("#newGoal")?.addEventListener("click",()=>openModal("goal"));
@@ -1124,7 +1178,9 @@ if(kind==="catalog"){
  if(!streamItems.length){toast("İş grubu yetkiniz yok");return}
  f.innerHTML='<div class="span2">'+field("title","İş adı *",item?.title||"","text","required minlength=3 maxlength=240")+'</div>'+
  '<label class="span2">Açıklama<textarea name="description" rows="3">'+esc(item?.description||"")+'</textarea></label>'+
+ '<label class="span2">Tamamlanma doğrulaması / belge<textarea name="verification_note" rows="2" placeholder="Rapor, işlem ekranı, onay veya teslim belgesi">'+esc(item?.verification_note||"")+'</textarea></label>'+
  sel("workstream_id","İş grubu *",streamItems,item?.workstream_id||streamItems[0][0])+
+ sel("section_code","Plan alt başlığı",[["","Diğer / Sınıflandırılmamış"],...catalogSections()],item?.section_code||"")+
  sel("school_unit","Kurum",schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+
  sel("assigned_to","Varsayılan sorumlu",[["","Bölüm yöneticisi"],...people.filter(x=>x[0])],item?.assigned_to||"")+
  sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+
@@ -1240,7 +1296,15 @@ if(modalKind==="catalog"){
  if(monthly&&!data.month_day)throw Error("Ayın gününü seçin");
  if(yearly&&!data.year_month)throw Error("Yılın ayını seçin");
  if(data.end_on&&data.start_on&&data.end_on<data.start_on)throw Error("Bitiş tarihi başlangıçtan önce olamaz");
+ const selectedCode=data.section_code||null;
+ if(selectedCode){
+  const sectionItem=catalogSections().find(x=>x[0]===selectedCode);
+  if(!sectionItem)throw Error("Plan alt başlığı bulunamadı.");
+  if(selectedCode!=="0.0"&&selectedCode.split(".")[0]!==String(workstream.sort_order))throw Error("Alt başlık seçilen iş grubuna ait değil.");
+ }
  const payload={workspace_id:WS,workstream_id:data.workstream_id,title:(data.title||"").trim(),description:data.description||"",
+ section_code:selectedCode,section_title:selectedCode?catalogSections().find(x=>x[0]===selectedCode)?.[1]||null:null,
+ verification_note:(data.verification_note||"").trim(),
  school_unit:data.school_unit||"ortak",assigned_to:data.assigned_to||null,collaborator_user_ids:shared,
  priority:data.priority||"normal",cadence,weekday:weekly?Number(data.weekday):null,
  month_day:monthly?Number(data.month_day):null,year_month:yearly?Number(data.year_month):null,
