@@ -312,10 +312,62 @@ body *{visibility:hidden!important}
  #nav.nav>button{font-size:11.7px!important;padding:8px 6px!important;gap:3px!important}
  #nav.nav .ic{width:16px!important;min-width:16px!important;flex-basis:16px!important}
 }
+
+/* Optional Simple Mode: 4 daily-use destinations, detail stays available. */
+#shell.simple-mode #nav button:not([data-simple-nav="1"]){display:none!important}
+#shell.simple-mode #nav{gap:7px}
+#shell.simple-mode .mobile-menu-caption{display:none!important}
+.mode-switch{
+ width:100%;margin:12px 0 0;padding:12px 13px;
+ background:#274a67;border:1px solid #476e88;color:#f0faff;
+ border-radius:10px;font-size:12.5px;font-weight:730;cursor:pointer;
+ text-align:left;
+}
+.mode-switch:hover,.mode-switch:focus-visible{background:#32617b;outline:2px solid #4bb8c2;outline-offset:2px}
+.simple-home-hero{background:linear-gradient(125deg,#132c49,#1d6680);color:#fff;border-radius:17px;padding:22px 23px;margin-bottom:15px}
+.simple-home-hero h2{color:#fff;font-size:21px;margin:0 0 7px}
+.simple-home-hero p{color:#dceef6;font-size:12.5px;line-height:1.6;margin:0}
+.simple-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:16px}
+.simple-summary button{background:#fff;border:1px solid #dae5ef;border-radius:13px;padding:15px;text-align:left;color:#163b55;min-width:0}
+.simple-summary button:hover,.simple-summary button:focus-visible{outline:2px solid #32a7b1}
+.simple-summary strong{display:block;font-size:27px;margin-bottom:4px}
+.simple-summary span{font-size:12px;color:#58718a;font-weight:650}
+.simple-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.simple-task{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid #e9f0f5;padding:13px 0}
+.simple-task:last-child{border:0}
+.simple-task .simple-task-info{min-width:0;flex:1}
+.simple-task-name{font-size:14px;font-weight:750;color:#173955;line-height:1.45;overflow-wrap:anywhere}
+.simple-task-meta{font-size:11.5px;color:#7a8ba0;margin-top:5px;line-height:1.6}
+.simple-task .btn{flex:0 0 auto}
+.simple-tab-group{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.simple-tab-group button{border:1px solid #d5e4eb;background:#f5f9fc;color:#30556f;border-radius:11px;padding:10px 13px;font-size:12.5px;font-weight:700}
+.simple-tab-group button.active{background:#195c7a;color:white;border-color:#195c7a}
+.simple-task-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin-bottom:16px}
+.simple-task-filters input{grid-column:1/-1;width:100%}
+.simple-task-filters select{width:100%;max-width:none}
+.simple-task-list{padding:4px 18px 9px}
+.simple-readmore{margin:15px auto 0;display:block}
+@media(max-width:1000px){
+ .mode-switch{display:block!important;margin-top:10px!important}
+ #shell.simple-mode #nav.nav{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:480px){
+ .simple-home-hero{padding:18px 16px}
+ .simple-home-hero h2{font-size:19px}
+ .simple-summary{gap:7px}
+ .simple-summary button{padding:11px 8px}
+ .simple-summary strong{font-size:24px}
+ .simple-summary span{font-size:10.5px}
+ .simple-task{gap:7px}
+ .simple-task-name{font-size:12.5px}
+ .simple-task .btn{padding:7px 10px;font-size:11px}
+ .simple-task-list{padding:2px 12px 8px}
+}
+
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Yalnızca yetkili kullanıcıların kurum verilerine erişmesine izin verilir.</p></div></section>
-<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><div class="mobile-menu-caption" aria-hidden="true">TÜM MENÜLER · 10 BÖLÜM</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="ai"><span class="ic">✦</span> Yapay Zekâ Asistanı</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
+<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><div class="mobile-menu-caption" aria-hidden="true">TÜM MENÜLER · 10 BÖLÜM</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="ai"><span class="ic">✦</span> Yapay Zekâ Asistanı</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><button id="viewModeSwitch" class="mode-switch" type="button" aria-pressed="true">☷ Tüm Modüller</button><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
@@ -323,7 +375,12 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 const sb=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+
+function loadSimpleMode(){
+ try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
+ catch{return true}
+}
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Üye",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -517,7 +574,19 @@ function generateAIReport(mode){
  state.aiMode=mode;
  return sendAIRequest(mode);
 }
-function render(){const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],catalog:["İş ve Görev Havuzu","İş tanımları, tekrar kuralları ve görev oluşturma"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],ai:["Yapay Zekâ Yönetim Asistanı","Günlük ajanda, görev önerileri ve yönetim raporu"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=titles[state.view][0];$("#pageSubtitle").textContent=titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,catalog:catalogView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,ai:aiView,members:membersView})[state.view]();bindView()}
+function render(){
+ const shell=$("#shell");shell.classList.toggle("simple-mode",state.simpleMode);
+ const switchButton=$("#viewModeSwitch");
+ if(switchButton){switchButton.textContent=state.simpleMode?"☷ Tüm Modüller":"☷ Sade Görünüm";switchButton.setAttribute("aria-pressed",String(state.simpleMode))}
+ const menuNames={overview:"Bugün",tasks:"İşlerim",calendar:"Takvim",ai:"Asistan"};
+ const fullNames={overview:"Genel Bakış",tasks:"Görev Takibi",catalog:"İş ve Görev Havuzu",calendar:"Takvim",goals:"Performans ve Hedefler",streams:"İş Grupları",reports:"Raporlama",notifications:"Bildirimler",ai:"Yapay Zekâ Asistanı",members:"Ortaklar ve Ekip"};
+ document.querySelectorAll("#nav button").forEach(b=>{
+   const simple=["overview","tasks","calendar","ai"].includes(b.dataset.view);
+   b.dataset.simpleNav=simple?"1":"0";
+   const ic=b.querySelector(".ic")?.textContent||"•";
+   b.innerHTML='<span class="ic">'+esc(ic)+'</span> '+esc(state.simpleMode?(menuNames[b.dataset.view]||fullNames[b.dataset.view]):fullNames[b.dataset.view]);
+ });
+ const titles={overview:["Genel Bakış","Güncel durum, öncelikler ve iş dağılımı"],tasks:["Görev Takibi","İşlerin durumu, sorumlusu ve teslim tarihleri"],catalog:["İş ve Görev Havuzu","İş tanımları, tekrar kuralları ve görev oluşturma"],calendar:["Takvim","Görev son tarihleri ve planlanan etkinlikler"],goals:["Performans ve Hedefler","Kurumsal, bölüm ve bireysel hedeflerle görev performansı"],streams:["İş Grupları","Bölüm sorumluları ve ortak alanlar"],reports:["Raporlama","Bölüm ve sorumlu bazında performans"],notifications:["Bildirim Yönetimi","Otomatik e-posta, gönderim kayıtları ve tercihleri"],ai:["Yapay Zekâ Yönetim Asistanı","Günlük ajanda, görev önerileri ve yönetim raporu"],members:["Ortaklar ve Ekip","Yetkili kullanıcılar ve görev dağılımı"]};$("#pageTitle").textContent=state.simpleMode&&state.view==="overview"?"Bugün":state.simpleMode&&state.view==="tasks"?"İşlerim":titles[state.view][0];$("#pageSubtitle").textContent=state.simpleMode&&state.view==="overview"?"Öncelikli işleriniz tek ekranda":state.simpleMode&&state.view==="tasks"?"Size ait veya ortak yürüttüğünüz işler":titles[state.view][1];document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));const c=$("#content");c.innerHTML=({overview:overview,tasks:tasksView,catalog:catalogView,calendar:calendarView,goals:goalsView,streams:streamsView,reports:reportsView,notifications:notificationsView,ai:aiView,members:membersView})[state.view]();bindView()}
 
 const catalogCadences=[["once","Tek seferlik"],["daily","Günlük"],["weekly","Haftalık"],["monthly","Aylık"],["yearly","Yıllık"]];
 const weekDays=[["1","Pazartesi"],["2","Salı"],["3","Çarşamba"],["4","Perşembe"],["5","Cuma"],["6","Cumartesi"],["7","Pazar"]];
@@ -598,6 +667,87 @@ async function toggleCatalogItem(id){
   if(e||!data)throw Error(e?.message||"Havuz işlemi başarısız");toast("İş havuzu güncellendi");await refresh();
  }catch(e){error(e)}
 }
+
+// Simple-mode task ownership: assigned to me, shared with me, or owned workstream.
+const isMine=t=>{
+ const me=state.user?.id;
+ return !!me&&(t.assigned_to===me||(t.collaborator_user_ids||[]).includes(me)||
+  state.streams.some(w=>w.id===t.workstream_id&&w.lead_user_id===me));
+};
+const openTask=t=>!["tamamlandi","iptal"].includes(t.status);
+function simpleTaskRows(){
+ const day=iso(new Date()),later=iso(new Date(new Date().getTime()+7*86400000));
+ return state.tasks.filter(t=>{
+   if(state.taskScope==="mine"&&!isMine(t))return false;
+   if(state.simpleTaskStatus==="open"&&!openTask(t))return false;
+   if(state.simpleTaskStatus==="late"&&(!openTask(t)||!t.due_date||t.due_date>=day))return false;
+   if(state.simpleTaskStatus==="done"&&t.status!=="tamamlandi")return false;
+   if(state.simpleTaskSearch&&!String(t.title||"").toLocaleLowerCase("tr-TR").includes(state.simpleTaskSearch.toLocaleLowerCase("tr-TR")))return false;
+   return true;
+ }).sort((a,b)=>{
+   const score=t=>!openTask(t)?4:t.due_date&&t.due_date<day?0:t.priority==="kritik"?1:t.due_date&&t.due_date<=later?2:3;
+   return score(a)-score(b)||(a.due_date||"9999").localeCompare(b.due_date||"9999")||a.title.localeCompare(b.title,"tr");
+ });
+}
+const simpleTaskCard=t=>{
+ const day=iso(new Date()),late=t.due_date&&t.due_date<day&&openTask(t);
+ return '<div class="simple-task"><div class="simple-task-info"><div class="simple-task-name">'+esc(t.title)+'</div>'+
+  '<div class="simple-task-meta">'+esc(memberName(t.assigned_to))+' · '+(late?"Gecikti · ":"")+
+  (t.due_date?date(t.due_date):"Tarih belirlenmedi")+' · '+esc(labels[t.status]||t.status)+'</div></div>'+
+  '<button type="button" class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button></div>';
+};
+function simpleOverview(){
+ const mine=state.tasks.filter(isMine),today=iso(new Date());
+ const week=iso(new Date(new Date().getTime()+7*86400000));
+ const open=mine.filter(openTask);
+ const overdue=open.filter(t=>t.due_date&&t.due_date<today);
+ const thisWeek=open.filter(t=>t.due_date&&t.due_date>=today&&t.due_date<=week);
+ const ordered=[...open].sort((a,b)=>{
+   const late=t=>t.due_date&&t.due_date<today;
+   return Number(!!late(b))-Number(!!late(a))||
+    (a.priority==="kritik"?-1:0)-(b.priority==="kritik"?-1:0)||
+    (a.due_date||"9999").localeCompare(b.due_date||"9999");
+ });
+ const card=(count,label,filter)=>'<button type="button" data-simple-summary="'+filter+'"><strong>'+count+'</strong><span>'+label+'</span></button>';
+ return '<section class="simple-home-hero"><h2>Bugün ne yapmalıyım?</h2>'+
+  '<p>Yalnızca sizin sorumluluğunuzdaki işler burada. İş havuzundaki taslaklar yapılacaklar listenizi kalabalıklaştırmaz.</p></section>'+
+  '<div class="simple-summary">'+card(open.length,"Açık işim","open")+
+   card(overdue.length,"Geciken","late")+card(thisWeek.length,"Bu hafta","week")+'</div>'+
+  '<div class="simple-actions">'+
+  (state.role!=="viewer"?'<button type="button" class="btn primary" id="newTask">+ Yeni İş Ekle</button>':"")+
+  '<button type="button" class="btn" data-view="calendar">Takvim</button>'+
+  '<button type="button" class="btn" data-view="ai">Asistana Sor</button></div>'+
+  '<section class="panel"><div class="titlebar"><h2>Öncelikli İşlerim</h2><button class="btn sm" data-view="tasks">İşlerimi Gör</button></div>'+
+  (ordered.length?ordered.slice(0,5).map(simpleTaskCard).join(""):'<p class="muted small">Şu anda sizden beklenen açık bir görev görünmüyor. İş eklemek için Yeni İş Ekle düğmesini kullanabilirsiniz.</p>')+
+  (ordered.length>5?'<p class="small muted">Diğer '+(ordered.length-5)+' işiniz İşlerim bölümünde.</p>':"")+
+  '</section>'+
+  '<p class="small muted">Tüm kurumların ayrıntılı raporları, hedefleri ve iş tanımları için sol menüdeki “Tüm Modüller” seçeneğini kullanın.</p>';
+}
+function simpleTasksView(){
+ const can=state.role!=="viewer";
+ return '<div class="titlebar"><h2>İş Takibi</h2>'+
+  (can?'<button class="btn primary" id="newTask">+ Yeni İş</button>':"")+'</div>'+
+  '<div class="simple-tab-group"><button type="button" data-simple-scope="mine" class="'+(state.taskScope==="mine"?"active":"")+'">Benim İşlerim</button>'+
+  '<button type="button" data-simple-scope="all" class="'+(state.taskScope==="all"?"active":"")+'">Tüm İşler</button></div>'+
+  '<div class="simple-task-filters">'+
+   '<select id="simpleTaskStatus" aria-label="İş durumu">'+options([["open","Açık işler"],["late","Geciken işler"],["done","Tamamlanan işler"],["all","Tüm durumlar"]],state.simpleTaskStatus)+'</select>'+
+   '<select id="simpleTaskStream" aria-label="İş grubu">'+options([["all","Tüm bölümler"],...state.streams.map(w=>[w.id,w.name])],state.stream)+'</select>'+
+   '<input type="search" id="simpleTaskSearch" aria-label="İş arama" placeholder="İş ara..." value="'+esc(state.simpleTaskSearch)+'"></div>'+
+  '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
+  '<section class="panel simple-task-list" id="taskBody"></section>'+
+  '<div id="simpleTaskMore"></div>';
+}
+function showSimpleTaskRows(){
+ const el=$("#taskBody");if(!el)return;
+ const rows=simpleTaskRows().filter(t=>state.stream==="all"||t.workstream_id===state.stream);
+ const count=$("#taskResultCount");
+ if(count)count.textContent=rows.length+" iş listeleniyor";
+ el.innerHTML=rows.slice(0,state.simpleTaskLimit).map(simpleTaskCard).join("")||'<div class="empty">Bu seçime uygun iş yok.</div>';
+ const more=$("#simpleTaskMore");
+ if(more)more.innerHTML=rows.length>state.simpleTaskLimit?
+ '<button class="btn simple-readmore" id="simpleLoadMore">Daha Fazla Göster ('+(rows.length-state.simpleTaskLimit)+' iş)</button>':"";
+ $("#simpleLoadMore")?.addEventListener("click",()=>{state.simpleTaskLimit+=20;showSimpleTaskRows()});
+}
 const dashboardTaskFilters=[["all","Tüm görevler"],["active","Devam edenler"],["completed","Tamamlananlar"],["overdue","Gecikenler"],["critical","Kritik görevler"]];
 function matchesTaskQuickFilter(task,filter=state.quickFilter){
  if(filter==="active")return task.status==="devam_ediyor";
@@ -628,10 +778,10 @@ function stat(label,num,detail,taskFilter=null){
  if(taskFilter===null)return '<div class="card">'+markup+'</div>';
  return '<button type="button" class="card dashboard-stat" data-task-jump="'+esc(taskFilter)+'" aria-label="'+esc(label+': '+num+'. İlgili görevleri aç')+'">'+markup+'<div class="stat-hint" aria-hidden="true">Görevleri gör →</div></button>';
 }
-function overview(){const ts=state.tasks,done=ts.filter(t=>t.status==="tamamlandi").length,active=ts.filter(t=>t.status==="devam_ediyor").length,late=ts.filter(t=>t.due_date&&t.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(t.status)).length,priority=ts.filter(t=>t.priority==="kritik"&&t.status!=="tamamlandi").length;
+function overview(){if(state.simpleMode)return simpleOverview();const ts=state.tasks,done=ts.filter(t=>t.status==="tamamlandi").length,active=ts.filter(t=>t.status==="devam_ediyor").length,late=ts.filter(t=>t.due_date&&t.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(t.status)).length,priority=ts.filter(t=>t.priority==="kritik"&&t.status!=="tamamlandi").length;
 const soon=[...ts].filter(t=>t.status!=="tamamlandi"&&t.status!=="iptal").sort((a,b)=>(a.due_date||"9999").localeCompare(b.due_date||"9999")).slice(0,6);
 return '<div class="kpi">'+stat("Toplam görev",ts.length,"Kayıtlı işler","all")+stat("Devam eden",active,"Aktif çalışmalar","active")+stat("Tamamlanan",done,"Sonuçlanan işler","completed")+stat("Geciken",late,"Süresi geçen","overdue")+stat("Kritik",priority,"Öncelikli takip","critical")+'</div><div class="twocol"><section class="panel"><div class="titlebar"><h2>Yakın Takip</h2><button class="btn sm" data-view="tasks">Tüm görevler</button></div>'+(soon.length?soon.map(t=>'<div class="stream"><div class="row"><div style="min-width:0"><div style="font-weight:700;font-size:14px">'+esc(t.title)+'</div><div class="small muted" style="margin-top:5px">'+esc(streamName(t.workstream_id))+' · '+(t.due_date?date(t.due_date):"Tarih atanmamış")+'</div></div><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></div></div>').join(""):'<div class="empty">Takip edilecek görev yok.</div>')+'</section><section class="panel"><h2>İş Grupları İlerlemesi</h2>'+state.streams.map(s=>{const list=ts.filter(t=>t.workstream_id===s.id),pct=list.length?Math.round(list.filter(t=>t.status==="tamamlandi").length/list.length*100):0;return '<div class="stream"><div class="row small"><strong>'+esc(s.name)+'</strong><span>'+list.length+' iş · %'+pct+'</span></div><div class="bar" style="margin-top:11px"><i style="width:'+pct+'%;background:'+esc(s.color)+'"></i></div></div>'}).join("")+'</section></div><section class="panel"><div class="row"><div><h2>Hedef Gerçekleşmesi</h2><div class="muted small">'+state.goals.length+' hedef tanımlı</div></div><button data-view="goals" class="btn sm">Hedefleri Gör</button></div></section>'}
-function tasksView(){const can=state.role!=="viewer";
+function tasksView(){if(state.simpleMode)return simpleTasksView();const can=state.role!=="viewer";
  const filtersActive=state.quickFilter!=="all"||state.status!=="all"||state.stream!=="all"||!!state.search;
  return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+
   (can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+'</div>'+
@@ -644,7 +794,7 @@ function tasksView(){const can=state.role!=="viewer";
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
   '<section class="panel tablewrap" style="padding:7px"><table><thead><tr><th>Görev</th><th>İş Grubu</th><th>Sorumlu</th><th>Öncelik</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th><th></th></tr></thead><tbody id="taskBody"></tbody></table></section>';
 }
-function renderTaskRows(){const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button> <button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
+function renderTaskRows(){if(state.simpleMode){showSimpleTaskRows();return;}const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button> <button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
 function goalsView(){
  const range=performanceWindow(),today=iso(new Date());
  const tasks=state.tasks.filter(t=>t.status!=="iptal"&&
@@ -1071,7 +1221,27 @@ async function changeGoalApproval(id,status,btn){
   await refresh();
  }catch(e){error(e)}finally{btn.disabled=false}
 }
-function bindView(){document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
+function bindView(){
+ $("#viewModeSwitch")?.addEventListener("click",()=>{
+  state.simpleMode=!state.simpleMode;
+  try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}
+  state.view="overview";state.taskScope="mine";state.simpleTaskStatus="open";state.simpleTaskLimit=20;
+  render();window.scrollTo({top:0,behavior:"smooth"});
+ });
+ document.querySelectorAll("[data-simple-summary]").forEach(b=>b.onclick=()=>{
+  state.taskScope="mine";state.simpleTaskStatus=b.dataset.simpleSummary==="late"?"late":"open";
+  state.simpleTaskLimit=20;state.view="tasks";render();
+ });
+ document.querySelectorAll("[data-simple-scope]").forEach(b=>b.onclick=()=>{
+  state.taskScope=b.dataset.simpleScope;state.simpleTaskLimit=20;render();
+ });
+ $("#simpleTaskStatus")?.addEventListener("change",e=>{state.simpleTaskStatus=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
+ $("#simpleTaskStream")?.addEventListener("change",e=>{state.stream=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
+ $("#simpleTaskSearch")?.addEventListener("input",e=>{state.simpleTaskSearch=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
+ document.querySelectorAll("[data-simple-open-task]").forEach(b=>b.onclick=()=>{
+  const task=state.tasks.find(t=>t.id===b.dataset.simpleOpenTask);if(task)openModal("task",task);
+ });
+ document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
 document.querySelectorAll("[data-ai-run]").forEach(b=>b.onclick=()=>generateAIReport(b.dataset.aiRun));
 document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>sendAIRequest("chat",b.dataset.aiQuestion));
