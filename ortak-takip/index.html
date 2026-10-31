@@ -681,6 +681,7 @@ function simpleTaskRows(){
    if(state.taskScope==="mine"&&!isMine(t))return false;
    if(state.simpleTaskStatus==="open"&&!openTask(t))return false;
    if(state.simpleTaskStatus==="late"&&(!openTask(t)||!t.due_date||t.due_date>=day))return false;
+   if(state.simpleTaskStatus==="week"&&(!openTask(t)||!t.due_date||t.due_date<day||t.due_date>later))return false;
    if(state.simpleTaskStatus==="done"&&t.status!=="tamamlandi")return false;
    if(state.simpleTaskSearch&&!String(t.title||"").toLocaleLowerCase("tr-TR").includes(state.simpleTaskSearch.toLocaleLowerCase("tr-TR")))return false;
    return true;
@@ -717,7 +718,7 @@ function simpleOverview(){
   (state.role!=="viewer"?'<button type="button" class="btn primary" id="newTask">+ Yeni İş Ekle</button>':"")+
   '<button type="button" class="btn" data-view="calendar">Takvim</button>'+
   '<button type="button" class="btn" data-view="ai">Asistana Sor</button></div>'+
-  '<section class="panel"><div class="titlebar"><h2>Öncelikli İşlerim</h2><button class="btn sm" data-view="tasks">İşlerimi Gör</button></div>'+
+  '<section class="panel" id="simplePriorityPanel"><div class="titlebar"><h2>Öncelikli İşlerim</h2><button class="btn sm" data-view="tasks">İşlerimi Gör</button></div>'+
   (ordered.length?ordered.slice(0,5).map(simpleTaskCard).join(""):'<p class="muted small">Şu anda sizden beklenen açık bir görev görünmüyor. İş eklemek için Yeni İş Ekle düğmesini kullanabilirsiniz.</p>')+
   (ordered.length>5?'<p class="small muted">Diğer '+(ordered.length-5)+' işiniz İşlerim bölümünde.</p>':"")+
   '</section>'+
@@ -730,7 +731,7 @@ function simpleTasksView(){
   '<div class="simple-tab-group"><button type="button" data-simple-scope="mine" class="'+(state.taskScope==="mine"?"active":"")+'">Benim İşlerim</button>'+
   '<button type="button" data-simple-scope="all" class="'+(state.taskScope==="all"?"active":"")+'">Tüm İşler</button></div>'+
   '<div class="simple-task-filters">'+
-   '<select id="simpleTaskStatus" aria-label="İş durumu">'+options([["open","Açık işler"],["late","Geciken işler"],["done","Tamamlanan işler"],["all","Tüm durumlar"]],state.simpleTaskStatus)+'</select>'+
+   '<select id="simpleTaskStatus" aria-label="İş durumu">'+options([["open","Açık işler"],["late","Geciken işler"],["week","Bu hafta"],["done","Tamamlanan işler"],["all","Tüm durumlar"]],state.simpleTaskStatus)+'</select>'+
    '<select id="simpleTaskStream" aria-label="İş grubu">'+options([["all","Tüm bölümler"],...state.streams.map(w=>[w.id,w.name])],state.stream)+'</select>'+
    '<input type="search" id="simpleTaskSearch" aria-label="İş arama" placeholder="İş ara..." value="'+esc(state.simpleTaskSearch)+'"></div>'+
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
@@ -1229,7 +1230,7 @@ function bindView(){
   render();window.scrollTo({top:0,behavior:"smooth"});
  });
  document.querySelectorAll("[data-simple-summary]").forEach(b=>b.onclick=()=>{
-  state.taskScope="mine";state.simpleTaskStatus=b.dataset.simpleSummary==="late"?"late":"open";
+  state.taskScope="mine";state.simpleTaskStatus=["late","week"].includes(b.dataset.simpleSummary)?b.dataset.simpleSummary:"open";
   state.simpleTaskLimit=20;state.view="tasks";render();
  });
  document.querySelectorAll("[data-simple-scope]").forEach(b=>b.onclick=()=>{
@@ -1238,8 +1239,8 @@ function bindView(){
  $("#simpleTaskStatus")?.addEventListener("change",e=>{state.simpleTaskStatus=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
  $("#simpleTaskStream")?.addEventListener("change",e=>{state.stream=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
  $("#simpleTaskSearch")?.addEventListener("input",e=>{state.simpleTaskSearch=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
- document.querySelectorAll("[data-simple-open-task]").forEach(b=>b.onclick=()=>{
-  const task=state.tasks.find(t=>t.id===b.dataset.simpleOpenTask);if(task)openModal("task",task);
+ document.querySelectorAll("#simplePriorityPanel [data-edit-task]").forEach(b=>b.onclick=()=>{
+  const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task);
  });
  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
