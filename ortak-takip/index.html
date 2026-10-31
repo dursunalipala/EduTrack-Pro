@@ -373,6 +373,13 @@ body *{visibility:hidden!important}
 .install-app-btn[hidden],.install-help[hidden]{display:none!important}
 .install-help{padding:10px 12px;margin:7px 0 0;color:#e6f7fa;font-size:11.5px;line-height:1.6;background:#1d4057;border:1px solid #3b6880;border-radius:9px}
 .staff-mode #nav button:not([data-simple-nav="1"]),.staff-mode #viewModeSwitch,.staff-mode .mobile-menu-caption{display:none!important}
+.staff-mode #nav button:not([data-simple-nav="1"]),.staff-mode #viewModeSwitch,.staff-mode .mobile-menu-caption{display:none!important}
+.task-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:#f5f8fb;border-radius:9px;padding:13px}
+.task-info-grid span{display:block;color:#607c94;font-size:11px}.task-info-grid strong{font-size:13px;overflow-wrap:anywhere}
+.task-action-card{padding:12px;border:1px solid #d9e6ec;border-radius:10px;margin:12px 0}
+.task-action-card textarea,.task-action-card input{width:100%;margin-top:7px}
+.task-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.task-history{font-size:12px;padding:9px 0;border-bottom:1px solid #e3eaf2}
+@media(max-width:600px){.task-info-grid{grid-template-columns:1fr}}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Oturum bu cihazda kalıcı tutulmaz. 15 dakika işlem yapılmazsa veya uygulama 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -597,12 +604,12 @@ const whatsAppDigits=phone=>String(phone||"").replace(/[^0-9]/g,"");
 function shareTaskWhatsApp(id){
  const t=state.tasks.find(x=>x.id===id);if(!t){toast("Görev bulunamadı.");return}
  const message=["📋 *ORTAK TAKİP | GÖREV*","*Görev:* "+t.title,
- "*Sorumlu:* "+memberName(t.assigned_to),"*İş grubu:* "+streamName(t.workstream_id),
+ "*Üst sorumlu:* "+memberName(t.assigned_to),"*Ana uygulayıcı:* "+memberName(t.executor_id),"*Kontrol eden:* "+memberName(t.reviewer_id),"*İş grubu:* "+streamName(t.workstream_id),
  "*Durum:* "+(labels[t.status]||t.status),"*Öncelik:* "+(labels[t.priority]||t.priority),
  "*Son tarih:* "+(t.due_date?date(t.due_date):"Belirlenmedi"),"",
  "*Görevi aç:* "+PANEL_URL+"?task="+encodeURIComponent(t.id),
  "Ayrıntılar için Ortak Takip'e giriş yapın."].join("\n");
- const digits=whatsAppDigits(memberWhatsAppPhone(t.assigned_to));
+ const digits=whatsAppDigits(memberWhatsAppPhone(t.executor_id||t.assigned_to));
  const recipient=(digits.length>=8&&digits.length<=15)?digits:"";
  const url="https://wa.me/"+recipient+"?text="+encodeURIComponent(message);
  window.open(url,"_blank","noopener,noreferrer");
@@ -613,7 +620,7 @@ function openTaskFromSharedLink(){
  const t=state.tasks.find(x=>x.id.toLowerCase()===id.toLowerCase());
  if(!t){toast("Görev bulunamadı veya erişim yetkiniz yok.");return}
  resetTaskFilters();state.search=t.title;state.taskScope="all";state.simpleTaskStatus="all";state.simpleTaskSearch=t.title;state.stream="all";state.view="tasks";render();
- if(["owner","manager"].includes(state.role)||t.assigned_to===state.user?.id||t.created_by===state.user?.id)openModal("task",t);
+ if(canManage()||isExecutor(t)||isHelper(t))openTaskDetail(t);
 }
 
 
@@ -1371,7 +1378,7 @@ function bindView(){
  $("#simpleTaskStream")?.addEventListener("change",e=>{state.stream=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
  $("#simpleTaskSearch")?.addEventListener("input",e=>{state.simpleTaskSearch=e.target.value;state.simpleTaskLimit=20;showSimpleTaskRows()});
  document.querySelectorAll("#simplePriorityPanel [data-edit-task]").forEach(b=>b.onclick=()=>{
-  const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openModal("task",task);
+  const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openTaskDetail(task);
  });
  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
@@ -1438,7 +1445,7 @@ $("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll
  const b=e.target.closest("[data-edit-task]");
  if(!b)return;
  const task=state.tasks.find(t=>t.id===b.dataset.editTask);
- if(task)openModal("task",task);
+ if(task)openTaskDetail(task);
 });
 document.querySelectorAll("[data-wa-task]").forEach(b=>{
  if(b.closest("#taskBody"))return;
@@ -1473,7 +1480,7 @@ const toDatetimeLocal=v=>{if(!v)return "";const d=new Date(v);return iso(d)+"T"+
 const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(val??"")+'" '+extra+'></label>';
 const multiPeopleField=(name,selected=[],exclude=null)=>'<div class="span2 multi-people"><strong>Ortak Sorumlular</strong><div class="multi-person-grid">'+state.members.filter(m=>m.is_active&&m.user_id!==exclude).map(m=>'<label><input type="checkbox" name="'+name+'" value="'+esc(m.user_id)+'"'+(selected.includes(m.user_id)?' checked':'')+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><div class="small muted">İlgili kişiler işaretlenerek ortak görev tanımlanabilir.</div></div>';
 const sel=(name,label,opts,val)=>'<label>'+label+'<select name="'+name+'">'+options(opts,val)+'</select></label>';
-function openModal(kind,item){modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Taslak Hedefi Düzenle":"Yeni Taslak Hedef",goalActual:"Gerçekleşeni Güncelle",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle",catalog:item?"İşi Düzenle":"Havuza İş Ekle",catalogGenerate:"Havuzdan Görev Oluştur"})[kind];
+function openModal(kind,item){if(kind==="task"&&!canManage()){toast("Personel yalnızca kendisine verilen görevin durumunu güncelleyebilir.");return;}$("#modalForm button[type=submit]").hidden=false;modalKind=kind;editing=item||null;const f=$("#modalFields");const people=[["","Atanmadı"],...state.members.filter(m=>m.is_active).map(m=>[m.user_id,memberName(m.user_id)])],streams=[["","Genel"],...state.streams.map(s=>[s.id,s.name])];$("#modalTitle").textContent=({task:item?"Görevi Düzenle":"Yeni Görev",goal:item?"Taslak Hedefi Düzenle":"Yeni Taslak Hedef",goalActual:"Gerçekleşeni Güncelle",stream:"İş Grubunu Düzenle",event:item?"Etkinliği Düzenle":"Takvime Etkinlik Ekle",member:"Yeni Kullanıcı Daveti",memberEdit:"Kullanıcı Bilgilerini Düzenle",memberPassword:"Yeni Şifre Belirle",catalog:item?"İşi Düzenle":"Havuza İş Ekle",catalogGenerate:"Havuzdan Görev Oluştur"})[kind];
 
 if(kind==="catalog"){
  const editable=editableCatalogStreams(),streamItems=editable.map(w=>[w.id,w.name]);
@@ -1569,7 +1576,49 @@ $("#showMemberNewPassword")?.addEventListener("change",e=>{
  f.querySelectorAll('input[name="password"],input[name="confirm_password"]').forEach(x=>x.type=e.target.checked?"text":"password");
 });
 }
-function closeModal(){$("#modalscrim").classList.add("hide");editing=null}
+
+function openTaskDetail(t){
+ if(!t)return;
+ modalKind="taskDetail";editing=t;
+ $("#modalTitle").textContent=t.title;
+ $("#modalForm button[type=submit]").hidden=true;
+ const executor=isExecutor(t),helper=isHelper(t),reviewer=canManage()&&isReviewer(t)&&t.executor_id!==state.user.id;
+ const active=["taslak","beklemede","devam_ediyor"].includes(t.status);
+ const actions=[];
+ if(active&&(executor||canManage())&&t.status!=="devam_ediyor")actions.push(["start","İşe Başla"]);
+ if(active&&executor)actions.push(["submit","Kontrole Gönder"]);
+ if(t.status==="kontrol_bekliyor"&&reviewer){actions.push(["approve","Onayla"]);actions.push(["return","Düzeltme İste"])}
+ if(executor||helper||canManage())actions.push(["comment","Not Ekle"]);
+ const fields=[["Üst Sorumlu",memberName(t.assigned_to)],["Ana Uygulayıcı",memberName(t.executor_id)],["Yardımcı Personeller",(t.helper_user_ids||[]).map(memberName).join(", ")||"Yok"],["Kontrol Eden",memberName(t.reviewer_id)],["Görevi Veren",memberName(t.created_by)],["Son Tarih",date(t.due_date)],["Durum",statusName(t.status)],["Kontrole Gönderildi",date(t.submitted_at)],["Kontrol Tarihi",date(t.reviewed_at)],["Tamamlandı",date(t.completed_at)]];
+ const names={start:"Başladı",submit:"Kontrole gönderdi",approve:"Onayladı",return:"Düzeltme istedi",comment:"Not ekledi"};
+ const log=state.taskActivities.filter(a=>a.task_id===t.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $("#modalFields").innerHTML='<div class="span2"><p>'+esc(t.description||"")+'</p><div class="task-info-grid">'+fields.map(([k,v])=>'<div><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join("")+'</div>'+
+ (t.execution_note?'<p><strong>Uygulama notu: </strong>'+esc(t.execution_note)+'</p>':"")+
+ (t.review_note?'<p><strong>Kontrol notu: </strong>'+esc(t.review_note)+'</p>':"")+
+ (t.evidence_url?'<p><a href="'+esc(t.evidence_url)+'" target="_blank" rel="noopener noreferrer">Belge bağlantısı</a></p>':"")+
+ '<div class="task-action-card">'+(actions.length?'<label>Açıklama<textarea id="taskActionNote" rows="3" placeholder="Yapılan iş veya kontrol notu"></textarea></label><label>Belge bağlantısı (https://)<input type="url" id="taskActionEvidence" placeholder="https://..."></label><div class="task-actions">'+
+ actions.map(([a,l])=>'<button type="button" class="btn sm" data-task-action="'+a+'">'+l+'</button>').join("")+'</div>':"")+
+ '<div class="task-actions">'+(canManage()?'<button type="button" class="btn sm" id="editTaskDetail">Görevi Düzenle</button>':"")+
+ '<button type="button" class="btn sm" id="shareTaskDetail">WhatsApp ile Paylaş</button></div></div>'+
+ '<h3>İşlem Geçmişi</h3>'+(log.length?log.map(a=>'<div class="task-history"><b>'+esc(memberName(a.actor_id))+'</b> · '+esc(names[a.action]||a.action)+' · '+date(a.created_at)+(a.note?'<p>'+esc(a.note)+'</p>':"")+(a.evidence_url?'<p><a target="_blank" rel="noopener noreferrer" href="'+esc(a.evidence_url)+'">Belge</a></p>':"")+'</div>').join(""):'<p class="muted small">Henüz işlem kaydı yok.</p>')+'</div>';
+ $("#modalscrim").classList.remove("hide");
+ $("#editTaskDetail")?.addEventListener("click",()=>openModal("task",t));
+ $("#shareTaskDetail")?.addEventListener("click",()=>shareTaskWhatsApp(t.id));
+ document.querySelectorAll("[data-task-action]").forEach(b=>b.onclick=()=>performTaskAction(t.id,b.dataset.taskAction));
+}
+async function performTaskAction(id,action){
+ const note=$("#taskActionNote")?.value.trim()||"",evidence=$("#taskActionEvidence")?.value.trim()||"";
+ if(action==="return"&&!note){toast("Düzeltme açıklaması yazın.");return}
+ if(["approve","return"].includes(action)&&!window.confirm("Bu kontrol işlemi kaydedilsin mi?"))return;
+ const btn=document.querySelector('[data-task-action="'+action+'"]');if(btn)btn.disabled=true;
+ try{await requireActiveSession();
+  const {error:e}=await sb.rpc("task_action",{p_task_id:id,p_action:action,p_note:note,p_evidence_url:evidence});
+  if(e)throw e;
+  closeModal();toast(action==="submit"?"Yönetici kontrolüne gönderildi.":action==="approve"?"Yönetici onayıyla tamamlandı.":"Görev güncellendi.");
+  await refresh();
+ }catch(e){error(e)}finally{if(btn)btn.disabled=false}
+}
+function closeModal(){$("#modalscrim").classList.add("hide");$("#modalForm button[type=submit]").hidden=false;editing=null}
 $("#closeModal").onclick=closeModal;$("#cancelModal").onclick=closeModal;$("#modalscrim").addEventListener("click",e=>{if(e.target.id==="modalscrim")closeModal()});
 async function requireActiveSession(){
   const verified=await sb.auth.getUser();
