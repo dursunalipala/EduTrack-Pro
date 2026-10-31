@@ -492,7 +492,7 @@ function openTaskFromSharedLink(){
  if(!id||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return;
  const t=state.tasks.find(x=>x.id.toLowerCase()===id.toLowerCase());
  if(!t){toast("Görev bulunamadı veya erişim yetkiniz yok.");return}
- resetTaskFilters();state.search=t.title;state.view="tasks";render();
+ resetTaskFilters();state.search=t.title;state.taskScope="all";state.simpleTaskStatus="all";state.simpleTaskSearch=t.title;state.stream="all";state.view="tasks";render();
  if(["owner","manager"].includes(state.role)||t.assigned_to===state.user?.id||t.created_by===state.user?.id)openModal("task",t);
 }
 
