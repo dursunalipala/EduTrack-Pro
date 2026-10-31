@@ -577,7 +577,7 @@ function generateAIReport(mode){
 function render(){
  const shell=$("#shell");shell.classList.toggle("simple-mode",state.simpleMode);
  const switchButton=$("#viewModeSwitch");
- if(switchButton){switchButton.textContent=state.simpleMode?"☷ Tüm Modüller":"☷ Sade Görünüm";switchButton.setAttribute("aria-pressed",String(state.simpleMode))}
+ if(switchButton){switchButton.textContent=state.simpleMode?"☷ Tüm Modülleri Göster":"☷ Sade Görünüme Geç";switchButton.setAttribute("aria-pressed",String(state.simpleMode));switchButton.setAttribute("aria-label",state.simpleMode?"Ayrıntılı tüm modülleri göster":"Sade görünüme geç")}
  const menuNames={overview:"Bugün",tasks:"İşlerim",calendar:"Takvim",ai:"Asistan"};
  const fullNames={overview:"Genel Bakış",tasks:"Görev Takibi",catalog:"İş ve Görev Havuzu",calendar:"Takvim",goals:"Performans ve Hedefler",streams:"İş Grupları",reports:"Raporlama",notifications:"Bildirimler",ai:"Yapay Zekâ Asistanı",members:"Ortaklar ve Ekip"};
  document.querySelectorAll("#nav button").forEach(b=>{
@@ -1223,12 +1223,19 @@ async function changeGoalApproval(id,status,btn){
  }catch(e){error(e)}finally{btn.disabled=false}
 }
 function bindView(){
- $("#viewModeSwitch")?.addEventListener("click",()=>{
-  state.simpleMode=!state.simpleMode;
-  try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}
-  state.view="overview";state.taskScope="mine";state.simpleTaskStatus="open";state.simpleTaskLimit=20;
-  render();window.scrollTo({top:0,behavior:"smooth"});
- });
+ const viewModeButton=$("#viewModeSwitch");
+ if(viewModeButton)viewModeButton.onclick=()=>{
+  // This button persists across renders. Replace its handler instead of stacking listeners.
+  const nextMode=!state.simpleMode;
+  state.simpleMode=nextMode;
+  try{localStorage.setItem("ortak-takip-ui-mode",nextMode?"simple":"detailed")}catch{}
+  state.view="overview";
+  state.taskScope="mine";
+  state.simpleTaskStatus="open";
+  state.simpleTaskLimit=20;
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+ };
  document.querySelectorAll("[data-simple-summary]").forEach(b=>b.onclick=()=>{
   state.taskScope="mine";state.simpleTaskStatus=["late","week"].includes(b.dataset.simpleSummary)?b.dataset.simpleSummary:"open";
   state.simpleTaskLimit=20;state.view="tasks";render();
