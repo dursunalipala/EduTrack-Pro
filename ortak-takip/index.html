@@ -575,7 +575,7 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -1197,6 +1197,203 @@ if("serviceWorker" in navigator){
    .catch(()=>console.warn("PWA çevrimdışı kabuğu kullanılamadı")));
 }
 function showAuth(){$("#auth").classList.remove("hide");$("#shell").classList.add("hide")}
+
+/* Digital Center: links only. Passwords or access tokens must never be stored here. */
+const digitalCategories=[
+ ["website","Web Siteleri","🌐"],["sheets","Google Tabloları","▦"],
+ ["social","Sosyal Medya","◉"],["google","Google Hizmetleri","◆"],
+ ["ads","Reklam Panelleri","◎"],["hosting","Hosting ve Alan Adları","⌘"],
+ ["email","E-posta Sistemleri","✉"],["other","Diğer Platformlar","↗"]
+];
+const digitalStates=[["active","Aktif"],["maintenance","Bakımda"],["passive","Pasif"]];
+const isDigitalAdmin=()=>state.role==="owner";
+const digitalCategory=c=>digitalCategories.find(x=>x[0]===c)||digitalCategories[digitalCategories.length-1];
+const digitalStateLabel=s=>digitalStates.find(x=>x[0]===s)?.[1]||"Belirsiz";
+const digitalSafeUrl=text=>{
+ try{
+  const url=new URL(String(text||"").trim());
+  if(url.protocol!=="https:"||url.username||url.password||!url.hostname||url.href.length>1850)return "";
+  return url.href;
+ }catch{return ""}
+};
+const digitalShortUrl=value=>{
+ try{const u=new URL(value);return u.hostname+(u.pathname!=="/"?u.pathname.slice(0,40):"")}
+ catch{return value}
+};
+async function loadDigitalCenter(){
+ const response=await sb.from("digital_resources").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(500);
+ if(response.error)throw response.error;
+ state.digitalResources=response.data||[];
+ if(isDigitalAdmin()){
+  const history=await sb.from("digital_resource_audit").select("id,resource_id,actor_id,action,happened_at")
+   .eq("workspace_id",WS).order("happened_at",{ascending:false}).limit(500);
+  if(history.error)throw history.error;
+  state.digitalAudit=history.data||[];
+ }else state.digitalAudit=[];
+}
+const digitalViewerList=()=>state.members.filter(m=>m.is_active&&!m.archived_at);
+const digitalUrlActions=(url,label)=>{
+ const safe=digitalSafeUrl(url);
+ if(!safe)return "";
+ return '<a class="digital-open-btn" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer"'+
+  ' aria-label="'+esc(label+' yeni sekmede aç')+'">'+esc(label)+' ↗</a>';
+};
+function digitalView(){
+ const can=isDigitalAdmin(),all=state.digitalResources||[];
+ const filtered=all.filter(r=>
+  (can?Boolean(r.is_archived)===Boolean(state.digitalArchive):!r.is_archived)&&
+  (state.digitalCategory==="all"||r.category===state.digitalCategory)&&
+  (state.digitalSchool==="all"||r.school_unit===state.digitalSchool)&&
+  (state.digitalStatus==="all"||r.status===state.digitalStatus)&&
+  (!state.digitalSearch||[r.title,r.description,r.url,r.admin_url].some(v=>String(v||"").toLocaleLowerCase("tr-TR").includes(state.digitalSearch.toLocaleLowerCase("tr-TR"))))
+ );
+ const categoryFilter='<select id="digitalCategoryFilter" aria-label="Platform türü">'+options([["all","Tüm platformlar"],...digitalCategories.map(x=>[x[0],x[1]])],state.digitalCategory)+'</select>';
+ const schoolFilter='<select id="digitalSchoolFilter" aria-label="Kurum">'+options(schools,state.digitalSchool)+'</select>';
+ const statusFilter='<select id="digitalStatusFilter" aria-label="Durum">'+options([["all","Tüm durumlar"],...digitalStates],state.digitalStatus)+'</select>';
+ const filters='<div class="digital-filters">'+categoryFilter+schoolFilter+statusFilter+
+ '<input type="search" id="digitalSearch" placeholder="Platform, web adresi veya açıklama ara..." aria-label="Dijital bağlantı ara" value="'+esc(state.digitalSearch)+'">'+
+ (can?'<label class="digital-archive-option"><input type="checkbox" id="digitalArchive" '+(state.digitalArchive?"checked":"")+'> Arşiv</label>':"")+
+ '</div>';
+ const cards=filtered.map(item=>{
+  const category=digitalCategory(item.category),safe=digitalSafeUrl(item.url),panelUrl=digitalSafeUrl(item.admin_url);
+  const audience=can?
+   '<div class="digital-audience">Görünür: '+(item.allowed_user_ids?.length?
+    item.allowed_user_ids.map(memberName).map(esc).join(", "):"Yalnızca Admin")+'</div>':"";
+  const hist=can&&state.digitalHistoryId===item.id?
+   '<div class="digital-history"><strong>İşlem geçmişi</strong>'+
+   (state.digitalAudit.filter(a=>a.resource_id===item.id).slice(0,15).map(a=>
+    '<div>'+esc(({created:"Eklendi",updated:"Güncellendi",archived:"Arşivlendi",restored:"Geri alındı"})[a.action]||a.action)+
+    ' · '+esc(memberName(a.actor_id))+' · '+esc(notificationDate(a.happened_at))+'</div>').join("")||'<div>Henüz işlem bulunmuyor.</div>')+'</div>':"";
+  return '<article class="digital-card'+(item.is_archived?" archived":"")+'">'+
+    '<div class="digital-card-head"><div class="digital-card-icon" aria-hidden="true">'+category[2]+'</div>'+
+    '<div class="digital-card-heading"><strong>'+esc(item.title)+'</strong><small>'+esc(category[1])+' · '+esc(schoolName(item.school_unit))+'</small></div>'+
+    '<span class="digital-state digital-state-'+esc(item.is_archived?"passive":item.status)+'">'+esc(item.is_archived?"Arşiv":digitalStateLabel(item.status))+'</span></div>'+
+    (item.description?'<p class="digital-description">'+esc(item.description)+'</p>':"")+
+    '<div class="digital-url" title="'+esc(item.url)+'">'+esc(digitalShortUrl(item.url))+'</div>'+
+    (item.responsible_id?'<div class="digital-owner">Sorumlu: <strong>'+esc(memberName(item.responsible_id))+'</strong></div>':"")+
+    audience+
+    '<div class="digital-actions">'+
+    (safe?digitalUrlActions(safe,"Ziyaret Et"):"")+
+    (panelUrl?digitalUrlActions(panelUrl,"Yönetim Paneli"):"")+
+    (safe?'<button type="button" class="digital-copy-btn" data-digital-copy="'+esc(item.id)+'" data-digital-type="url">Kopyala</button>':"")+
+    (can?'<button type="button" class="digital-manage-btn" data-digital-edit="'+esc(item.id)+'">Düzenle</button>'+
+      '<button type="button" class="digital-manage-btn" data-digital-history="'+esc(item.id)+'">Geçmiş</button>'+
+      '<button type="button" class="digital-archive-btn" data-digital-archive="'+esc(item.id)+'">'+(item.is_archived?"Geri Al":"Arşivle")+'</button>':"")+
+    '</div>'+hist+'</article>';
+ }).join("");
+ const header='<section class="digital-hero"><div><h2>Dijital Yönetim Merkezi</h2><p>Web siteleri, Google tabloları, sosyal medya ve yönetim platformları tek ekranda.</p></div>'+
+  (can?'<button type="button" class="btn primary" id="digitalAdd">+ Bağlantı Ekle</button>':"")+'</section>';
+ const stats='<div class="digital-summary"><span><strong>'+all.filter(r=>!r.is_archived).length+'</strong> Erişilebilir bağlantı</span>'+
+ '<span><strong>'+new Set(all.filter(r=>!r.is_archived).map(r=>r.category)).size+'</strong> Platform türü</span>'+
+ (can?'<span><strong>'+all.filter(r=>r.is_archived).length+'</strong> Arşiv</span>':"")+'</div>';
+ const empty='<div class="digital-empty">'+(all.length?
+ "Bu filtreye uygun kayıt bulunmuyor. Filtreleri değiştirin.":
+ (can?"Henüz bağlantı eklenmedi. İlk web sitesi veya Google tablosunu eklemek için “Bağlantı Ekle”yi kullanın.":
+  "Size açılmış bir dijital bağlantı henüz bulunmuyor. Admin erişim verdiğinde burada görünecek."))+'</div>';
+ const form=can&&state.digitalFormOpen?digitalFormView():"";
+ return header+stats+form+'<section class="digital-content">'+filters+
+ '<div class="digital-results">'+filtered.length+' bağlantı gösteriliyor</div>'+
+ '<div class="digital-grid">'+(cards||empty)+'</div></section>'+
+ '<div class="digital-security-note">🔒 Platform giriş şifreleri burada saklanmaz. Bağlantının görüntülenmesi, ilgili Google veya sosyal medya hesabında otomatik yetki vermez.</div>';
+}
+function digitalFormView(){
+ const item=state.digitalResources.find(r=>r.id===state.digitalEditingId)||null;
+ const staff=digitalViewerList();
+ const access=staff.map(m=>
+  '<label class="digital-check"><input type="checkbox" name="allowed_user_ids" value="'+esc(m.user_id)+'"'+
+  ((item?.allowed_user_ids||[]).includes(m.user_id)?" checked":"")+'> '+esc(memberName(m.user_id))+
+  '<small>'+esc(labels[m.role]||m.role)+'</small></label>').join("");
+ return '<section class="digital-editor"><div class="digital-editor-head"><h3>'+
+  (item?"Bağlantıyı Düzenle":"Yeni Dijital Bağlantı")+'</h3>'+
+  '<button type="button" class="btn sm" id="digitalCancel">Vazgeç</button></div>'+
+  '<form id="digitalForm" class="digital-form"><label>Bağlantı adı *<input name="title" maxlength="140" minlength="2" required placeholder="Örn. Elit Koleji Web Sitesi" value="'+esc(item?.title||"")+'"></label>'+
+  '<label>Platform türü *<select name="category">'+options(digitalCategories.map(x=>[x[0],x[1]]),item?.category||"website")+'</select></label>'+
+  '<label>Kurum <select name="school_unit">'+options(schools.filter(x=>x[0]!=="all"),item?.school_unit||"ortak")+'</select></label>'+
+  '<label>Durum <select name="status">'+options(digitalStates,item?.status||"active")+'</select></label>'+
+  '<label class="digital-span2">Ziyaret bağlantısı (https://) *<input name="url" type="url" required maxlength="1800" placeholder="https://..." value="'+esc(item?.url||"")+'"></label>'+
+  '<label class="digital-span2">Yönetim paneli bağlantısı (isteğe bağlı)<input name="admin_url" type="url" maxlength="1800" placeholder="https://.../admin" value="'+esc(item?.admin_url||"")+'"></label>'+
+  '<label>Sorumlu kişi<select name="responsible_id">'+options([["","Belirlenmedi"],...staff.map(x=>[x.user_id,memberName(x.user_id)])],item?.responsible_id||"")+'</select></label>'+
+  '<label class="digital-span2">Açıklama<textarea name="description" rows="3" maxlength="900" placeholder="Ne için kullanılıyor? Hangi işlemler takip ediliyor?">'+esc(item?.description||"")+'</textarea></label>'+
+  '<fieldset class="digital-span2"><legend>Kimler görüntüleyebilir?</legend><div class="digital-access-grid">'+access+'</div>'+
+  '<p class="digital-help">Kimseyi seçmezseniz yalnızca Admin görebilir. Sorumlu kişi atanması tek başına görüntüleme yetkisi vermez.</p></fieldset>'+
+  '<p class="digital-warning digital-span2">Şifre, kurtarma kodu veya erişim anahtarı yazmayın. Yalnızca güvenli web bağlantıları ekleyin.</p>'+
+  '<div class="digital-span2 digital-form-actions"><button type="submit" class="btn primary" id="digitalSave">'+(item?"Değişiklikleri Kaydet":"Bağlantıyı Kaydet")+'</button>'+
+  '<button type="button" class="btn" id="digitalCancelBottom">Vazgeç</button></div></form></section>';
+}
+async function saveDigitalResource(form){
+ if(!isDigitalAdmin()||!state.user)return;
+ const btn=$("#digitalSave");if(btn)btn.disabled=true;
+ try{
+  await requireActiveSession();
+  const fd=new FormData(form);
+  const cleanUrl=str=>{const x=digitalSafeUrl(str);if(!x)throw Error("Bağlantılar https:// ile başlamalı ve geçerli bir adres olmalıdır.");return x};
+  const url=cleanUrl(fd.get("url"));const adminRaw=String(fd.get("admin_url")||"").trim();
+  const allowed=[...new Set(fd.getAll("allowed_user_ids"))].filter(id=>digitalViewerList().some(m=>m.user_id===id));
+  const responsible=String(fd.get("responsible_id")||"");
+  if(responsible&&!digitalViewerList().some(m=>m.user_id===responsible))throw Error("Sorumlu kişi aktif personel olmalıdır.");
+  const payload={workspace_id:WS,title:String(fd.get("title")||"").trim(),
+   category:String(fd.get("category")||""),school_unit:String(fd.get("school_unit")||"ortak"),
+   status:String(fd.get("status")||"active"),url,admin_url:adminRaw?cleanUrl(adminRaw):null,
+   description:String(fd.get("description")||"").trim(),responsible_id:responsible||null,allowed_user_ids:allowed};
+  if(payload.title.length<2)throw Error("Bağlantıya açıklayıcı bir ad yazın.");
+  const old=state.digitalResources.find(r=>r.id===state.digitalEditingId);
+  let result;
+  if(old){
+   const {workspace_id,...updates}=payload;
+   result=await sb.from("digital_resources").update(updates).eq("id",old.id).eq("workspace_id",WS).select("id").single();
+  }else{
+   result=await sb.from("digital_resources").insert({...payload,created_by:state.user.id}).select("id").single();
+  }
+  if(result.error)throw result.error;
+  state.digitalFormOpen=false;state.digitalEditingId=null;state.digitalArchive=false;
+  await refresh();toast(old?"Dijital bağlantı güncellendi.":"Dijital bağlantı eklendi.");
+ }catch(e){error(e)}finally{if(btn)btn.disabled=false}
+}
+async function archiveDigitalResource(id){
+ if(!isDigitalAdmin())return;
+ const item=state.digitalResources.find(r=>r.id===id);
+ if(!item)return;
+ const next=!item.is_archived;
+ if(!confirm(next?"Bu bağlantı kullanıcıların görünümünden kaldırılarak arşivlensin mi?":"Bağlantı yeniden aktif listeye alınsın mı?"))return;
+ try{
+  await requireActiveSession();
+  const {error}=await sb.from("digital_resources").update({is_archived:next})
+   .eq("workspace_id",WS).eq("id",id);
+  if(error)throw error;
+  await refresh();
+  toast(next?"Bağlantı arşivlendi, işlem geçmişi korundu.":"Bağlantı arşivden çıkarıldı.");
+ }catch(e){error(e)}
+}
+function bindDigitalCenter(){
+ $("#digitalAdd")?.addEventListener("click",()=>{if(!isDigitalAdmin())return;state.digitalEditingId=null;state.digitalFormOpen=true;render();$("#digitalForm")?.scrollIntoView({behavior:"smooth",block:"start"})});
+ document.querySelectorAll("[data-digital-edit]").forEach(b=>b.onclick=()=>{
+  if(!isDigitalAdmin())return;state.digitalEditingId=b.dataset.digitalEdit;state.digitalFormOpen=true;render();
+  $("#digitalForm")?.scrollIntoView({behavior:"smooth",block:"start"});
+ });
+ for(const id of ["digitalCancel","digitalCancelBottom"])$("#"+id)?.addEventListener("click",()=>{state.digitalFormOpen=false;state.digitalEditingId=null;render()});
+ $("#digitalForm")?.addEventListener("submit",e=>{e.preventDefault();void saveDigitalResource(e.currentTarget)});
+ document.querySelectorAll("[data-digital-archive]").forEach(b=>b.onclick=()=>void archiveDigitalResource(b.dataset.digitalArchive));
+ document.querySelectorAll("[data-digital-history]").forEach(b=>b.onclick=()=>{
+  state.digitalHistoryId=state.digitalHistoryId===b.dataset.digitalHistory?null:b.dataset.digitalHistory;render();
+ });
+ document.querySelectorAll("[data-digital-copy]").forEach(b=>b.onclick=async()=>{
+  const item=state.digitalResources.find(x=>x.id===b.dataset.digitalCopy);
+  const url=item&&digitalSafeUrl(item.url);if(!url)return;
+  try{await navigator.clipboard.writeText(url);toast("Bağlantı kopyalandı.")}
+  catch{toast("Kopyalama desteklenmiyor; adresi karttan açabilirsiniz.")}
+ });
+ for(const [id,key] of [["digitalCategoryFilter","digitalCategory"],["digitalSchoolFilter","digitalSchool"],["digitalStatusFilter","digitalStatus"]])
+  $("#"+id)?.addEventListener("change",e=>{state[key]=e.target.value;render()});
+ $("#digitalArchive")?.addEventListener("change",e=>{state.digitalArchive=e.target.checked;render()});
+ $("#digitalSearch")?.addEventListener("input",e=>{
+  state.digitalSearch=e.target.value;const caret=e.target.selectionStart;
+  clearTimeout(window.digitalSearchTimer);window.digitalSearchTimer=setTimeout(()=>{
+   if(state.view!=="digital")return;render();
+   const input=$("#digitalSearch");if(input){input.focus();try{input.setSelectionRange(caret,caret)}catch{}}
+  },180);
+ });
+}
+
 async function fetchAll(){
 if(isStaff()){
  const q=[sb.from("tasks").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),
@@ -2215,6 +2412,7 @@ function bindView(){
   const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openTaskDetail(task);
  });
  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks","digital"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
+if(state.view==="digital")bindDigitalCenter();
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
 document.querySelectorAll("[data-ai-run]").forEach(b=>b.onclick=()=>generateAIReport(b.dataset.aiRun));
 document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>sendAIRequest("chat",b.dataset.aiQuestion));
