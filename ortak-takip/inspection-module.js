@@ -4,7 +4,7 @@
  * The Google Drive file's own sharing permissions remain authoritative.
  */
 export function createInspectionModule(api) {
-  const {sb, WS, state, esc, options, toast, error, requireActiveSession, render, canManage} = api;
+  const {sb, WS, state, esc, options, toast, error, requireActiveSession, render, canManage, openFindingTask} = api;
   const schoolOptions = [['anasinifi','Elit Anaokulu / Anasınıfı'],['ilkokul','Elit İlkokulu'],['aksam','Elit Akşam Lisesi'],['ortaokul','Ortaokul (kurum eklenirse)']];
   const docSchools = [['all','Tüm kurumlar'],['ortak','Ortak kurum evrakları'],...schoolOptions];
   const docCategories = [['resmiyet','Resmî Belgeler'],['personel','Personel'],['guvenlik','Güvenlik'],['egitim','Eğitim'],['ogrenci','Öğrenci İşleri'],['fiziki','Fiziki Şartlar'],['mali','Mali İşler'],['diger','Diğer']];
@@ -116,7 +116,7 @@ export function createInspectionModule(api) {
       html.push('<article class="inspection-check" data-criterion="'+esc(row.key)+'"><div class="inspection-check-title"><strong>'+esc(row.title)+'</strong>'+(row.critical?'<span class="inspection-critical">Kritik</span>':'')+'</div>',
         '<div class="inspection-check-fields"><label>Sonuç<select name="status" '+(selected.status==='completed'?'disabled':'')+'>'+options(statuses,status)+'</select></label><label>Kanıt belgesi<select name="document_id" '+(selected.status==='completed'?'disabled':'')+'>'+docOptions(a?.document_id||'',s.unit)+'</select></label></div>',
         '<label class="inspection-note-label">Açıklama<textarea name="note" rows="2" maxlength="3000" '+(selected.status==='completed'?'disabled':'')+' placeholder="Gözlem, eksik, yapılacak işlem...">'+esc(a?.note||'')+'</textarea></label>',
-        '<div class="inspection-check-actions">'+(doc?docLink(doc.drive_url,'Belgeyi Gör'):'')+(selected.status==='completed'?'':('<button type="button" class="btn teal sm" data-check-save="'+esc(row.key)+'">Kontrolü Kaydet</button>'))+'</div></article>');
+        '<div class="inspection-check-actions">'+(doc?docLink(doc.drive_url,'Belgeyi Gör'):'')+(selected.status==='completed'?'':(status==='eksik'?'<button type="button" class="btn sm" data-inspection-task="'+esc(row.key)+'">Göreve Aktar</button>':'')+'<button type="button" class="btn teal sm" data-check-save="'+esc(row.key)+'">Kontrolü Kaydet</button>')+'</div></article>');
     }
     if(last)html.push('</div>');
     html.push('<div class="inspection-footer"><button type="button" class="btn" id="inspectionPrint">Yazdır / PDF</button><button type="button" class="btn" id="inspectionCsv">Excel için CSV</button>'+(selected.status==='draft'?'<button type="button" class="btn teal" id="inspectionComplete">Ön Denetimi Tamamla</button>':'')+'</div>');
@@ -220,6 +220,10 @@ export function createInspectionModule(api) {
       document.getElementById('inspectionSession')?.addEventListener('change',e=>{void selectSession(e.target.value);});
       document.getElementById('inspectionNew')?.addEventListener('click',()=>void newSession());
       document.querySelectorAll('[data-check-save]').forEach(btn=>btn.addEventListener('click',()=>void saveCheck(btn.dataset.checkSave,btn.closest('[data-criterion]'))));
+      document.querySelectorAll('[data-inspection-task]').forEach(btn=>btn.addEventListener('click',()=>{
+        const criterion=checklist(S().unit).find(item=>item.key===btn.dataset.inspectionTask);
+        if(criterion&&typeof openFindingTask==='function')openFindingTask({title:criterion.title,critical:criterion.critical,school_unit:S().unit,note:answerFor(criterion.key)?.note||''});
+      }));
       document.getElementById('inspectionComplete')?.addEventListener('click',()=>void complete());
       document.getElementById('inspectionPrint')?.addEventListener('click',()=>window.print());
       document.getElementById('inspectionCsv')?.addEventListener('click',downloadCSV);
