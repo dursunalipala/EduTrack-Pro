@@ -1103,7 +1103,7 @@ function makeReportSnapshot(){
    supervisor:memberName(h.supervisor_id),changedAt:h.changed_at,kind:h.change_type
   }));
   const activityLog=state.taskActivities.filter(a=>taskIds.has(a.task_id)).map(a=>({
-   task:taskNames.get(a.task_id)||"",actor:memberName(a.actor_id),
+   task:taskNames.get(a.task_id)||"",actorId:a.actor_id,actor:memberName(a.actor_id),
    action:a.action,note:a.note||"",createdAt:a.created_at
   }));
   const personnel=state.members.map(m=>{
@@ -1112,7 +1112,7 @@ function makeReportSnapshot(){
    for(const h of state.taskAssignmentHistory)if(taskIds.has(h.task_id)&&(
      [h.executor_id,h.prior_executor_id,h.supervisor_id,h.prior_supervisor_id].includes(m.user_id)||
      [...(h.helper_ids||[]),...(h.prior_helper_ids||[])].includes(m.user_id)))relevant.add(h.task_id);
-   const acts=activityLog.filter(a=>a.actor===memberName(m.user_id));
+   const acts=activityLog.filter(a=>a.actorId===m.user_id);
    return {name:memberName(m.user_id),role:labels[m.role]||m.role,
     status:m.archived_at?"Arşivde":m.is_active?"Aktif":"Pasif",
     archivedAt:m.archived_at||"",deactivatedAt:m.deactivated_at||"",
@@ -1257,8 +1257,11 @@ function printManagementReport(){
 }
 
 function exportReportCsv(){
-const rows=[["İş Grubu","Görev","Birincil Sorumlu","Ortak Sorumlular","Durum","Öncelik","Son Tarih","İlerleme (%)","Son Devir Tarihi"]];
-for(const t of reportTasks())rows.push([streamName(t.workstream_id),t.title,memberName(t.assigned_to),(t.collaborator_user_ids||[]).map(memberName).join(", "),labels[t.status]||t.status,labels[t.priority]||t.priority,t.due_date||"",t.progress??0,t.last_delegated_at||""]);
+const rows=[["İş Grubu","Görev","Üst Sorumlu","Uygulayıcı","Ortak Sorumlular","Durum","Öncelik","Son Tarih","İlerleme (%)","Son Devir Tarihi"]];
+for(const t of reportTasks())rows.push([streamName(t.workstream_id),t.title,memberName(t.assigned_to),memberName(t.executor_id),(t.collaborator_user_ids||[]).map(memberName).join(", "),labels[t.status]||t.status,labels[t.priority]||t.priority,t.due_date||"",t.progress??0,t.last_delegated_at||""]);
+rows.push([]);
+rows.push(["Personel","Yetki","Durum","İlgili Görev","İşlem","Kontrole Gönderim"]);
+for(const m of makeReportSnapshot().personnel)rows.push([m.name,m.role,m.status,m.relatedTasks,m.actions,m.submissions]);
 const clean=v=>{let x=String(v??"");if(/^[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
 const csv="\uFEFF"+rows.map(r=>r.map(clean).join(";")).join("\r\n");
 const url=window.URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
