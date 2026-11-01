@@ -517,6 +517,26 @@ body *{visibility:hidden!important}
 #notifyDeviceStatus{font-size:11px;color:#657e90;margin:8px 0;line-height:1.5}
 .notify-device-controls label{font-size:11px;display:flex;align-items:center;gap:8px;color:#2d5168}
 .notify-device-controls input{width:17px;height:17px;accent-color:#176b82}
+
+/* Accessible swipe-to-remove notifications (without deleting tasks). */
+#notifyMarkAll[hidden],#notifyUndoBar[hidden]{display:none!important}
+.notify-panel-actions button:not(:disabled){font-weight:800;color:#08768d;background:#e7f5f8;border-radius:8px;padding:7px 9px}
+.notify-swipe-row{display:flex;align-items:stretch;position:relative;overflow:hidden;
+ border-bottom:1px solid #e8eff4;background:#fff4f3;touch-action:pan-y}
+.notify-swipe-row .notify-item{width:auto;min-width:0;flex:1;border-bottom:0;transition:transform .18s ease}
+.notify-swipe-row.swiping .notify-item{transition:none}
+.notify-swipe-row .notify-delete-btn{display:flex;flex-direction:column;justify-content:center;
+ align-items:center;gap:3px;min-width:57px;padding:10px 7px;border:0;
+ border-left:1px solid #f4d3d4;background:#fff1f0;color:#a43f49;cursor:pointer;font-weight:700}
+.notify-swipe-row .notify-delete-btn>span{font-size:24px;line-height:1}
+.notify-swipe-row .notify-delete-btn small{font-size:10px}
+.notify-swipe-row .notify-delete-btn:hover,.notify-swipe-row .notify-delete-btn:focus-visible{
+ background:#ffe0dc;outline:2px solid #d2777c;outline-offset:-2px}
+.notify-undo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:9px 14px;font-size:11px;background:#e7f6f8;color:#245e68;border-bottom:1px solid #d3e9ef}
+.notify-undo-bar button{border:0;border-radius:7px;padding:7px 11px;background:#18778c;
+ color:#fff;font-size:11px;font-weight:800;cursor:pointer}
+@media(max-width:650px){.notify-swipe-row .notify-delete-btn{min-width:53px}}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -964,6 +984,7 @@ function bindInAppNotifications(){
  bell.onclick=()=>setInboxOpen(panel.hidden);
  $("#notifyClose").onclick=()=>setInboxOpen(false);
  $("#notifyMarkAll").onclick=()=>void markAllNotificationsRead();
+ $("#notifyUndoButton").onclick=()=>void undoInboxDismissal();
  $("#enableDeviceNotifications").onclick=()=>void enablePushOnDevice();
  $("#disableDeviceNotifications").onclick=()=>void disablePushOnDevice();
  $("#testDeviceNotifications").onclick=()=>void testPushOnDevice();
@@ -979,9 +1000,51 @@ function bindInAppNotifications(){
   });
  }
  panel.onclick=e=>{
-  const row=e.target.closest("[data-inbox-open]");
-  if(row)void openInboxTask(row.dataset.inboxOpen);
+  if(Date.now()<ignoreNotificationClickUntil){e.preventDefault();return}
+  const deleteButton=e.target.closest("[data-inbox-delete]");
+  if(deleteButton){e.preventDefault();void dismissInboxNotification(deleteButton.dataset.inboxDelete);return}
+  const openButton=e.target.closest("[data-inbox-open]");
+  if(openButton)void openInboxTask(openButton.dataset.inboxOpen);
  };
+ const list=$("#notifyList");
+ // Capture touch gestures without interfering with vertical scrolling.
+ list.addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="touch"||!e.isPrimary||!e.target.closest(".notify-item"))return;
+  const row=e.target.closest("[data-inbox-row]");
+  if(!row)return;
+  swipeGesture={id:row.dataset.inboxRow,x:e.clientX,y:e.clientY,dx:0,dy:0};
+ });
+ list.addEventListener("pointermove",e=>{
+  const gesture=swipeGesture;
+  if(!gesture||e.pointerType!=="touch")return;
+  gesture.dx=e.clientX-gesture.x;gesture.dy=e.clientY-gesture.y;
+  if(Math.abs(gesture.dx)<12||Math.abs(gesture.dx)<Math.abs(gesture.dy)*1.4)return;
+  const row=list.querySelector('[data-inbox-row="'+gesture.id+'"]');
+  if(!row)return;
+  row.classList.add("swiping");
+  const item=row.querySelector(".notify-item");
+  if(item)item.style.transform="translateX("+Math.max(-105,Math.min(105,gesture.dx))+"px)";
+ });
+ list.addEventListener("pointerup",e=>{
+  const gesture=swipeGesture;swipeGesture=null;
+  if(!gesture||e.pointerType!=="touch")return;
+  const row=list.querySelector('[data-inbox-row="'+gesture.id+'"]');
+  const moved=Math.abs(e.clientX-gesture.x),vertical=Math.abs(e.clientY-gesture.y);
+  if(moved>=78&&moved>vertical*1.4){
+   ignoreNotificationClickUntil=Date.now()+550;
+   e.preventDefault();
+   void dismissInboxNotification(gesture.id);
+  }else if(row){
+   row.classList.remove("swiping");
+   const item=row.querySelector(".notify-item");if(item)item.style.transform="";
+  }
+ });
+ list.addEventListener("pointercancel",()=>{
+  if(!swipeGesture)return;
+  const row=list.querySelector('[data-inbox-row="'+swipeGesture.id+'"]');
+  swipeGesture=null;
+  if(row){row.classList.remove("swiping");const item=row.querySelector(".notify-item");if(item)item.style.transform=""}
+ });
  document.addEventListener("click",e=>{
   if(!panel.hidden&&!panel.contains(e.target)&&!bell.contains(e.target))setInboxOpen(false);
  });
