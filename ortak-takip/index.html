@@ -1291,13 +1291,13 @@ const digitalSafeUrl=text=>{
   // Kopyala-yapıştır sırasında URL içine karışabilen görünmez Unicode işaretlerini temizle.
   const value=String(text??"").replace(/[\u200B-\u200F\u2060\uFEFF]/g,"").trim();
   if(!/^https:\/\//i.test(value))return "";
-  const url=new URL(value);
+  const url=new globalThis.URL(value);
   if(url.protocol!=="https:"||url.username||url.password||!url.hostname||url.href.length>1800)return "";
   return url.href;
  }catch{return ""}
 };
 const digitalShortUrl=value=>{
- try{const u=new URL(value);return u.hostname+(u.pathname!=="/"?u.pathname.slice(0,40):"")}
+ try{const u=new globalThis.URL(value);return u.hostname+(u.pathname!=="/"?u.pathname.slice(0,40):"")}
  catch{return value}
 };
 async function loadDigitalCenter(){
