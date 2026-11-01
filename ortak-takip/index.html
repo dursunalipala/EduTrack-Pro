@@ -843,20 +843,27 @@ async function loadMyNotifications(){
  const currentUser=state.user.id,request=++inboxRequest;
  inboxLoading=true;
  try{
-  const {data,error}=await sb.from("user_notifications").select("id,task_id,kind,title,read_at,created_at")
-   .eq("workspace_id",WS).eq("recipient_id",currentUser).order("created_at",{ascending:false}).limit(80);
-  if(error)throw error;
+  const [listResult,countResult]=await Promise.all([
+   sb.from("user_notifications").select("id,task_id,kind,title,read_at,created_at")
+    .eq("workspace_id",WS).eq("recipient_id",currentUser).is("dismissed_at",null)
+    .order("created_at",{ascending:false}).limit(80),
+   sb.from("user_notifications").select("id",{head:true,count:"exact"})
+    .eq("workspace_id",WS).eq("recipient_id",currentUser).is("dismissed_at",null).is("read_at",null)
+  ]);
+  if(listResult.error)throw listResult.error;
+  if(countResult.error)throw countResult.error;
   if(state.user?.id===currentUser&&request===inboxRequest){
-   const rows=data||[];
+   const rows=listResult.data||[];
    if(lastInboxIds!==null){
     for(const n of rows)if(!n.read_at&&!lastInboxIds.has(n.id)&&
        Date.now()-new Date(n.created_at).getTime()<180000)playSoundOnce(n.id);
    }
    lastInboxIds=new Set(rows.map(n=>n.id));
    state.userNotifications=rows;
+   inboxUnreadTotal=countResult.count??rows.filter(n=>!n.read_at).length;
    renderNotificationCenter();
   }
- }catch(e){console.warn("Uygulama bildirimleri yüklenemedi",e?.message||e)}
+ }catch(e){console.warn("Uygulama bildirimleri yüklenemedi",e?.message||e);if($("#notifyPanel")&&!$("#notifyPanel").hidden)toast("Bildirimler yüklenemedi. Bağlantınızı kontrol edin.")}
  finally{inboxLoading=false}
 }
 async function markNotificationRead(id){
@@ -867,19 +874,68 @@ async function markNotificationRead(id){
  const {data,error}=await sb.from("user_notifications").update({read_at:stamp})
    .eq("id",id).eq("recipient_id",userId).select("id");
  if(error||!data?.length){toast("Bildirim okundu olarak işaretlenemedi.");return}
- if(state.user?.id===userId){n.read_at=stamp;renderNotificationCenter()}
+ if(state.user?.id===userId){n.read_at=stamp;inboxUnreadTotal=Math.max(0,inboxUnreadTotal-1);renderNotificationCenter()}
 }
 async function markAllNotificationsRead(){
  const userId=state.user?.id;
  if(!userId||!unreadNotificationCount())return;
- const stamp=new Date().toISOString();
- const {error}=await sb.from("user_notifications").update({read_at:stamp})
-  .eq("workspace_id",WS).eq("recipient_id",userId).is("read_at",null);
- if(error){toast("Bildirimler güncellenemedi.");return}
- if(state.user?.id===userId){
-  state.userNotifications.forEach(n=>{if(!n.read_at)n.read_at=stamp});
+ const allReadButton=$("#notifyMarkAll");
+ allReadButton.disabled=true;
+ try{
+  const stamp=new Date().toISOString();
+  const {error}=await sb.from("user_notifications").update({read_at:stamp})
+    .eq("workspace_id",WS).eq("recipient_id",userId).is("read_at",null).is("dismissed_at",null);
+  if(error)throw error;
+  if(state.user?.id===userId){
+   state.userNotifications.forEach(n=>{if(!n.read_at)n.read_at=stamp});
+   inboxUnreadTotal=0;
+   renderNotificationCenter();
+   toast("Bütün bildirimler okundu olarak işaretlendi.");
+   void loadMyNotifications();
+  }
+ }catch(e){toast("Bildirimler okundu yapılamadı: "+String(e.message||e))}
+ finally{allReadButton.disabled=false}
+}
+async function dismissInboxNotification(id){
+ const n=state.userNotifications.find(x=>x.id===id);
+ if(!n||!state.user)return;
+ const userId=state.user.id,stamp=new Date().toISOString();
+ try{
+  const {data,error}=await sb.from("user_notifications").update({dismissed_at:stamp})
+   .eq("id",id).eq("recipient_id",userId).is("dismissed_at",null).select("id");
+  if(error)throw error;
+  if(!data?.length)throw Error("Bildirim bulunamadı veya kaldırılmış");
+  if(state.user?.id!==userId)return;
+  state.userNotifications=state.userNotifications.filter(x=>x.id!==id);
+  if(!n.read_at)inboxUnreadTotal=Math.max(0,inboxUnreadTotal-1);
+  undoDismissedNotification={...n,userId};
+  if(undoDismissTimer)clearTimeout(undoDismissTimer);
+  undoDismissTimer=setTimeout(()=>{
+   undoDismissTimer=null;undoDismissedNotification=null;renderNotificationCenter();
+  },7000);
   renderNotificationCenter();
+ }catch(e){
+  const row=document.querySelector('[data-inbox-row="'+id+'"]');
+  if(row){row.classList.remove("swiping");const item=row.querySelector(".notify-item");if(item)item.style.transform=""}
+  toast("Bildirim kaldırılamadı: "+String(e.message||e));
  }
+}
+async function undoInboxDismissal(){
+ const previous=undoDismissedNotification,userId=state.user?.id;
+ if(!previous||!userId||previous.userId!==userId)return;
+ const button=$("#notifyUndoButton");button.disabled=true;
+ try{
+  const {data,error}=await sb.from("user_notifications").update({dismissed_at:null})
+   .eq("id",previous.id).eq("recipient_id",userId).select("id");
+  if(error)throw error;
+  if(!data?.length)throw Error("Bildirim geri alınamadı");
+  if(undoDismissTimer)clearTimeout(undoDismissTimer);
+  undoDismissTimer=null;undoDismissedNotification=null;
+  await loadMyNotifications();
+  renderNotificationCenter();
+  toast("Bildirim geri alındı.");
+ }catch(e){toast("Geri alınamadı: "+String(e.message||e))}
+ finally{button.disabled=false}
 }
 async function openInboxTask(id){
  const n=state.userNotifications.find(x=>x.id===id);
@@ -941,7 +997,9 @@ function bindInAppNotifications(){
 function stopInAppNotifications(){
  inboxRequest++;
  if(inboxChannel){const old=inboxChannel;inboxChannel=null;void sb.removeChannel(old)}
- state.userNotifications=[];lastInboxIds=null;playedSoundIds.clear();
+ state.userNotifications=[];inboxUnreadTotal=0;lastInboxIds=null;playedSoundIds.clear();
+ undoDismissedNotification=null;swipeGesture=null;
+ if(undoDismissTimer){clearTimeout(undoDismissTimer);undoDismissTimer=null}
  $("#notifyPanel").hidden=true;$("#notifyBell").setAttribute("aria-expanded","false");
  renderNotificationCenter();
 }
