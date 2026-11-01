@@ -552,6 +552,11 @@ body *{visibility:hidden!important}
 .digital-archive-option{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:12px;color:#54728b}
 .digital-archive-option input{accent-color:#177c8e}
 .digital-results{margin:0 0 12px;color:#6c8194;font-size:11.5px}
+.digital-sort-row{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin:-2px 0 12px}
+.digital-sort-row label{font-size:12px;font-weight:750;color:#36596e}
+.digital-sort-row select{border:1px solid #d4e2eb;border-radius:10px;background:#fff;color:#21425b;font-size:12px;padding:10px 12px;min-width:195px;max-width:100%}
+.digital-sort-row select:focus-visible{outline:2px solid #2e9aad;outline-offset:1px}
+@media(max-width:670px){.digital-sort-row{justify-content:space-between}.digital-sort-row select{flex:1;min-width:0}}
 .digital-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .digital-card{background:#fff;border:1px solid #dfe9ef;border-radius:15px;padding:17px;display:flex;flex-direction:column;gap:12px;min-width:0;box-shadow:0 3px 13px #153b5010}
 .digital-card.archived{opacity:.75;border-style:dashed}
@@ -675,7 +680,7 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -1306,6 +1311,23 @@ const digitalCategories=[
  ["email","E-posta Sistemleri","✉"],["other","Diğer Platformlar","↗"]
 ];
 const digitalStates=[["active","Aktif"],["maintenance","Bakımda"],["passive","Pasif"]];
+const digitalSortOptions=[
+ ["newest","En yeni eklenen"],
+ ["oldest","En eski eklenen"],
+ ["title_asc","Ada göre A–Z"],
+ ["title_desc","Ada göre Z–A"],
+ ["category","Platform türüne göre"],
+ ["school","Kuruma göre"],
+ ["status","Duruma göre"]
+];
+const digitalSortStorageKey="ortak-takip-digital-sort";
+const loadDigitalSort=()=>{
+ try{
+  const saved=localStorage.getItem(digitalSortStorageKey);
+  return digitalSortOptions.some(([value])=>value===saved)?saved:"newest";
+ }catch{return "newest"}
+};
+
 const isDigitalAdmin=()=>state.role==="owner";
 const digitalCategory=c=>digitalCategories.find(x=>x[0]===c)||digitalCategories[digitalCategories.length-1];
 const digitalStateLabel=s=>digitalStates.find(x=>x[0]===s)?.[1]||"Belirsiz";
@@ -1360,6 +1382,26 @@ const digitalPreviewCard=(item,safe)=>{
   '<div class="digital-preview-note">'+(canEmbed?"Bazı siteler küçük ön izlemeyi engeller; bağlantıyı Ziyaret Et ile açabilirsiniz.":"Bu platformun güvenli bağlantı kartı gösteriliyor.")+'</div>'+
  '</div>';
 };
+
+const digitalSortResources=(items,order)=>{
+ const collator=new Intl.Collator("tr",{numeric:true,sensitivity:"base"});
+ const title=(a,b)=>collator.compare(String(a.title||""),String(b.title||""));
+ const statusRank={active:0,maintenance:1,passive:2};
+ return [...items].sort((a,b)=>{
+  let result=0;
+  switch(order){
+   case "oldest":result=String(a.created_at||"").localeCompare(String(b.created_at||""));break;
+   case "title_asc":result=title(a,b);break;
+   case "title_desc":result=-title(a,b);break;
+   case "category":result=collator.compare(digitalCategory(a.category)[1],digitalCategory(b.category)[1]);break;
+   case "school":result=collator.compare(schoolName(a.school_unit),schoolName(b.school_unit));break;
+   case "status":result=(statusRank[a.status]??3)-(statusRank[b.status]??3);break;
+   default:result=String(b.created_at||"").localeCompare(String(a.created_at||""));
+  }
+  if(!result&&order!=="title_asc"&&order!=="title_desc")result=title(a,b);
+  return result||collator.compare(String(a.id||""),String(b.id||""));
+ });
+};
 function digitalView(){
  const can=isDigitalAdmin(),all=state.digitalResources||[];
  const filtered=all.filter(r=>
@@ -1376,7 +1418,8 @@ function digitalView(){
  '<input type="search" id="digitalSearch" placeholder="Platform, web adresi veya açıklama ara..." aria-label="Dijital bağlantı ara" value="'+esc(state.digitalSearch)+'">'+
  (can?'<label class="digital-archive-option"><input type="checkbox" id="digitalArchive" '+(state.digitalArchive?"checked":"")+'> Arşiv</label>':"")+
  '</div>';
- const cards=filtered.map(item=>{
+ const sorted=digitalSortResources(filtered,state.digitalSort);
+ const cards=sorted.map(item=>{
   const category=digitalCategory(item.category),safe=digitalSafeUrl(item.url),panelUrl=digitalSafeUrl(item.admin_url);
   const audience=can?
    '<div class="digital-audience">Görünür: '+(item.allowed_user_ids?.length?
@@ -1416,7 +1459,9 @@ function digitalView(){
  (can?"Henüz bağlantı eklenmedi. İlk web sitesi veya Google tablosunu eklemek için “Bağlantı Ekle”yi kullanın.":
   "Size açılmış bir dijital bağlantı henüz bulunmuyor. Admin erişim verdiğinde burada görünecek."))+'</div>';
  const form=can&&state.digitalFormOpen?digitalFormView():"";
- return header+stats+form+'<section class="digital-content">'+filters+
+ const sorting='<div class="digital-sort-row"><label for="digitalSort">Sıralama</label>'+
+ '<select id="digitalSort" aria-label="Dijital bağlantıları sırala">'+options(digitalSortOptions,state.digitalSort)+'</select></div>';
+ return header+stats+form+'<section class="digital-content">'+filters+sorting+
  '<div class="digital-results">'+filtered.length+' bağlantı gösteriliyor</div>'+
  '<div class="digital-grid">'+(cards||empty)+'</div></section>'+
  '<div class="digital-security-note">🔒 Platform giriş şifreleri burada saklanmaz. Bağlantının görüntülenmesi, ilgili Google veya sosyal medya hesabında otomatik yetki vermez.</div>';
@@ -1553,6 +1598,13 @@ function bindDigitalCenter(){
  for(const [id,key] of [["digitalCategoryFilter","digitalCategory"],["digitalSchoolFilter","digitalSchool"],["digitalStatusFilter","digitalStatus"]])
   $("#"+id)?.addEventListener("change",e=>{state[key]=e.target.value;render()});
  $("#digitalArchive")?.addEventListener("change",e=>{state.digitalArchive=e.target.checked;render()});
+ $("#digitalSort")?.addEventListener("change",e=>{
+  const selected=e.target.value;
+  if(!digitalSortOptions.some(([value])=>value===selected))return;
+  state.digitalSort=selected;
+  try{localStorage.setItem(digitalSortStorageKey,selected)}catch{}
+  render();
+ });
  $("#digitalSearch")?.addEventListener("input",e=>{
   state.digitalSearch=e.target.value;const caret=e.target.selectionStart;
   clearTimeout(window.digitalSearchTimer);window.digitalSearchTimer=setTimeout(()=>{
