@@ -1061,9 +1061,17 @@ const rows=state.streams.filter(w=>state.reportStream==="all"||w.id===state.repo
 const items=ts.filter(t=>t.workstream_id===w.id),done=items.filter(t=>t.status==="tamamlandi").length,overdue=items.filter(t=>t.due_date&&t.due_date<today&&!["tamamlandi","iptal"].includes(t.status)).length,progress=items.length?Math.round(done*100/items.length):0;
 return '<div class="stream"><div class="row"><strong>'+esc(w.name)+'</strong><span class="small">'+items.length+' görev · '+done+' tamamlandı · '+overdue+' geciken</span></div><div class="small muted" style="margin:6px 0">Yönetici: '+esc(memberName(w.lead_user_id))+'</div><div class="bar"><i style="width:'+progress+'%;background:'+esc(w.color)+'"></i></div><div class="small muted" style="margin-top:6px">%'+progress+' gerçekleşme</div></div>'
 }).join("");
-const members=state.members.filter(m=>m.is_active).map(m=>{
-const items=ts.filter(t=>t.assigned_to===m.user_id),done=items.filter(t=>t.status==="tamamlandi").length,overdue=items.filter(t=>t.due_date&&t.due_date<today&&!["tamamlandi","iptal"].includes(t.status)).length;
-return '<div class="stream"><div class="row"><strong>'+esc(memberName(m.user_id))+'</strong><span class="small">'+items.length+' görev · '+done+' tamamlanan · '+overdue+' geciken</span></div></div>'
+const members=state.members.map(m=>{
+ const related=new Set();
+ for(const t of ts)if(t.assigned_to===m.user_id||t.executor_id===m.user_id||(t.helper_user_ids||[]).includes(m.user_id))related.add(t.id);
+ for(const h of state.taskAssignmentHistory)if(ts.some(t=>t.id===h.task_id)&&
+  [h.executor_id,h.prior_executor_id,h.supervisor_id,h.prior_supervisor_id].includes(m.user_id)||
+  (ts.some(t=>t.id===h.task_id)&&[...(h.helper_ids||[]),...(h.prior_helper_ids||[])].includes(m.user_id)))related.add(h.task_id);
+ const activities=state.taskActivities.filter(a=>a.actor_id===m.user_id&&ts.some(t=>t.id===a.task_id));
+ const status=m.archived_at?"Arşivde":m.is_active?"Aktif":"Pasif";
+ return '<div class="stream"><div class="row"><strong>'+esc(memberName(m.user_id))+
+  '</strong><span class="small">'+esc(status)+' · '+related.size+' ilgili görev · '+activities.length+' işlem · '+
+  activities.filter(a=>a.action==="submit").length+' kontrole gönderim</span></div></div>';
 }).join("");
 return '<div class="titlebar"><h2>Yönetim ve Performans Raporu</h2></div>'+filter+
 '<div class="kpi">'+stat("Toplam Görev",ts.length,"Seçili kapsam")+stat("Tamamlanan",completed,"%"+pct+" gerçekleşme")+stat("Açık Görev",open.length,"Takip edilmesi gereken")+stat("Geciken",late,"Süresi geçmiş işler")+stat("Görev Devri",transfers,"Devredilmiş görevler")+stat("Ortak Görev",shared,"Birlikte yürütülen")+'</div>'+
@@ -1082,10 +1090,36 @@ function makeReportSnapshot(){
     const late=groupItems.filter(t=>t.due_date&&t.due_date<day&&!["tamamlandi","iptal"].includes(t.status)).length;
     return {name:w.name,lead:memberName(w.lead_user_id),total:groupItems.length,done:completed,late,pct:groupItems.length?Math.round(100*completed/groupItems.length):0};
   });
-  const tasks=items.map((t,i)=>({num:i+1,group:streamName(t.workstream_id),title:t.title,description:t.description||"",person:memberName(t.assigned_to),
+  const tasks=items.map((t,i)=>({num:i+1,group:streamName(t.workstream_id),title:t.title,description:t.description||"",
+    person:memberName(t.assigned_to),executor:memberName(t.executor_id),reviewer:memberName(t.reviewer_id),
     collaborators:(t.collaborator_user_ids||[]).map(memberName).join(", "),status:labels[t.status]||t.status,priority:labels[t.priority]||t.priority,
-    due:t.due_date||"",progress:Number(t.progress)||0,transfer:t.last_delegated_at||"",transferredBy:t.last_delegated_by?memberName(t.last_delegated_by):""}));
-  return {day,period,scope,tasks,groups,totals:{total:items.length,done,open:open.length,late:open.filter(t=>t.due_date&&t.due_date<day).length,
+    due:t.due_date||"",progress:Number(t.progress)||0,transfer:t.last_delegated_at||"",transferredBy:t.last_delegated_by?memberName(t.last_delegated_by):"",
+    submittedAt:t.submitted_at||"",reviewedAt:t.reviewed_at||""}));
+  const taskIds=new Set(items.map(t=>t.id));
+  const taskNames=new Map(items.map(t=>[t.id,t.title]));
+  const assignmentHistory=state.taskAssignmentHistory.filter(h=>taskIds.has(h.task_id)).map(h=>({
+   task:taskNames.get(h.task_id)||"",
+   previous:memberName(h.prior_executor_id),current:memberName(h.executor_id),
+   supervisor:memberName(h.supervisor_id),changedAt:h.changed_at,kind:h.change_type
+  }));
+  const activityLog=state.taskActivities.filter(a=>taskIds.has(a.task_id)).map(a=>({
+   task:taskNames.get(a.task_id)||"",actor:memberName(a.actor_id),
+   action:a.action,note:a.note||"",createdAt:a.created_at
+  }));
+  const personnel=state.members.map(m=>{
+   const relevant=new Set();
+   for(const t of items)if([t.assigned_to,t.executor_id].includes(m.user_id)||(t.helper_user_ids||[]).includes(m.user_id))relevant.add(t.id);
+   for(const h of state.taskAssignmentHistory)if(taskIds.has(h.task_id)&&(
+     [h.executor_id,h.prior_executor_id,h.supervisor_id,h.prior_supervisor_id].includes(m.user_id)||
+     [...(h.helper_ids||[]),...(h.prior_helper_ids||[])].includes(m.user_id)))relevant.add(h.task_id);
+   const acts=activityLog.filter(a=>a.actor===memberName(m.user_id));
+   return {name:memberName(m.user_id),role:labels[m.role]||m.role,
+    status:m.archived_at?"Arşivde":m.is_active?"Aktif":"Pasif",
+    archivedAt:m.archived_at||"",deactivatedAt:m.deactivated_at||"",
+    relatedTasks:relevant.size,actions:acts.length,submissions:acts.filter(a=>a.action==="submit").length};
+  });
+  return {day,period,scope,tasks,groups,personnel,assignmentHistory,activityLog,
+   totals:{total:items.length,done,open:open.length,late:open.filter(t=>t.due_date&&t.due_date<day).length,
     shared:items.filter(t=>(t.collaborator_user_ids||[]).length>0).length,delegated:items.filter(t=>t.last_delegated_at).length,
     percent:items.length?Math.round(100*done/items.length):0}};
 }
@@ -1120,7 +1154,7 @@ async function exportReportPdf(){
       ...r.groups.map(g=>[g.name,g.lead,String(g.total),String(g.done),String(g.late),String(g.pct)])];
     const taskRows=[[{text:"No",bold:true},{text:"İş Grubu",bold:true},{text:"Görev / Açıklama",bold:true},{text:"Sorumlu / Ortaklar",bold:true},{text:"Durum",bold:true},{text:"Bitiş",bold:true},{text:"%",bold:true}],
       ...r.tasks.map(x=>[String(x.num),x.group,{text:[x.title,x.description?x.description:""].filter(Boolean).join("\n"),fontSize:7},
-      {text:[x.person,x.collaborators?"Ortak: "+x.collaborators:""].filter(Boolean).join("\n"),fontSize:7},x.status,x.due||"—",String(x.progress)])];
+      {text:[x.person,"Uygulayıcı: "+x.executor,"Kontrol: "+x.reviewer,x.collaborators?"Ortak: "+x.collaborators:""].filter(Boolean).join("\n"),fontSize:7},x.status,x.due||"—",String(x.progress)])];
     const doc={pageSize:"A4",pageOrientation:"landscape",pageMargins:[28,38,28,34],info:{title:"Ortak Takip Yönetim Raporu",subject:r.scope,author:"Ortak Takip"},
       content:[
         {text:"ORTAK TAKİP  |  YÖNETİM RAPORU",fontSize:17,bold:true,color:"#142c49",margin:[0,0,0,4]},
@@ -1129,7 +1163,18 @@ async function exportReportPdf(){
         {text:"Bölüm Performansı",style:"section"},
         {table:{headerRows:1,widths:["*",120,52,58,48,58],body:groupRows},layout:"lightHorizontalLines",margin:[0,0,0,16]},
         {text:"Görev Detayları",style:"section"},
-        r.tasks.length?{table:{headerRows:1,widths:[21,103,"*",104,73,52,27],body:taskRows},layout:{fillColor:(row)=>row===0?"#e8f0f8":row%2?"#ffffff":"#f5f8fb",hLineColor:()=>"#d3dce8",vLineColor:()=>"#e3e9f1"},fontSize:7.5}:{text:"Seçilen filtrelere uygun görev bulunmuyor.",italics:true}
+        r.tasks.length?{table:{headerRows:1,widths:[21,103,"*",104,73,52,27],body:taskRows},layout:{fillColor:(row)=>row===0?"#e8f0f8":row%2?"#ffffff":"#f5f8fb",hLineColor:()=>"#d3dce8",vLineColor:()=>"#e3e9f1"},fontSize:7.5}:{text:"Seçilen filtrelere uygun görev bulunmuyor.",italics:true}        ,{text:"Personel Görev Geçmişi (Pasif ve Arşiv Dahil)",style:"section",margin:[0,18,0,8]},
+        {table:{headerRows:1,widths:["*","auto","auto",58,58,58],body:[
+          [{text:"Personel",bold:true},{text:"Yetki",bold:true},{text:"Durum",bold:true},
+           {text:"İlgili Görev",bold:true},{text:"İşlem",bold:true},{text:"Kontrole Gönderim",bold:true}],
+          ...r.personnel.map(p=>[p.name,p.role,p.status,String(p.relatedTasks),String(p.actions),String(p.submissions)])
+        ]},layout:"lightHorizontalLines"},
+        {text:"Personel İşlem Kayıtları",style:"section",margin:[0,18,0,8]},
+        r.activityLog.length?{table:{headerRows:1,widths:["*",100,95,104,90],body:[
+           ["Görev","İşlemi Yapan","İşlem","Açıklama","Tarih"],
+           ...r.activityLog.map(x=>[x.task,x.actor,x.action,x.note,x.createdAt?new Date(x.createdAt).toLocaleString("tr-TR"):""])
+        ]},layout:"lightHorizontalLines",fontSize:7}:{text:"Seçili kapsamda işlem kaydı yok.",italics:true}
+
       ],
       styles:{section:{fontSize:12,bold:true,color:"#142c49",margin:[0,0,0,8]}},
       defaultStyle:{font:"Roboto",fontSize:9},
@@ -1175,6 +1220,21 @@ async function exportReportExcel(){
     details["!cols"]=[{wch:6},{wch:42},{wch:54},{wch:60},{wch:24},{wch:35},{wch:18},{wch:15},{wch:17},{wch:15},{wch:23},{wch:24}];
     details["!autofilter"]={ref:"A1:L"+Math.max(1,taskRows.length)};
     X.utils.book_append_sheet(book,details,"Görevler");
+    const staffRows=[["Personel","Yetki","Durum","İlgili Görev","İşlem","Kontrole Gönderim","Arşiv Tarihi"],
+      ...r.personnel.map(p=>[safe(p.name),safe(p.role),p.status,p.relatedTasks,p.actions,p.submissions,p.archivedAt])];
+    const staffSheet=X.utils.aoa_to_sheet(staffRows);
+    staffSheet["!cols"]=[{wch:28},{wch:18},{wch:16},{wch:19},{wch:14},{wch:20},{wch:23}];
+    X.utils.book_append_sheet(book,staffSheet,"Personel Geçmişi");
+    const operations=[["Tarih","Personel","Görev","İşlem","Açıklama"],
+      ...r.activityLog.map(x=>[x.createdAt,safe(x.actor),safe(x.task),safe(x.action),safe(x.note)])];
+    const actionsSheet=X.utils.aoa_to_sheet(operations);
+    actionsSheet["!cols"]=[{wch:24},{wch:28},{wch:46},{wch:20},{wch:60}];
+    X.utils.book_append_sheet(book,actionsSheet,"İşlem Kayıtları");
+    const assignments=[["Tarih","Görev","Önceki Uygulayıcı","Yeni Uygulayıcı","Üst Sorumlu","Değişiklik"],
+      ...r.assignmentHistory.map(x=>[x.changedAt,safe(x.task),safe(x.previous),safe(x.current),safe(x.supervisor),safe(x.kind)])];
+    const assignmentSheet=X.utils.aoa_to_sheet(assignments);
+    assignmentSheet["!cols"]=[{wch:24},{wch:48},{wch:30},{wch:30},{wch:30},{wch:20}];
+    X.utils.book_append_sheet(book,assignmentSheet,"Görev Devir Geçmişi");
     X.writeFile(book,reportFileName("xlsx"),{compression:true});
     toast("Excel raporu indiriliyor");
   });
@@ -1188,7 +1248,11 @@ function printManagementReport(){
   section.innerHTML='<h1>ORTAK TAKİP - YÖNETİM RAPORU</h1><div class="print-meta">Rapor tarihi: '+esc(new Date().toLocaleString("tr-TR"))+' | Dönem: '+esc(r.period)+' | Bölüm: '+esc(r.scope)+'</div>'+
     '<div class="print-kpi">'+[["Toplam",t.total],["Tamamlanan",t.done],["Açık",t.open],["Geciken",t.late],["Ortak",t.shared],["Devredilen",t.delegated]].map(k=>'<span>'+esc(k[0])+': <b>'+k[1]+'</b></span>').join("")+'</div>'+
     '<h2>Bölüm Performansı</h2><table><thead><tr><th>İş Grubu</th><th>Yönetici</th><th>Toplam</th><th>Tamamlanan</th><th>Geciken</th><th>Gerçekleşme</th></tr></thead><tbody>'+groupRows+'</tbody></table>'+
-    '<h2>Görev Detayları</h2><table><thead><tr><th>No</th><th>İş Grubu</th><th>Görev</th><th>Sorumlu</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th></tr></thead><tbody>'+taskRows+'</tbody></table>';
+    '<h2>Görev Detayları</h2><table><thead><tr><th>No</th><th>İş Grubu</th><th>Görev</th><th>Sorumlu</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th></tr></thead><tbody>'+taskRows+'</tbody></table>'+
+    '<h2>Personel Geçmişi (Pasif ve Arşiv Dahil)</h2><table><thead><tr><th>Personel</th><th>Durum</th><th>İlgili Görev</th><th>İşlem</th><th>Kontrole Gönderim</th></tr></thead><tbody>'+
+    r.personnel.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.status)+'</td><td>'+p.relatedTasks+'</td><td>'+p.actions+'</td><td>'+p.submissions+'</td></tr>').join("")+'</tbody></table>'+
+    '<h2>İşlem Geçmişi</h2><table><thead><tr><th>Tarih</th><th>Görev</th><th>Personel</th><th>İşlem</th></tr></thead><tbody>'+
+    r.activityLog.map(a=>'<tr><td>'+esc(date(a.createdAt))+'</td><td>'+esc(a.task)+'</td><td>'+esc(a.actor)+'</td><td>'+esc(a.action)+'</td></tr>').join("")+'</tbody></table>';
   window.print();
 }
 
