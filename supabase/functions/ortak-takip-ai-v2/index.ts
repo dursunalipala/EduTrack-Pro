@@ -128,9 +128,9 @@ Deno.serve(async (req:Request)=>{
  });
  // Opt-in decision already made by user in app UI; never call OpenAI without it.
  if(body?.allowAI!==true)return reply(headers,{source:"data",modelConnected:false,text:localText,stats:summary,notice:"OpenAI’ye veri gönderme izni verilmedi. Yalnızca uygulama içindeki gerçek görev kayıtları görüntüleniyor."});
- // Existing atomic quota: 4 per user and 12 per workspace per day; cap bills.
+ // OpenAI-v2-only atomic quota: 20 per user and 80 per workspace per day; cap bills.
  const quotaClient=createClient(supaURL,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"",{auth:{persistSession:false,autoRefreshToken:false}});
- const q=await quotaClient.rpc("reserve_ortak_ai_request",{p_workspace:WS,p_user:user.id});
+ const q=await quotaClient.rpc("reserve_ortak_openai_v2_request",{p_workspace:WS,p_user:user.id});
  if(q.error||!q.data)return reply(headers,{source:"quota",text:localText,stats:summary,
   notice:"Günlük OpenAI kullanım limiti doldu. Ek ücret oluşmaması için yalnızca güncel görev özeti gösteriliyor."});
  const prompts={agenda:"Bugünün yönetim ajandasını açık/kritik/geciken görevlere dayanarak hazırla.",
