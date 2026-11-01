@@ -735,7 +735,20 @@ const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-T
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
 const canManage=()=>["owner","manager"].includes(state.role);
 const isStaff=()=>!canManage();
-const inspection=createInspectionModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage});
+const inspection=createInspectionModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage,
+ openFindingTask:(finding)=>{
+  openModal("task");
+  const fields=$("#modalFields");
+  if(!fields)return;
+  const title=fields.querySelector('[name="title"]');
+  const desc=fields.querySelector('[name="description"]');
+  const school=fields.querySelector('[name="school_unit"]');
+  const priority=fields.querySelector('[name="priority"]');
+  if(title)title.value=("Teftiş eksikliği: "+finding.title).slice(0,240);
+  if(desc)desc.value="Ön denetim bulgusu: "+finding.title+(finding.note?"\nAçıklama: "+finding.note:"")+"\nKaynak: Teftiş / Ön Denetim Modülü";
+  if(school)school.value=finding.school_unit==="ortaokul"?"ortak":finding.school_unit;
+  if(priority)priority.value=finding.critical?"kritik":"yuksek";
+ }});
 const isExecutor=t=>t?.executor_id===state.user?.id;
 const isHelper=t=>(t?.helper_user_ids||[]).includes(state.user?.id);
 const isReviewer=t=>t?.reviewer_id===state.user?.id;
