@@ -537,6 +537,82 @@ body *{visibility:hidden!important}
 .notify-undo-bar button{border:0;border-radius:7px;padding:7px 11px;background:#18778c;
  color:#fff;font-size:11px;font-weight:800;cursor:pointer}
 @media(max-width:650px){.notify-swipe-row .notify-delete-btn{min-width:53px}}
+
+/* Digital Center: mobile-first administrative link library */
+.digital-hero{background:linear-gradient(125deg,#142c49 6%,#1b6b84 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:15px;border-radius:17px;padding:24px;margin-bottom:14px}
+.digital-hero h2{color:#fff;font-size:20px;margin:0 0 7px}
+.digital-hero p{font-size:12.5px;color:#dceef7;line-height:1.6;margin:0}
+.digital-hero .btn{flex:none;background:#e7fcff;color:#125066;font-weight:800;border:1px solid #9cdae5}
+.digital-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:17px}
+.digital-summary span{background:#fff;border:1px solid #dbe8ed;border-radius:10px;padding:10px 15px;font-size:12px;color:#57738a}
+.digital-summary strong{font-size:20px;margin-right:6px;color:#174f68}
+.digital-content{border-radius:16px}
+.digital-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(200px,2fr) auto;gap:10px;margin:0 0 12px;align-items:center}
+.digital-filters select,.digital-filters input[type="search"]{width:100%;min-width:0;padding:11px 10px;border:1px solid #d4e2eb;border-radius:10px;background:#fff;color:#21425b;font-size:12px}
+.digital-archive-option{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:12px;color:#54728b}
+.digital-archive-option input{accent-color:#177c8e}
+.digital-results{margin:0 0 12px;color:#6c8194;font-size:11.5px}
+.digital-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.digital-card{background:#fff;border:1px solid #dfe9ef;border-radius:15px;padding:17px;display:flex;flex-direction:column;gap:12px;min-width:0;box-shadow:0 3px 13px #153b5010}
+.digital-card.archived{opacity:.75;border-style:dashed}
+.digital-card-head{display:flex;align-items:center;gap:10px;min-width:0}
+.digital-card-icon{display:grid;place-items:center;border-radius:12px;width:43px;height:43px;flex:none;background:#e8f5f7;color:#1e6678;font-size:23px;font-weight:800}
+.digital-card-heading{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
+.digital-card-heading strong{font-size:14px;color:#173951;line-height:1.3;overflow-wrap:anywhere}
+.digital-card-heading small{font-size:10px;color:#738b9d;line-height:1.35}
+.digital-state{font-size:10px;border-radius:20px;padding:5px 9px;font-weight:750;white-space:nowrap;background:#e6f8ed;color:#24764b}
+.digital-state-maintenance{background:#fff3db;color:#886021}
+.digital-state-passive{background:#f0f2f5;color:#687888}
+.digital-card .digital-description{font-size:12px;line-height:1.6;color:#597086;margin:0;overflow-wrap:anywhere}
+.digital-url{font-size:11px;color:#21758c;background:#f1f8fc;border:1px solid #e3edf4;border-radius:8px;padding:9px 10px;overflow-wrap:anywhere}
+.digital-owner,.digital-audience{font-size:11px;color:#657d90;line-height:1.5;overflow-wrap:anywhere}
+.digital-owner strong{color:#26485c}
+.digital-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto}
+.digital-open-btn,.digital-actions button{font-family:inherit;font-size:11px;border-radius:8px;padding:9px 10px;line-height:1.35;font-weight:720;min-height:35px;cursor:pointer;text-decoration:none}
+.digital-open-btn{color:#fff;background:#167a8c;border:1px solid #167a8c}
+.digital-open-btn:hover,.digital-open-btn:focus-visible{background:#0d6375;outline:2px solid #a1d9e4;outline-offset:2px}
+.digital-actions button{background:#f0f6fa;border:1px solid #d6e3eb;color:#28566d}
+.digital-actions button:hover,.digital-actions button:focus-visible{background:#e1f3f6;outline:2px solid #a1d9e4;outline-offset:1px}
+.digital-actions .digital-archive-btn{background:#fff6f3;color:#94513e;border-color:#eedbd5}
+.digital-history{border-top:1px solid #e7eef2;margin-top:4px;padding-top:8px;font-size:11px;color:#61788b;display:flex;flex-direction:column;gap:6px}
+.digital-history strong{font-size:12px;color:#214b64}
+.digital-empty{grid-column:1/-1;padding:38px 20px;background:#fff;border:1px dashed #cfdee6;border-radius:15px;text-align:center;font-size:13px;color:#647e92;line-height:1.7}
+.digital-security-note{background:#f2f8fb;border:1px solid #dbe9ef;border-radius:10px;padding:12px 14px;margin-top:18px;color:#587388;font-size:11.5px;line-height:1.5}
+.digital-editor{background:#fff;border:1px solid #cbdfe8;border-radius:16px;padding:21px;margin:0 0 18px;box-shadow:0 3px 16px #0f597112}
+.digital-editor-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.digital-editor-head h3{font-size:17px;margin:0;color:#18394f}
+.digital-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.digital-form>label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:710;color:#325067}
+.digital-form input:not([type=checkbox]),.digital-form select,.digital-form textarea{border:1px solid #d1e1e9;background:#fff;color:#193b53;border-radius:9px;padding:11px 12px;width:100%;min-width:0;font-size:13px}
+.digital-form input:focus-visible,.digital-form select:focus-visible,.digital-form textarea:focus-visible{outline:2px solid #2e9aad;outline-offset:1px}
+.digital-span2{grid-column:1/-1}
+.digital-form fieldset{border:1px solid #dce8ee;border-radius:12px;padding:13px;min-width:0}
+.digital-form legend{font-size:13px;color:#244860;font-weight:760;padding:0 8px}
+.digital-access-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.digital-check{display:flex;align-items:center;flex-wrap:wrap;gap:7px;background:#f5f9fb;border:1px solid #e4edf2;border-radius:9px;padding:10px;font-size:12px;color:#29485f;cursor:pointer}
+.digital-check input{width:17px;height:17px;accent-color:#147b8c}
+.digital-check small{font-size:10px;color:#8293a2}
+.digital-help{font-size:11px;color:#677f90;line-height:1.5;margin:11px 0 0}
+.digital-warning{background:#fff9eb;border:1px solid #f1e0b7;border-radius:9px;padding:11px;color:#906d29;font-size:11px;margin:0}
+.digital-form-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:1200px){.digital-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.digital-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.digital-filters input[type="search"]{grid-column:1/-2}.digital-access-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:670px){
+ .digital-hero{padding:19px 16px;align-items:flex-start;flex-direction:column}
+ .digital-hero h2{font-size:19px}
+ .digital-summary span{flex:1;text-align:center;padding:9px 7px;min-width:110px}
+ .digital-summary strong{display:block;margin:0}
+ .digital-grid{grid-template-columns:1fr}
+ .digital-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .digital-filters #digitalStatusFilter{grid-column:1/2}
+ .digital-filters input[type="search"]{grid-column:1/-1;grid-row:1}
+ .digital-archive-option{align-self:center}
+ .digital-card{padding:15px}
+ .digital-form{grid-template-columns:1fr}
+ .digital-form>label,.digital-span2{grid-column:1}
+ .digital-access-grid{grid-template-columns:1fr}
+ .digital-editor{padding:15px}
+}
+
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
