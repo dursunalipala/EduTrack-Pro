@@ -417,6 +417,25 @@ body *{visibility:hidden!important}
  .simple-summary.with-review .review-summary span,.simple-summary.with-review .review-summary small{text-align:left}
  .simple-summary.with-review .review-summary small{margin:0}
 }
+
+/* Direct review queue button above all task filters (both UI modes). */
+.review-queue-shortcut{
+ display:flex;align-items:center;gap:12px;width:100%;margin:0 0 17px;
+ border:1.5px solid #36a2ab;background:#effafa;border-radius:13px;
+ padding:14px 18px;color:#163e59;text-align:left;font:inherit;cursor:pointer;
+}
+.review-queue-shortcut:hover,.review-queue-shortcut:focus-visible{outline:2px solid #268e9e;outline-offset:2px;background:#e5f5f7}
+.review-queue-icon{display:flex;align-items:center;justify-content:center;width:35px;height:35px;flex:none;border-radius:10px;background:#1c8792;color:#fff;font-size:20px;font-weight:800}
+.review-queue-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.review-queue-text strong{font-size:14px}
+.review-queue-text small{font-size:11.5px;color:#5b7b8d}
+.review-queue-count{display:grid;place-items:center;min-width:38px;height:38px;border-radius:11px;background:#1b6884;color:#fff;font-size:20px;font-weight:800}
+@media(max-width:650px){
+ .review-queue-shortcut{padding:12px 11px;gap:9px}
+ .review-queue-text strong{font-size:12.5px}
+ .review-queue-text small{font-size:10.5px}
+ .review-queue-count{min-width:35px;height:35px;font-size:18px}
+}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -904,10 +923,19 @@ function simpleOverview(){
   '</section>'+
   '<p class="small muted">Tüm kurumların ayrıntılı raporları, hedefleri ve iş tanımları için sol menüdeki “Tüm Modüller” seçeneğini kullanın.</p>';
 }
+function reviewQueueShortcut(){
+ if(!canManage())return "";
+ const count=state.tasks.filter(awaitingMyApproval).length;
+ return '<button type="button" class="review-queue-shortcut" data-review-shortcut="1" aria-label="Onayımı bekleyen '+count+' görev. Kontrole gönderilen görevlerimi aç">'+
+  '<span class="review-queue-icon" aria-hidden="true">✓</span>'+
+  '<span class="review-queue-text"><strong>Onayımı Bekleyen Görevler</strong><small>Kontrolünüze gönderilen işleri görüntüleyin</small></span>'+
+  '<span class="review-queue-count">'+count+'</span><span aria-hidden="true">›</span></button>';
+}
 function simpleTasksView(){
  const can=canManage();
  return '<div class="titlebar"><h2>'+(state.simpleTaskStatus==="review"&&canManage()?"Onayımı Bekleyen Görevler":"İş Takibi")+'</h2>'+
   (can?'<button class="btn primary" id="newTask">+ Yeni İş</button>':"")+'</div>'+
+  reviewQueueShortcut()+
   '<div class="simple-tab-group"><button type="button" data-simple-scope="mine" class="'+(state.taskScope==="mine"?"active":"")+'">Benim İşlerim</button>'+
   (canManage()?'<button type="button" data-simple-scope="all" class="'+(state.taskScope==="all"?"active":"")+'">Tüm İşler</button>':"")+'</div>'+
   '<div class="simple-task-filters">'+
@@ -968,6 +996,7 @@ function tasksView(){if(state.simpleMode||isStaff())return simpleTasksView();con
  const filtersActive=state.quickFilter!=="all"||state.status!=="all"||state.stream!=="all"||!!state.search;
  return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+
   (can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+'</div>'+
+  reviewQueueShortcut()+
   '<div class="filters">'+
   '<select id="quickFilter" aria-label="Görev hızlı filtresi">'+options(dashboardTaskFilters,state.quickFilter)+'</select>'+
   '<input id="taskSearch" placeholder="Görev ara..." value="'+esc(state.search)+'">'+
@@ -1564,6 +1593,22 @@ function bindView(){
   render();
   window.scrollTo({top:0,behavior:"smooth"});
  };
+ document.querySelectorAll("[data-review-shortcut]").forEach(b=>b.onclick=()=>{
+  if(!canManage())return;
+  state.view="tasks";
+  if(state.simpleMode){
+    state.taskScope="mine";
+    state.simpleTaskStatus="review";
+    state.simpleTaskSearch="";
+    state.simpleTaskLimit=20;
+    state.stream="all";
+  }else{
+    resetTaskFilters();
+    state.quickFilter="review";
+  }
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+ });
  document.querySelectorAll("[data-simple-summary]").forEach(b=>b.onclick=()=>{
   state.taskScope="mine";state.simpleTaskStatus=["late","week"].includes(b.dataset.simpleSummary)||(b.dataset.simpleSummary==="review"&&canManage())?b.dataset.simpleSummary:"open";
   state.simpleTaskSearch="";state.stream="all";
