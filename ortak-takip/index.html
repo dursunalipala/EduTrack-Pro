@@ -614,6 +614,29 @@ body *{visibility:hidden!important}
 }
 
 .digital-admin-address{background:#f7f8fc;border-color:#e2e5ee;color:#4d6586}.digital-admin-address strong{display:block;color:#243f61;font-size:10px;margin-bottom:4px}
+/* Digital cards: responsive mini website preview and explicit external share */
+.digital-preview{border:1px solid #d9e8ef;border-radius:12px;overflow:hidden;background:#fff;min-width:0}
+.digital-preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#f5f9fc;border-bottom:1px solid #e0eaf0;color:#527185;font-size:10.5px}
+.digital-preview-top strong{color:#1f5267;font-size:11px}
+.digital-preview-toggle{border:1px solid #d4e3ea;border-radius:7px;background:#fff;color:#31677e;padding:5px 8px;cursor:pointer;font:inherit;font-weight:700;flex:none}
+.digital-preview-toggle:hover,.digital-preview-toggle:focus-visible{background:#e6f4f7;outline:2px solid #9bd2de}
+.digital-preview-viewport{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(145deg,#e4eff8,#f6fbfd)}
+.digital-preview-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;color:#376980}
+.digital-preview-fallback .digital-preview-icon{width:39px;height:39px;border-radius:12px;display:grid;place-items:center;background:#fff;font-size:22px;box-shadow:0 3px 13px #1a566a18}
+.digital-preview-fallback strong{font-size:14px;line-height:1.25;max-width:95%;overflow-wrap:anywhere}
+.digital-preview-fallback small{font-size:11px;opacity:.8;max-width:95%;overflow-wrap:anywhere}
+.digital-preview-frame{position:absolute;top:0;left:0;width:1024px;height:576px;border:0;transform-origin:top left;transform:scale(.32);pointer-events:none;background:transparent}
+.digital-preview-frame[hidden]{display:none!important}
+.digital-preview-hit{position:absolute;inset:0;z-index:2;cursor:pointer}
+.digital-preview-hit:focus-visible{outline:3px solid #147b8c;outline-offset:-3px}
+.digital-preview-note{padding:7px 10px;border-top:1px solid #e7edf2;color:#788da0;font-size:10px;line-height:1.4}
+.digital-actions .digital-share-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-family:inherit;font-size:11px;border-radius:8px;padding:9px 10px;line-height:1.35;font-weight:720;min-height:35px;cursor:pointer;background:#e8f9ef;border:1px solid #bde7d0;color:#116a3f}
+.digital-actions .digital-share-btn:hover,.digital-actions .digital-share-btn:focus-visible{background:#d7f5e3;outline:2px solid #74c99c;outline-offset:1px}
+.digital-access-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 11px}
+.digital-select-all{display:flex;align-items:center;gap:8px;cursor:pointer;color:#24546b;font-size:12px;font-weight:750}
+.digital-select-all input{width:18px;height:18px;accent-color:#147b8c}
+.digital-selected-count{font-size:11px;color:#607b8e}
+
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -1318,6 +1341,25 @@ const digitalUrlActions=(url,label)=>{
  return '<a class="digital-open-btn" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer"'+
   ' aria-label="'+esc(label+' yeni sekmede aç')+'">'+esc(label)+' ↗</a>';
 };
+
+const digitalPreviewCard=(item,safe)=>{
+ if(!safe)return "";
+ const domain=new globalThis.URL(safe).hostname.replace(/^www\./i,"");
+ // Sadece genel web siteleri otomatik gömülür; özel tablolar ve paneller yüklenmez.
+ const canEmbed=item.category==="website";
+ const category=digitalCategory(item.category);
+ return '<div class="digital-preview" aria-label="Bağlantı ön izlemesi">'+
+  '<div class="digital-preview-top"><strong>'+(canEmbed?"Site ön izlemesi":"Bağlantı ön izlemesi")+'</strong>'+
+   (canEmbed?'<button type="button" class="digital-preview-toggle" data-digital-preview-toggle="'+esc(item.id)+'">Görünümü gizle</button>':'<span>'+esc(domain)+'</span>')+'</div>'+
+  '<div class="digital-preview-viewport">'+
+   '<div class="digital-preview-fallback"><span class="digital-preview-icon" aria-hidden="true">'+category[2]+'</span>'+
+   '<strong>'+esc(item.title)+'</strong><small>'+esc(domain)+'</small></div>'+
+   (canEmbed?'<iframe class="digital-preview-frame" src="'+esc(safe)+'" title="'+esc(item.title)+' küçük web ön izlemesi" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms" tabindex="-1" aria-hidden="true"></iframe>':"")+
+   '<a class="digital-preview-hit" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" aria-label="'+esc(item.title)+' web sitesini yeni sekmede aç"></a>'+
+  '</div>'+
+  '<div class="digital-preview-note">'+(canEmbed?"Bazı siteler küçük ön izlemeyi engeller; bağlantıyı Ziyaret Et ile açabilirsiniz.":"Bu platformun güvenli bağlantı kartı gösteriliyor.")+'</div>'+
+ '</div>';
+};
 function digitalView(){
  const can=isDigitalAdmin(),all=state.digitalResources||[];
  const filtered=all.filter(r=>
@@ -1349,6 +1391,7 @@ function digitalView(){
     '<div class="digital-card-heading"><strong>'+esc(item.title)+'</strong><small>'+esc(category[1])+' · '+esc(schoolName(item.school_unit))+'</small></div>'+
     '<span class="digital-state digital-state-'+esc(item.is_archived?"passive":item.status)+'">'+esc(item.is_archived?"Arşiv":digitalStateLabel(item.status))+'</span></div>'+
     (item.description?'<p class="digital-description">'+esc(item.description)+'</p>':"")+
+    digitalPreviewCard(item,safe)+
     '<div class="digital-url" title="'+esc(item.url)+'">'+esc(item.url)+'</div>'+
     (panelUrl?'<div class="digital-url digital-admin-address"><strong>Yönetim adresi</strong> '+esc(item.admin_url)+'</div>':"")+
     (item.responsible_id?'<div class="digital-owner">Sorumlu: <strong>'+esc(memberName(item.responsible_id))+'</strong></div>':"")+
@@ -1357,6 +1400,7 @@ function digitalView(){
     (safe?digitalUrlActions(safe,"Ziyaret Et"):"")+
     (panelUrl?digitalUrlActions(panelUrl,"Yönetim Paneli"):"")+
     (safe?'<button type="button" class="digital-copy-btn" data-digital-copy="'+esc(item.id)+'" data-digital-type="url">Kopyala</button>':"")+
+    (safe?'<a class="digital-share-btn" href="https://wa.me/?text='+encodeURIComponent(item.title+"\n"+safe)+'" target="_blank" rel="noopener noreferrer" aria-label="'+esc(item.title)+' WhatsApp üzerinden paylaş">WhatsApp Paylaş</a>':"")+
     (can?'<button type="button" class="digital-manage-btn" data-digital-edit="'+esc(item.id)+'">Düzenle</button>'+
       '<button type="button" class="digital-manage-btn" data-digital-history="'+esc(item.id)+'">Geçmiş</button>'+
       '<button type="button" class="digital-archive-btn" data-digital-archive="'+esc(item.id)+'">'+(item.is_archived?"Geri Al":"Arşivle")+'</button>':"")+
@@ -1395,7 +1439,10 @@ function digitalFormView(){
   '<label class="digital-span2">Yönetim paneli bağlantısı (isteğe bağlı)<input name="admin_url" type="url" maxlength="1800" placeholder="https://.../admin" value="'+esc(item?.admin_url||"")+'"></label>'+
   '<label>Sorumlu kişi<select name="responsible_id">'+options([["","Belirlenmedi"],...staff.map(x=>[x.user_id,memberName(x.user_id)])],item?.responsible_id||"")+'</select></label>'+
   '<label class="digital-span2">Açıklama<textarea name="description" rows="3" maxlength="900" placeholder="Ne için kullanılıyor? Hangi işlemler takip ediliyor?">'+esc(item?.description||"")+'</textarea></label>'+
-  '<fieldset class="digital-span2"><legend>Kimler görüntüleyebilir?</legend><div class="digital-access-grid">'+access+'</div>'+
+  '<fieldset class="digital-span2"><legend>Kimler görüntüleyebilir?</legend>'+
+  '<div class="digital-access-toolbar"><label class="digital-select-all"><input type="checkbox" id="digitalAccessAll"> Tümünü seç</label>'+
+  '<span class="digital-selected-count" id="digitalSelectedCount" role="status" aria-live="polite"></span></div>'+
+  '<div class="digital-access-grid">'+access+'</div>'+
   '<p class="digital-help">Kimseyi seçmezseniz yalnızca Admin görebilir. Sorumlu kişi atanması tek başına görüntüleme yetkisi vermez.</p></fieldset>'+
   '<p class="digital-warning digital-span2">Şifre, kurtarma kodu veya erişim anahtarı yazmayın. Yalnızca güvenli web bağlantıları ekleyin.</p>'+
   '<div class="digital-span2 digital-form-actions"><button type="submit" class="btn primary" id="digitalSave">'+(item?"Değişiklikleri Kaydet":"Bağlantıyı Kaydet")+'</button>'+
@@ -1459,6 +1506,40 @@ function bindDigitalCenter(){
  });
  for(const id of ["digitalCancel","digitalCancelBottom"])$("#"+id)?.addEventListener("click",()=>{state.digitalFormOpen=false;state.digitalEditingId=null;render()});
  $("#digitalForm")?.addEventListener("submit",e=>{e.preventDefault();void saveDigitalResource(e.currentTarget)});
+ const selectAll=$("#digitalAccessAll");
+ const personChecks=[...document.querySelectorAll('#digitalForm input[name="allowed_user_ids"]')];
+ const updateAccessCount=()=>{
+  const selected=personChecks.filter(c=>c.checked).length;
+  if(selectAll){
+   selectAll.checked=personChecks.length>0&&selected===personChecks.length;
+   selectAll.indeterminate=selected>0&&selected<personChecks.length;
+   selectAll.disabled=personChecks.length===0;
+  }
+  const count=$("#digitalSelectedCount");
+  if(count)count.textContent=selected+" / "+personChecks.length+" kişi seçili";
+ };
+ selectAll?.addEventListener("change",()=>{personChecks.forEach(c=>{c.checked=selectAll.checked});updateAccessCount()});
+ personChecks.forEach(c=>c.addEventListener("change",updateAccessCount));
+ updateAccessCount();
+ document.querySelectorAll("[data-digital-preview-toggle]").forEach(btn=>btn.addEventListener("click",()=>{
+  const frame=btn.closest(".digital-preview")?.querySelector(".digital-preview-frame");
+  if(!frame)return;
+  frame.hidden=!frame.hidden;
+  btn.textContent=frame.hidden?"Ön izlemeyi göster":"Görünümü gizle";
+ }));
+ if(state.digitalPreviewObserver)state.digitalPreviewObserver.disconnect();
+ const resizePreview=()=>{
+  document.querySelectorAll(".digital-preview-viewport").forEach(box=>{
+   const frame=box.querySelector(".digital-preview-frame");
+   if(frame)frame.style.transform="scale("+(box.clientWidth/1024)+")";
+  });
+ };
+ resizePreview();
+ if(typeof ResizeObserver!=="undefined"){
+  state.digitalPreviewObserver=new ResizeObserver(resizePreview);
+  document.querySelectorAll(".digital-preview-viewport").forEach(box=>state.digitalPreviewObserver.observe(box));
+ }
+
  document.querySelectorAll("[data-digital-archive]").forEach(b=>b.onclick=()=>void archiveDigitalResource(b.dataset.digitalArchive));
  document.querySelectorAll("[data-digital-history]").forEach(b=>b.onclick=()=>{
   state.digitalHistoryId=state.digitalHistoryId===b.dataset.digitalHistory?null:b.dataset.digitalHistory;render();
