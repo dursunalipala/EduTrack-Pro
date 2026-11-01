@@ -518,6 +518,29 @@ body *{visibility:hidden!important}
 .notify-device-controls label{font-size:11px;display:flex;align-items:center;gap:8px;color:#2d5168}
 .notify-device-controls input{width:17px;height:17px;accent-color:#176b82}
 
+.notify-message-detail[hidden]{display:none!important}
+.notify-message-detail{position:absolute;inset:0;z-index:5;background:#fff;display:flex;flex-direction:column;overflow:hidden}
+.notify-message-head{padding:13px 16px;border-bottom:1px solid #e5edf3;display:flex;align-items:center;justify-content:space-between;color:#1b4c62}
+.notify-message-head button{border:0;border-radius:8px;background:#edf5f9;padding:5px 11px;font-size:22px;color:#2b5066}
+.notify-message-content{padding:20px;overflow-y:auto;overflow-wrap:anywhere;flex:1}
+.notify-message-content h3{margin:0 0 7px;font-size:17px;color:#1e435e}
+#notifyMessageSender{color:#7690a0;font-size:11px}
+#notifyMessageBody{font-size:14px;line-height:1.7;white-space:pre-wrap;color:#29465b}
+.notify-kind-admin_message{background:#dff3fa;color:#0d6b86}
+.admin-compose-form{display:grid;gap:12px}
+.admin-compose-form label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:12px;color:#244e66}
+.admin-compose-form input[type=text],.admin-compose-form textarea{width:100%;padding:11px;border:1px solid #cbdfe8;border-radius:9px;font-size:13px;font-family:inherit;color:#23415c}
+.admin-compose-form textarea{min-height:106px;resize:vertical}
+.admin-compose-recipient-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admin-compose-recipient-tools label{display:flex;align-items:center;gap:8px;flex-direction:row;cursor:pointer}
+.admin-compose-recipient-tools input{accent-color:#147b8c}
+.admin-compose-recipients{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.admin-compose-recipients label{display:flex;flex-direction:row;align-items:center;gap:8px;background:#f2f7fb;border:1px solid #e2ebf2;padding:10px;border-radius:9px;font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.admin-compose-recipients input{accent-color:#147b8c;width:16px;height:16px;flex:none}
+.admin-message-history{width:100%;border-collapse:collapse;font-size:12px}
+.admin-message-history th,.admin-message-history td{padding:10px;text-align:left;border-bottom:1px solid #e5edf3;vertical-align:top}
+.admin-message-history td small{color:#647e91;display:block;margin-top:4px}
+@media(max-width:640px){.admin-compose-recipients{grid-template-columns:1fr}}
 /* Accessible swipe-to-remove notifications (without deleting tasks). */
 #notifyMarkAll[hidden],#notifyUndoBar[hidden]{display:none!important}
 .notify-panel-actions button:not(:disabled){font-weight:800;color:#08768d;background:#e7f5f8;border-radius:8px;padding:7px 9px}
@@ -661,7 +684,11 @@ body *{visibility:hidden!important}
  <div id="notifyDeviceStatus" role="status">Cihaz durumu kontrol ediliyor.</div>
  <label><input type="checkbox" id="notifySoundToggle"> Uygulama açıkken bildirim sesi</label>
  </div><div id="notifyUndoBar" class="notify-undo-bar" hidden><span>Bildirim listeden kaldırıldı.</span><button type="button" id="notifyUndoButton">Geri al</button></div>
- <div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">Bildirimi sağa veya sola kaydırarak silebilirsiniz. Görev kayıtları korunur.</div>
+ <div id="notifyList" class="notify-list"></div>
+ <div id="notifyMessageDetail" class="notify-message-detail" hidden role="dialog" aria-modal="true" aria-labelledby="notifyMessageTitle">
+ <div class="notify-message-head"><strong>Admin Mesajı</strong><button type="button" id="notifyMessageClose" aria-label="Mesajı kapat">×</button></div>
+ <div class="notify-message-content"><h3 id="notifyMessageTitle"></h3><div id="notifyMessageSender"></div><p id="notifyMessageBody"></p></div>
+ </div><div class="notify-panel-foot">Bildirimi sağa veya sola kaydırarak silebilirsiniz. Görev kayıtları korunur.</div>
  </div><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
@@ -697,7 +724,7 @@ const loadDigitalSort=()=>{
  }catch{return "newest"}
 };
 
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -928,13 +955,13 @@ let inboxUnreadTotal=0,swipeGesture=null,ignoreNotificationClickUntil=0,undoDism
 const notificationTitles={
  assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
  due_changed:"Görev tarihi değişti",due_soon:"Görev tarihi yaklaşıyor",
- overdue:"Görev gecikti",submitted:"Görev kontrolünüzü bekliyor",
+ overdue:"Görev gecikti",admin_message:"Admin mesajı",submitted:"Görev kontrolünüzü bekliyor",
  approved:"Görev onaylandı",completed:"Görev tamamlandı",
  returned:"Görev düzeltme için geri gönderildi"
 };
 const notificationIcons={
  assignment:"✚",transfer:"⇄",due_changed:"▦",due_soon:"◷",
- overdue:"!",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
+ overdue:"!",admin_message:"✉",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
 };
 const notificationDate=d=>{
  if(!d)return "";
@@ -961,10 +988,12 @@ function renderNotificationCenter(){
  $("#notifyList").innerHTML=state.userNotifications.length?
    state.userNotifications.map(n=>
     '<div class="notify-swipe-row" data-inbox-row="'+esc(n.id)+'">'+
-    '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'" aria-label="'+esc((notificationTitles[n.kind]||"Görev bildirimi")+' '+notifyTaskTitle(n)+". Görevi aç")+'">'+
+    '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'" aria-label="'+esc((notificationTitles[n.kind]||"Görev bildirimi")+' '+notifyTaskTitle(n)+(n.kind==="admin_message"?". Mesajı oku":". Görevi aç"))+'">'+
      '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
      '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
-     '<span>'+esc(notifyTaskTitle(n))+'</span><small>'+esc(notificationDate(n.created_at))+'</small></span>'+
+     '<span>'+esc(notifyTaskTitle(n))+'</span>'+
+     (n.kind==="admin_message"&&n.payload?.body?'<small class="notify-message-preview">'+esc(String(n.payload.body).slice(0,90))+'</small>':"")+
+     '<small>'+esc(notificationDate(n.created_at))+'</small></span>'+
      (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
     '</button>'+
     '<button type="button" class="notify-delete-btn" data-inbox-delete="'+esc(n.id)+'" aria-label="'+esc(notifyTaskTitle(n))+' bildirimini sil" title="Bildirimi listeden kaldır">'+
@@ -975,6 +1004,7 @@ function renderNotificationCenter(){
 function setInboxOpen(open){
  const panel=$("#notifyPanel"),bell=$("#notifyBell");
  if(!panel||!bell)return;
+ if(!open)$("#notifyMessageDetail").hidden=true;
  panel.hidden=!open;
  bell.setAttribute("aria-expanded",String(open));
  if(open){void loadMyNotifications();void updatePushControls()}
@@ -986,7 +1016,7 @@ async function loadMyNotifications(){
  inboxLoading=true;
  try{
   const [listResult,countResult]=await Promise.all([
-   sb.from("user_notifications").select("id,task_id,kind,title,read_at,created_at")
+   sb.from("user_notifications").select("id,task_id,kind,title,payload,read_at,created_at")
     .eq("workspace_id",WS).eq("recipient_id",currentUser).is("dismissed_at",null)
     .order("created_at",{ascending:false}).limit(80),
    sb.from("user_notifications").select("id",{head:true,count:"exact"})
@@ -1082,6 +1112,16 @@ async function undoInboxDismissal(){
 async function openInboxTask(id){
  const n=state.userNotifications.find(x=>x.id===id);
  if(!n)return;
+ if(n.kind==="admin_message"){
+  await markNotificationRead(id);
+  const detail=$("#notifyMessageDetail");
+  $("#notifyMessageTitle").textContent=n.title||"Admin mesajı";
+  $("#notifyMessageBody").textContent=String(n.payload?.body||"");
+  $("#notifyMessageSender").textContent="Admin tarafından gönderildi · "+notificationDate(n.created_at);
+  detail.hidden=false;
+  $("#notifyMessageClose")?.focus();
+  return;
+ }
  await markNotificationRead(id);
  setInboxOpen(false);
  if(!n.task_id){toast("Bu bildirimin görevi artık mevcut değil.");return}
@@ -1105,6 +1145,7 @@ function bindInAppNotifications(){
  if(!bell||!panel)return;
  bell.onclick=()=>setInboxOpen(panel.hidden);
  $("#notifyClose").onclick=()=>setInboxOpen(false);
+ $("#notifyMessageClose").onclick=()=>{$("#notifyMessageDetail").hidden=true;$("#notifyBell")?.focus()};
  $("#notifyMarkAll").onclick=()=>void markAllNotificationsRead();
  $("#notifyUndoButton").onclick=()=>void undoInboxDismissal();
  $("#enableDeviceNotifications").onclick=()=>void enablePushOnDevice();
@@ -1206,7 +1247,7 @@ function eraseSensitiveView(){
  stopInAppNotifications();
  state.user=null;state.role="";
  state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
- state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.userNotifications=[];state.notifyPrefs=[];state.digitalResources=[];state.digitalAudit=[];state.digitalEditingId=null;state.digitalFormOpen=false;
+ state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.userNotifications=[];state.notifyPrefs=[];state.adminSentNotifications=[];state.adminHistoryLoaded=false;state.digitalResources=[];state.digitalAudit=[];state.digitalEditingId=null;state.digitalFormOpen=false;
  state.teamEmails={};state.taskActivities=[];state.activityRevisions=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;
  $("#shell").classList.add("hide");
  $("#email").value="";
@@ -2385,6 +2426,91 @@ f.reset();
 }catch(e){message.textContent=e?.message||"Şifre sıfırlama bağlantısı gönderilemedi."}finally{button.disabled=false}
 }
 
+
+async function loadAdminMessages(){
+ if(state.role!=="owner"||!state.user)return;
+ try{
+  const {data,error}=await sb.from("user_notifications")
+   .select("id,recipient_id,kind,title,read_at,created_at,payload")
+   .eq("workspace_id",WS).eq("kind","admin_message")
+   .order("created_at",{ascending:false}).limit(500);
+  if(error)throw error;
+  state.adminSentNotifications=(data||[]).filter(n=>n.payload?.sender_id===state.user.id);
+  state.adminHistoryLoaded=true;
+  if(state.view==="notifications")render();
+ }catch(e){console.warn("Admin mesaj geçmişi:",e?.message||e);toast("Mesaj geçmişi yüklenemedi.");state.adminHistoryLoaded=true}
+}
+function adminMessageComposer(){
+ if(state.role!=="owner")return "";
+ const people=state.members.filter(m=>m.is_active&&!m.archived_at);
+ const recipients=people.map(m=>'<label><input type="checkbox" name="admin_recipients" value="'+esc(m.user_id)+'" checked> '+esc(memberName(m.user_id))+'</label>').join("");
+ const entries=state.adminSentNotifications||[];
+ const grouped=new Map();
+ for(const n of entries){
+  const key=String(n.payload?.batch_id||n.id);
+  if(!grouped.has(key))grouped.set(key,{title:n.title,created_at:n.created_at,total:0,read:0});
+  const group=grouped.get(key);group.total++;if(n.read_at)group.read++;
+ }
+ const rows=[...grouped.values()].slice(0,20).map(g=>
+  '<tr><td><strong>'+esc(g.title)+'</strong><small>'+esc(notificationDate(g.created_at))+'</small></td>'+
+  '<td>'+g.total+' kişi</td><td>'+g.read+' okundu</td></tr>').join("");
+ return '<section class="panel"><h2>✉ Admin Mesaj Gönder</h2>'+
+  '<p class="small muted">Seçilen kişilerin uygulama içi bildirimlerine metin mesajı gönderin. Gönderimler ve okunma durumları aşağıda takip edilir.</p>'+
+  '<form id="adminMessageForm" class="admin-compose-form">'+
+  '<label>Mesaj başlığı <input type="text" name="title" minlength="2" maxlength="120" required placeholder="Örn. Haftalık Yönetim Toplantısı"></label>'+
+  '<label>Mesaj metni <textarea name="body" minlength="2" maxlength="1500" required placeholder="Mesajınızı buraya yazın..."></textarea></label>'+
+  '<div class="admin-compose-recipient-tools"><label><input type="checkbox" id="adminMessageAll" checked> Tümünü seç</label>'+
+  '<span id="adminMessageCount" class="small muted">'+people.length+' kişi seçili</span></div>'+
+  '<div class="admin-compose-recipients">'+recipients+'</div>'+
+  '<div><button class="btn primary" type="submit" id="adminMessageSend">Mesaj Gönder</button></div>'+
+  '</form></section>'+
+  '<section class="panel"><div class="titlebar"><h2>Gönderdiğim Mesajlar</h2>'+
+  '<button type="button" class="btn sm" id="adminMessageReload">Yenile</button></div>'+
+  '<div class="tablewrap"><table class="admin-message-history"><thead><tr><th>Mesaj</th><th>Alıcı</th><th>Okunma</th></tr></thead>'+
+  '<tbody>'+(rows||'<tr><td colspan="3">'+(state.adminHistoryLoaded?"Gönderilmiş mesaj bulunamadı.":"Mesaj geçmişi yükleniyor...")+'</td></tr>')+'</tbody></table></div>'+
+  '<p class="small muted">Okunma sayısı uygulamadaki bildirimlerin açılmasına göre güncellenir. Son 500 bildirim incelenir.</p></section>';
+}
+async function sendAdminMessage(form){
+ if(state.role!=="owner"||!state.user)return;
+ const button=$("#adminMessageSend");
+ if(button)button.disabled=true;
+ try{
+  await requireActiveSession();
+  const fd=new FormData(form);
+  const title=String(fd.get("title")||"").trim();
+  const body=String(fd.get("body")||"").trim();
+  const ids=[...new Set(fd.getAll("admin_recipients").map(String))];
+  const valid=state.members.filter(m=>m.is_active&&!m.archived_at).map(m=>m.user_id);
+  if(title.length<2||title.length>120||body.length<2||body.length>1500)throw Error("Başlık 2–120, mesaj 2–1500 karakter olmalı.");
+  if(ids.length<1||ids.length>25||ids.some(id=>!valid.includes(id)))throw Error("En az bir aktif kullanıcı seçin.");
+  const batchId=crypto.randomUUID();
+  const payload={body,sender_id:state.user.id,batch_id:batchId};
+  const rows=ids.map(recipient_id=>({workspace_id:WS,recipient_id,kind:"admin_message",title,payload}));
+  const {error:e}=await sb.from("user_notifications").insert(rows);
+  if(e)throw e;
+  form.reset();
+  state.adminHistoryLoaded=false;
+  toast(ids.length+" kişiye Admin mesajı gönderildi.");
+  void loadAdminMessages();
+  void loadMyNotifications();
+ }catch(e){error(e)}finally{if(button)button.disabled=false}
+}
+function bindAdminMessageComposer(){
+ const form=$("#adminMessageForm");if(!form)return;
+ const checks=[...form.querySelectorAll('input[name="admin_recipients"]')];
+ const all=$("#adminMessageAll");
+ const update=()=>{
+  const selected=checks.filter(x=>x.checked).length;
+  all.checked=selected===checks.length&&checks.length>0;
+  all.indeterminate=selected>0&&selected<checks.length;
+  $("#adminMessageCount").textContent=selected+" / "+checks.length+" kişi seçili";
+ };
+ all.addEventListener("change",()=>{checks.forEach(x=>x.checked=all.checked);update()});
+ checks.forEach(x=>x.addEventListener("change",update));
+ update();
+ form.addEventListener("submit",e=>{e.preventDefault();void sendAdminMessage(form)});
+ $("#adminMessageReload")?.addEventListener("click",()=>void loadAdminMessages());
+}
 const notifLabels={assignment:"Görev atandı",transfer:"Görev devredildi",due_changed:"Bitiş tarihi değişti",due_soon:"Bitiş tarihi yaklaşıyor",overdue:"Geciken görev",completed:"Görev tamamlandı",digest:"Günlük özet",test:"Test"};
 const notifStatus={pending:"Sırada",sending:"Gönderiliyor",sent:"Gönderildi",failed:"Hata",skipped:"Atlandı"};
 function notificationsView(){
@@ -2394,7 +2520,7 @@ function notificationsView(){
  const settings='<section class="panel"><h2>E-posta Tercihlerim</h2><p class="small muted">Bu ayarlar yalnızca sizin e-posta bildirimlerinizi etkiler.</p>'+
  '<div class="notify-settings">'+flags.map(([key,label])=>'<label><input type="checkbox" data-notify-setting="'+key+'" '+(own[key]!==false?"checked":"")+'> '+esc(label)+'</label>').join("")+'</div></section>';
  const logs=rows.map(r=>'<tr><td>'+esc(date(r.created_at))+'</td><td>'+esc(notifLabels[r.kind]||r.kind)+'</td><td>'+esc(memberName(r.recipient_id))+'</td><td>'+esc(r.payload?.title||"Genel rapor")+'</td><td>'+esc(notifStatus[r.status]||r.status)+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">Henüz bildirim kaydı bulunmuyor.</td></tr>';
- return '<div class="titlebar"><h2>Otomatik Bildirimler</h2>'+(state.role==="owner"?'<button class="btn primary" id="sendNotificationBatch">Gönderimi Kontrol Et</button>':"")+'</div>'+
+ return adminMessageComposer()+'<div class="titlebar"><h2>Otomatik Bildirimler</h2>'+(state.role==="owner"?'<button class="btn primary" id="sendNotificationBatch">Gönderimi Kontrol Et</button>':"")+'</div>'+
  '<p class="small muted">Görev atama ve devir bildirimleri sıraya alınır; sistem her 5 dakikada bir gönderim kontrolü yapar. Günlük özet 18.30 Türkiye saati için planlanmıştır.</p>'+
  '<div class="kpi">'+stat("Sırada",pending,"Gönderim bekliyor")+stat("Gönderilen",sent,"Başarılı e-posta")+stat("Hata",failed,"Başarısız kayıt")+'</div>'+
  settings+'<section class="panel"><h2>Son Bildirimler</h2><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>Olay</th><th>Alıcı</th><th>Görev</th><th>Durum</th></tr></thead><tbody>'+logs+'</tbody></table></div></section>'+
@@ -2693,6 +2819,11 @@ document.querySelectorAll("[data-member-password]").forEach(b=>b.addEventListene
 }));
 document.querySelectorAll("[data-notify-setting]").forEach(c=>c.addEventListener("change",()=>saveNotifySetting(c.dataset.notifySetting,c.checked,c)));
 $("#sendNotificationBatch")?.addEventListener("click",sendNotificationBatch);
+bindAdminMessageComposer();
+if(state.view==="notifications"&&state.role==="owner"&&!state.adminHistoryLoaded){
+ state.adminHistoryLoaded=true;
+ void loadAdminMessages();
+}
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
 $("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
 $("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);$("#taskBody")?.addEventListener("click",e=>{
