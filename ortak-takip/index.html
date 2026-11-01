@@ -403,6 +403,20 @@ body *{visibility:hidden!important}
 .task-activity-revisions>div{margin-top:8px;border-top:1px solid #e2eaf1;padding-top:8px}
 .deleted-comment{opacity:.77}
 
+
+/* Manager-only approval queue: the counter opens exactly the reviewer's assigned items. */
+.simple-summary.with-review{grid-template-columns:repeat(4,minmax(0,1fr))}
+.simple-summary .review-summary{border:2px solid #2e879a}
+.simple-summary .review-summary strong{color:#165674}
+.simple-summary .review-summary small{display:block;font-size:10px;color:#56758b;margin-top:4px;line-height:1.35}
+.simple-summary .review-summary:hover,.simple-summary .review-summary:focus-visible{outline:2px solid #2e879a;outline-offset:2px}
+@media(max-width:650px){
+ .simple-summary.with-review{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .simple-summary.with-review .review-summary{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;column-gap:13px;align-items:center}
+ .simple-summary.with-review .review-summary strong{grid-row:span 2;margin:0;font-size:31px}
+ .simple-summary.with-review .review-summary span,.simple-summary.with-review .review-summary small{text-align:left}
+ .simple-summary.with-review .review-summary small{margin:0}
+}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -432,6 +446,7 @@ const isStaff=()=>!canManage();
 const isExecutor=t=>t?.executor_id===state.user?.id;
 const isHelper=t=>(t?.helper_user_ids||[]).includes(state.user?.id);
 const isReviewer=t=>t?.reviewer_id===state.user?.id;
+const awaitingMyApproval=t=>canManage()&&!!state.user?.id&&t?.reviewer_id===state.user.id&&t?.status==="kontrol_bekliyor"&&t?.executor_id!==state.user.id;
 const statusName=s=>s==="kontrol_bekliyor"?"Kontrol Bekliyor":labels[s]||s;
 const PANEL_URL="https://takip.elitkoleji.com.tr/";
 const allowedPanelOrigins=new Set(["https://ortak-takip.onrender.com","https://takip.elitkoleji.com.tr"]);
@@ -843,6 +858,7 @@ function simpleTaskRows(){
    if(state.simpleTaskStatus==="late"&&(!openTask(t)||!t.due_date||t.due_date>=day))return false;
    if(state.simpleTaskStatus==="week"&&(!openTask(t)||!t.due_date||t.due_date<day||t.due_date>later))return false;
    if(state.simpleTaskStatus==="done"&&t.status!=="tamamlandi")return false;
+   if(state.simpleTaskStatus==="review"&&!awaitingMyApproval(t))return false;
    if(state.simpleTaskSearch&&!String(t.title||"").toLocaleLowerCase("tr-TR").includes(state.simpleTaskSearch.toLocaleLowerCase("tr-TR")))return false;
    return true;
  }).sort((a,b)=>{
@@ -863,6 +879,7 @@ function simpleOverview(){
  const open=mine.filter(openTask);
  const overdue=open.filter(t=>t.due_date&&t.due_date<today);
  const thisWeek=open.filter(t=>t.due_date&&t.due_date>=today&&t.due_date<=week);
+ const reviewCount=canManage()?state.tasks.filter(awaitingMyApproval).length:0;
  const ordered=[...open].sort((a,b)=>{
    const late=t=>t.due_date&&t.due_date<today;
    return Number(!!late(b))-Number(!!late(a))||
@@ -872,8 +889,10 @@ function simpleOverview(){
  const card=(count,label,filter)=>'<button type="button" data-simple-summary="'+filter+'"><strong>'+count+'</strong><span>'+label+'</span></button>';
  return '<section class="simple-home-hero"><h2>Bugün ne yapmalıyım?</h2>'+
   '<p>Yalnızca sizin sorumluluğunuzdaki işler burada. İş havuzundaki taslaklar yapılacaklar listenizi kalabalıklaştırmaz.</p></section>'+
-  '<div class="simple-summary">'+card(open.length,"Açık işim","open")+
-   card(overdue.length,"Geciken","late")+card(thisWeek.length,"Bu hafta","week")+'</div>'+
+  '<div class="simple-summary'+(canManage()?' with-review':'')+'">'+
+   (canManage()?'<button type="button" class="review-summary" data-simple-summary="review" aria-label="Onayımı bekleyen '+reviewCount+' görev. Kontrol bekleyen görevleri aç">'+
+   '<strong>'+reviewCount+'</strong><span>Onayımı Bekleyen</span><small>Kontrol bekleyen işler</small></button>':"")+
+   card(open.length,"Açık işim","open")+card(overdue.length,"Geciken","late")+card(thisWeek.length,"Bu hafta","week")+'</div>'+
   '<div class="simple-actions">'+
   (canManage()?'<button type="button" class="btn primary" id="newTask">+ Yeni İş Ekle</button>':"")+
   '<button type="button" class="btn" data-view="calendar">Takvim</button>'+
@@ -887,12 +906,12 @@ function simpleOverview(){
 }
 function simpleTasksView(){
  const can=canManage();
- return '<div class="titlebar"><h2>İş Takibi</h2>'+
+ return '<div class="titlebar"><h2>'+(state.simpleTaskStatus==="review"&&canManage()?"Onayımı Bekleyen Görevler":"İş Takibi")+'</h2>'+
   (can?'<button class="btn primary" id="newTask">+ Yeni İş</button>':"")+'</div>'+
   '<div class="simple-tab-group"><button type="button" data-simple-scope="mine" class="'+(state.taskScope==="mine"?"active":"")+'">Benim İşlerim</button>'+
   (canManage()?'<button type="button" data-simple-scope="all" class="'+(state.taskScope==="all"?"active":"")+'">Tüm İşler</button>':"")+'</div>'+
   '<div class="simple-task-filters">'+
-   '<select id="simpleTaskStatus" aria-label="İş durumu">'+options([["open","Açık işler"],["late","Geciken işler"],["week","Bu hafta"],["done","Tamamlanan işler"],["all","Tüm durumlar"]],state.simpleTaskStatus)+'</select>'+
+   '<select id="simpleTaskStatus" aria-label="İş durumu">'+options([["open","Açık işler"],...(canManage()?[["review","Onayımı Bekleyenler"]]:[]),["late","Geciken işler"],["week","Bu hafta"],["done","Tamamlanan işler"],["all","Tüm durumlar"]],state.simpleTaskStatus)+'</select>'+
    '<select id="simpleTaskStream" aria-label="İş grubu">'+options([["all","Tüm bölümler"],...state.streams.map(w=>[w.id,w.name])],state.stream)+'</select>'+
    '<input type="search" id="simpleTaskSearch" aria-label="İş arama" placeholder="İş ara..." value="'+esc(state.simpleTaskSearch)+'"></div>'+
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
@@ -910,8 +929,9 @@ function showSimpleTaskRows(){
  '<button class="btn simple-readmore" id="simpleLoadMore">Daha Fazla Göster ('+(rows.length-state.simpleTaskLimit)+' iş)</button>':"";
  $("#simpleLoadMore")?.addEventListener("click",()=>{state.simpleTaskLimit+=20;showSimpleTaskRows()});
 }
-const dashboardTaskFilters=[["all","Tüm görevler"],["active","Devam edenler"],["completed","Tamamlananlar"],["overdue","Gecikenler"],["critical","Kritik görevler"]];
+const dashboardTaskFilters=[["all","Tüm görevler"],["review","Onayımı Bekleyenler"],["active","Devam edenler"],["completed","Tamamlananlar"],["overdue","Gecikenler"],["critical","Kritik görevler"]];
 function matchesTaskQuickFilter(task,filter=state.quickFilter){
+ if(filter==="review")return awaitingMyApproval(task);
  if(filter==="active")return task.status==="devam_ediyor";
  if(filter==="completed")return task.status==="tamamlandi";
  if(filter==="overdue")return !!(task.due_date&&task.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(task.status));
@@ -941,8 +961,9 @@ function stat(label,num,detail,taskFilter=null){
  return '<button type="button" class="card dashboard-stat" data-task-jump="'+esc(taskFilter)+'" aria-label="'+esc(label+': '+num+'. İlgili görevleri aç')+'">'+markup+'<div class="stat-hint" aria-hidden="true">Görevleri gör →</div></button>';
 }
 function overview(){if(state.simpleMode||isStaff())return simpleOverview();const ts=state.tasks,done=ts.filter(t=>t.status==="tamamlandi").length,active=ts.filter(t=>t.status==="devam_ediyor").length,late=ts.filter(t=>t.due_date&&t.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(t.status)).length,priority=ts.filter(t=>t.priority==="kritik"&&t.status!=="tamamlandi").length;
+const approvals=canManage()?ts.filter(awaitingMyApproval).length:0;
 const soon=[...ts].filter(t=>t.status!=="tamamlandi"&&t.status!=="iptal").sort((a,b)=>(a.due_date||"9999").localeCompare(b.due_date||"9999")).slice(0,6);
-return '<div class="kpi">'+stat("Toplam görev",ts.length,"Kayıtlı işler","all")+stat("Devam eden",active,"Aktif çalışmalar","active")+stat("Tamamlanan",done,"Sonuçlanan işler","completed")+stat("Geciken",late,"Süresi geçen","overdue")+stat("Kritik",priority,"Öncelikli takip","critical")+'</div><div class="twocol"><section class="panel"><div class="titlebar"><h2>Yakın Takip</h2><button class="btn sm" data-view="tasks">Tüm görevler</button></div>'+(soon.length?soon.map(t=>'<div class="stream"><div class="row"><div style="min-width:0"><div style="font-weight:700;font-size:14px">'+esc(t.title)+'</div><div class="small muted" style="margin-top:5px">'+esc(streamName(t.workstream_id))+' · '+(t.due_date?date(t.due_date):"Tarih atanmamış")+'</div></div><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></div></div>').join(""):'<div class="empty">Takip edilecek görev yok.</div>')+'</section><section class="panel"><h2>İş Grupları İlerlemesi</h2>'+state.streams.map(s=>{const list=ts.filter(t=>t.workstream_id===s.id),pct=list.length?Math.round(list.filter(t=>t.status==="tamamlandi").length/list.length*100):0;return '<div class="stream"><div class="row small"><strong>'+esc(s.name)+'</strong><span>'+list.length+' iş · %'+pct+'</span></div><div class="bar" style="margin-top:11px"><i style="width:'+pct+'%;background:'+esc(s.color)+'"></i></div></div>'}).join("")+'</section></div><section class="panel"><div class="row"><div><h2>Hedef Gerçekleşmesi</h2><div class="muted small">'+state.goals.length+' hedef tanımlı</div></div><button data-view="goals" class="btn sm">Hedefleri Gör</button></div></section>'}
+return '<div class="kpi">'+(canManage()?stat("Onayımı Bekleyen",approvals,"Kontrolünüze sunulan görevler","review"):"")+stat("Toplam görev",ts.length,"Kayıtlı işler","all")+stat("Devam eden",active,"Aktif çalışmalar","active")+stat("Tamamlanan",done,"Sonuçlanan işler","completed")+stat("Geciken",late,"Süresi geçen","overdue")+stat("Kritik",priority,"Öncelikli takip","critical")+'</div><div class="twocol"><section class="panel"><div class="titlebar"><h2>Yakın Takip</h2><button class="btn sm" data-view="tasks">Tüm görevler</button></div>'+(soon.length?soon.map(t=>'<div class="stream"><div class="row"><div style="min-width:0"><div style="font-weight:700;font-size:14px">'+esc(t.title)+'</div><div class="small muted" style="margin-top:5px">'+esc(streamName(t.workstream_id))+' · '+(t.due_date?date(t.due_date):"Tarih atanmamış")+'</div></div><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></div></div>').join(""):'<div class="empty">Takip edilecek görev yok.</div>')+'</section><section class="panel"><h2>İş Grupları İlerlemesi</h2>'+state.streams.map(s=>{const list=ts.filter(t=>t.workstream_id===s.id),pct=list.length?Math.round(list.filter(t=>t.status==="tamamlandi").length/list.length*100):0;return '<div class="stream"><div class="row small"><strong>'+esc(s.name)+'</strong><span>'+list.length+' iş · %'+pct+'</span></div><div class="bar" style="margin-top:11px"><i style="width:'+pct+'%;background:'+esc(s.color)+'"></i></div></div>'}).join("")+'</section></div><section class="panel"><div class="row"><div><h2>Hedef Gerçekleşmesi</h2><div class="muted small">'+state.goals.length+' hedef tanımlı</div></div><button data-view="goals" class="btn sm">Hedefleri Gör</button></div></section>'}
 function tasksView(){if(state.simpleMode||isStaff())return simpleTasksView();const can=canManage();
  const filtersActive=state.quickFilter!=="all"||state.status!=="all"||state.stream!=="all"||!!state.search;
  return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+
@@ -950,7 +971,7 @@ function tasksView(){if(state.simpleMode||isStaff())return simpleTasksView();con
   '<div class="filters">'+
   '<select id="quickFilter" aria-label="Görev hızlı filtresi">'+options(dashboardTaskFilters,state.quickFilter)+'</select>'+
   '<input id="taskSearch" placeholder="Görev ara..." value="'+esc(state.search)+'">'+
-  '<select id="statusFilter">'+options([["all","Tüm durumlar"],["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],state.status)+'</select>'+
+  '<select id="statusFilter">'+options([["all","Tüm durumlar"],["taslak","Taslak"],["beklemede","Beklemede"],["devam_ediyor","Devam Ediyor"],["kontrol_bekliyor","Kontrol Bekliyor"],["tamamlandi","Tamamlandı"],["iptal","İptal"]],state.status)+'</select>'+
   '<select id="streamFilter">'+options([["all","Tüm iş grupları"],...state.streams.map(x=>[x.id,x.name])],state.stream)+'</select>'+
   (filtersActive?'<button class="btn sm" type="button" id="clearTaskFilters">Filtreleri Temizle</button>':'')+'</div>'+
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
@@ -1544,7 +1565,8 @@ function bindView(){
   window.scrollTo({top:0,behavior:"smooth"});
  };
  document.querySelectorAll("[data-simple-summary]").forEach(b=>b.onclick=()=>{
-  state.taskScope="mine";state.simpleTaskStatus=["late","week"].includes(b.dataset.simpleSummary)?b.dataset.simpleSummary:"open";
+  state.taskScope="mine";state.simpleTaskStatus=["late","week"].includes(b.dataset.simpleSummary)||(b.dataset.simpleSummary==="review"&&canManage())?b.dataset.simpleSummary:"open";
+  state.simpleTaskSearch="";state.stream="all";
   state.simpleTaskLimit=20;state.view="tasks";render();
  });
  document.querySelectorAll("[data-simple-scope]").forEach(b=>b.onclick=()=>{
