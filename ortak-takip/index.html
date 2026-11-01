@@ -2364,7 +2364,7 @@ closeModal();await refresh()
 }catch(e){error(e)}finally{b.disabled=false}};
 sb.auth.onAuthStateChange((event)=>{
   if(event==="PASSWORD_RECOVERY"){showRecoveryScreen();return}
-  if(event==="SIGNED_OUT"){if(!recoveryMode)showAuth();return}
+  if(event==="SIGNED_OUT"){if(!recoveryMode){eraseSensitiveView();showAuth()}return}
   if(recoveryMode)return;
   if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&!securityLocked&&!securityLoggingOut)setTimeout(()=>{if($("#shell").classList.contains("hide"))boot()},0);
 });
