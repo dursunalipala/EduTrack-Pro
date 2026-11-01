@@ -1288,8 +1288,11 @@ const digitalCategory=c=>digitalCategories.find(x=>x[0]===c)||digitalCategories[
 const digitalStateLabel=s=>digitalStates.find(x=>x[0]===s)?.[1]||"Belirsiz";
 const digitalSafeUrl=text=>{
  try{
-  const url=new URL(String(text||"").trim());
-  if(url.protocol!=="https:"||url.username||url.password||!url.hostname||url.href.length>1850)return "";
+  // Kopyala-yapıştır sırasında URL içine karışabilen görünmez Unicode işaretlerini temizle.
+  const value=String(text??"").replace(/[\u200B-\u200F\u2060\uFEFF]/g,"").trim();
+  if(!/^https:\/\//i.test(value))return "";
+  const url=new URL(value);
+  if(url.protocol!=="https:"||url.username||url.password||!url.hostname||url.href.length>1800)return "";
   return url.href;
  }catch{return ""}
 };
@@ -1404,14 +1407,20 @@ async function saveDigitalResource(form){
  try{
   await requireActiveSession();
   const fd=new FormData(form);
-  const cleanUrl=str=>{const x=digitalSafeUrl(str);if(!x)throw Error("Bağlantılar https:// ile başlamalı ve geçerli bir adres olmalıdır.");return x};
-  const url=cleanUrl(fd.get("url"));const adminRaw=String(fd.get("admin_url")||"").trim();
+  const cleanUrl=(str,field)=>{
+   const x=digitalSafeUrl(str);
+   if(!x)throw Error(field+" için https:// ile başlayan geçerli bir web adresi girin.");
+   return x;
+  };
+  const url=cleanUrl(fd.get("url"),"Ziyaret bağlantısı");
+  const adminRaw=String(fd.get("admin_url")||"").trim();
+  const adminUrl=adminRaw?cleanUrl(adminRaw,"Yönetim paneli bağlantısı"):null;
   const allowed=[...new Set(fd.getAll("allowed_user_ids"))].filter(id=>digitalViewerList().some(m=>m.user_id===id));
   const responsible=String(fd.get("responsible_id")||"");
   if(responsible&&!digitalViewerList().some(m=>m.user_id===responsible))throw Error("Sorumlu kişi aktif personel olmalıdır.");
   const payload={workspace_id:WS,title:String(fd.get("title")||"").trim(),
    category:String(fd.get("category")||""),school_unit:String(fd.get("school_unit")||"ortak"),
-   status:String(fd.get("status")||"active"),url,admin_url:adminRaw?cleanUrl(adminRaw):null,
+   status:String(fd.get("status")||"active"),url,admin_url:adminUrl,
    description:String(fd.get("description")||"").trim(),responsible_id:responsible||null,allowed_user_ids:allowed};
   if(payload.title.length<2)throw Error("Bağlantıya açıklayıcı bir ad yazın.");
   const old=state.digitalResources.find(r=>r.id===state.digitalEditingId);
