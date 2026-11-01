@@ -1,0 +1,46 @@
+name: Ortak Takip - Teftis modul kontrolu
+on:
+  push:
+    branches: [ "feature/teftis-evrak-merkezi" ]
+  pull_request:
+    paths:
+      - "ortak-takip/index.html"
+      - "ortak-takip/inspection-module.js"
+      - "ortak-takip/inspection-module.css"
+      - ".github/workflows/teftis-check.yml"
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check imported module syntax
+        run: node --input-type=module --check < ortak-takip/inspection-module.js
+      - name: Check inline HTML module syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          class ScriptParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.in_mod=False; self.scripts=[]
+              def handle_starttag(self, tag, attrs):
+                  if tag=='script' and dict(attrs).get('type')=='module': self.in_mod=True
+              def handle_endtag(self, tag):
+                  if tag=='script': self.in_mod=False
+              def handle_data(self, data):
+                  if self.in_mod: self.scripts.append(data)
+          p=ScriptParser(); p.feed(Path('ortak-takip/index.html').read_text())
+          assert p.scripts, 'No inline module script'
+          Path('/tmp/ortak-takip-inline.mjs').write_text(''.join(p.scripts))
+          PY
+          node --check /tmp/ortak-takip-inline.mjs
+      - name: Verify navigation and assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('ortak-takip/index.html').read_text()
+          for item in ('data-view="inspection"','data-view="documents"','./inspection-module.js','./inspection-module.css','await inspection.load()','inspection.bind()'):
+              assert item in text, item
+          assert Path('ortak-takip/inspection-module.css').stat().st_size > 1000
+          print('Inspection module wiring OK')
+          PY
