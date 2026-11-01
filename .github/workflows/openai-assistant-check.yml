@@ -1,0 +1,39 @@
+name: OpenAI management assistant checks
+on:
+  push:
+    branches: [ "feature/openai-management-assistant" ]
+  pull_request:
+    paths:
+      - "supabase/functions/ortak-takip-ai-v2/**"
+      - "ortak-takip/index.html"
+      - ".github/workflows/openai-assistant-check.yml"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Deno TypeScript / Edge Function validation
+        run: deno check --node-modules-dir=auto supabase/functions/ortak-takip-ai-v2/index.ts
+      - name: Verify client module syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          class P(HTMLParser):
+              def __init__(self): super().__init__();self.flag=False;self.parts=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='script' and dict(attrs).get('type')=='module':self.flag=True
+              def handle_endtag(self,tag):
+                  if tag=='script':self.flag=False
+              def handle_data(self,d):
+                  if self.flag:self.parts.append(d)
+          p=P();html=Path('ortak-takip/index.html').read_text();p.feed(html)
+          assert p.parts and 'ortak-takip-ai-v2' in html
+          assert html.index('data-view="ai"')<html.index('data-view="inspection"')<html.index('data-view="documents"')
+          assert 'id="aiAllowOpenAI"' in html and 'aiIncludeDetails' in html
+          Path('/tmp/otai.mjs').write_text(''.join(p.parts))
+          PY
+          node --check /tmp/otai.mjs
