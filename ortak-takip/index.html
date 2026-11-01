@@ -650,6 +650,126 @@ function expiredSecuritySessionMessage(){
 }
 
 /* Each recipient's private in-app inbox is separate from the e-mail queue. */
+
+const PUSH_ENDPOINT=URL+"/functions/v1/ortak-takip-push";
+const PUSH_SOUND_KEY="ortak-takip-push-sound-v1",PUSH_OWNER_KEY="ortak-takip-push-owner-v1";
+let pushBusy=false,pushAudio=null,lastInboxIds=null;
+const playedSoundIds=new Set();
+const canPush=()=>isSecureContext&&("serviceWorker" in navigator)&&("PushManager" in window)&&("Notification" in window);
+const soundOn=()=>{try{return localStorage.getItem(PUSH_SOUND_KEY)==="yes"}catch{return false}};
+async function callPush(action,payload={}){
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session?.access_token)throw Error("Lütfen önce giriş yapın.");
+ const response=await fetch(PUSH_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":KEY},body:JSON.stringify({action,...payload})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(data.error||"Bildirim servisi yanıt vermedi.");
+ return data;
+}
+function vapidBytes(s){
+ const b=atob(s.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(s.length/4)*4,"="));
+ return Uint8Array.from(b,c=>c.charCodeAt(0));
+}
+function playTaskSound(){
+ if(!soundOn()||document.hidden)return;
+ try{
+  const Audio=window.AudioContext||window.webkitAudioContext;
+  if(!Audio)return;
+  const ctx=pushAudio||new Audio();pushAudio=ctx;
+  if(ctx.state==="suspended")void ctx.resume();
+  const now=ctx.currentTime;
+  [784,1046].forEach((freq,i)=>{
+   const oscillator=ctx.createOscillator(),volume=ctx.createGain(),start=now+i*.12;
+   oscillator.type="sine";oscillator.frequency.setValueAtTime(freq,start);
+   volume.gain.setValueAtTime(.0001,start);
+   volume.gain.exponentialRampToValueAtTime(.08,start+.02);
+   volume.gain.exponentialRampToValueAtTime(.0001,start+.23);
+   oscillator.connect(volume);volume.connect(ctx.destination);
+   oscillator.start(start);oscillator.stop(start+.24);
+  });
+ }catch(e){console.warn("Bildirim sesi açılamadı",e)}
+}
+function playSoundOnce(id){
+ if(!id||playedSoundIds.has(id))return;
+ playedSoundIds.add(id);
+ if(playedSoundIds.size>100)playedSoundIds.clear();
+ playTaskSound();
+}
+async function updatePushControls(){
+ const on=$("#enableDeviceNotifications"),off=$("#disableDeviceNotifications"),test=$("#testDeviceNotifications"),status=$("#notifyDeviceStatus");
+ if(!on||!status)return;
+ $("#notifySoundToggle").checked=soundOn();
+ if(!canPush()){
+  on.hidden=true;off.hidden=true;test.hidden=true;
+  status.textContent="Tarayıcınız arka plan bildirimlerini desteklemiyor.";
+  return;
+ }
+ if(Notification.permission==="denied"){
+  on.hidden=true;off.hidden=true;test.hidden=true;
+  status.textContent="Bildirim izni engellenmiş; telefonun site ayarlarından Ortak Takip'e izin verin.";
+  return;
+ }
+ let active=false;
+ try{const reg=await navigator.serviceWorker.ready;active=!!(await reg.pushManager.getSubscription())&&Notification.permission==="granted"}
+ catch(e){console.warn("Abonelik kontrolü yapılamadı",e)}
+ on.hidden=active;off.hidden=!active;test.hidden=!active;
+ on.disabled=pushBusy;off.disabled=pushBusy;test.disabled=pushBusy;
+ status.textContent=active?"Telefon bildirimleri açık; uygulama kapalıyken de gelebilir.":"Telefon bildirimleri kapalı. Açmak için izin verin.";
+}
+async function enablePushOnDevice(){
+ if(pushBusy||!state.user||!canPush())return;
+ pushBusy=true;
+ try{
+  // The permission request is directly triggered by an explicit user click.
+  const permission=await Notification.requestPermission();
+  if(permission!=="granted")throw Error("Bildirim izni verilmedi.");
+  const {publicKey}=await callPush("config");
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub){
+   const previous=sub.options?.applicationServerKey;
+   if(previous&&Array.from(new Uint8Array(previous)).join(",")!==Array.from(vapidBytes(publicKey)).join(",")){
+    await sub.unsubscribe();sub=null;
+   }
+  }
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(publicKey)});
+  await callPush("subscribe",{subscription:sub.toJSON()});
+  try{localStorage.setItem(PUSH_OWNER_KEY,state.user.id)}catch{}
+  toast("Bu telefonda arka plan bildirimleri açıldı.");
+ }catch(e){toast("Bildirim açılamadı: "+String(e.message||e))}
+ finally{pushBusy=false;await updatePushControls()}
+}
+async function disablePushOnDevice(){
+ if(pushBusy||!state.user||!canPush())return;
+ pushBusy=true;
+ try{
+  const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+  if(sub){await callPush("unsubscribe",{endpoint:sub.endpoint});await sub.unsubscribe()}
+  try{localStorage.removeItem(PUSH_OWNER_KEY)}catch{}
+  toast("Bu cihazdaki bildirimler kapatıldı.");
+ }catch(e){toast("Kapatılamadı: "+String(e.message||e))}
+ finally{pushBusy=false;await updatePushControls()}
+}
+async function testPushOnDevice(){
+ if(pushBusy||!state.user)return;
+ pushBusy=true;
+ try{
+  const result=await callPush("test");
+  toast(result.delivery?.sent?"Test bildirimi gönderildi.":"Test bildirimi sıraya alındı.");
+ }catch(e){toast("Test başarısız: "+String(e.message||e))}
+ finally{pushBusy=false;await updatePushControls()}
+}
+async function checkPushAccountOwner(){
+ if(!canPush()||!state.user)return;
+ let previous=null;
+ try{previous=localStorage.getItem(PUSH_OWNER_KEY)}catch{}
+ if(previous&&previous!==state.user.id){
+  try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe()}
+  catch(e){console.warn("Önceki cihaz aboneliği temizlenemedi",e)}
+  try{localStorage.removeItem(PUSH_OWNER_KEY)}catch{}
+ }
+ await updatePushControls();
+}
+
 let inboxChannel=null,inboxRequest=0,inboxLoading=false,inboxPollHandle=null;
 const notificationTitles={
  assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
