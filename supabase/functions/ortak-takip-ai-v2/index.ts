@@ -118,9 +118,9 @@ Deno.serve(async (req:Request)=>{
  const focusLines=goalFocus?localGoalLines:calendarFocus?localEventLines:localLines;
  const focusTitle=goalFocus?"Hedef kayıtları:":calendarFocus?"Takvim kayıtları:":"İlgili görevler:";
  const localText="Güncel kayıtlara göre "+summary.open+" açık, "+summary.overdue+
-  " geciken, "+summary.critical+" kritik görev ve "+summary.goalsTotal+" hedef bulunuyor.\\n"+
-  (focusLines.length?focusTitle+"\\n"+focusLines.join("\\n"):"Bu konuda kayıt görünmüyor.")+
-  "\\n\\nBu bir veritabanı özetidir; OpenAI sohbet modeli şu anda kullanılmıyor.";
+  " geciken, "+summary.critical+" kritik görev ve "+summary.goalsTotal+" hedef bulunuyor.\n"+
+  (focusLines.length?focusTitle+"\n"+focusLines.join("\n"):"Bu konuda kayıt görünmüyor.")+
+  "\n\nBu bir veritabanı özetidir; OpenAI sohbet modeli şu anda kullanılmıyor.";
  const key=(Deno.env.get("OPENAI_API_KEY")||"").trim();
  if(!key)return reply(headers,{
    source:"data",modelConnected:false,text:localText,
