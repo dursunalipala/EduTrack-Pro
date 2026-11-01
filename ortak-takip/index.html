@@ -517,7 +517,15 @@ body *{visibility:hidden!important}
  <div id="avatar" class="avatar">OT</div></div></header><div id="notifyPanel" class="notify-panel" hidden role="region" aria-label="Uygulama içi bildirimler">
  <div class="notify-panel-head"><strong>Bildirimlerim</strong><button type="button" id="notifyClose" aria-label="Bildirimleri kapat">×</button></div>
  <div class="notify-panel-actions"><span id="notifyUnreadLabel">Yeni bildirim yok</span><button type="button" id="notifyMarkAll">Tümünü okundu işaretle</button></div>
- <div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">E-posta ve WhatsApp bildirimleri ayrıca devam eder.</div>
+ <div class="notify-device-controls">
+ <strong>Telefon Bildirimleri</strong>
+ <div class="notify-device-buttons">
+ <button type="button" id="enableDeviceNotifications">Telefona Bildirimleri Aç</button>
+ <button type="button" id="disableDeviceNotifications" hidden>Bildirimleri Kapat</button>
+ <button type="button" id="testDeviceNotifications" hidden>Test Bildirimi Gönder</button></div>
+ <div id="notifyDeviceStatus" role="status">Cihaz durumu kontrol ediliyor.</div>
+ <label><input type="checkbox" id="notifySoundToggle"> Uygulama açıkken bildirim sesi</label>
+ </div><div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">E-posta ve WhatsApp bildirimleri ayrıca devam eder.</div>
  </div><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
