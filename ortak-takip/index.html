@@ -978,7 +978,21 @@ async function secureLogout(message="Güvenli çıkış yapıldı. Yeniden giri�
    securityLoggingOut=false;lastActivityAt=Date.now();backgroundSince=null;
  }
 }
-$("#logout").onclick=()=>secureLogout("Güvenli çıkış yapıldı. Yeniden giriş yapın.");
+$("#logout").onclick=async()=>{
+ // Explicit logout also cancels device notifications to protect accounts on shared phones.
+ try{
+  if(state.user&&canPush()){
+   const reg=await navigator.serviceWorker.ready;
+   const sub=await reg.pushManager.getSubscription();
+   if(sub){
+    await callPush("unsubscribe",{endpoint:sub.endpoint});
+    await sub.unsubscribe();
+   }
+   try{localStorage.removeItem(PUSH_OWNER_KEY)}catch{}
+  }
+ }catch(e){console.warn("Çıkışta cihaz bildirimi kapatılamadı",e)}
+ await secureLogout("Güvenli çıkış yapıldı. Yeniden giriş yapın.");
+};
 const activityEvent=()=>{
  if(!document.hidden&&!$("#shell").classList.contains("hide"))recordSecurityActivity();
 };
