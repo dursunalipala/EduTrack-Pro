@@ -436,6 +436,27 @@ body *{visibility:hidden!important}
  .review-queue-text small{font-size:10.5px}
  .review-queue-count{min-width:35px;height:35px;font-size:18px}
 }
+
+/* Corporate KPI palette — status indicated by both label and muted background. */
+.kpi .dashboard-stat{border-width:1px;border-left-width:5px;min-height:126px;box-shadow:0 3px 13px #162b4409}
+.kpi .dashboard-stat .small{color:var(--kpi-ink,#204056)!important}
+.kpi .dashboard-stat .num{color:var(--kpi-ink,#204056)}
+.kpi .dashboard-stat .stat-hint{color:var(--kpi-ink,#204056);opacity:.8}
+.kpi .dashboard-stat--approval{background:#fff0d5;border-color:#e8ba59;--kpi-ink:#805508}
+.kpi .dashboard-stat--total{background:#e9f1ff;border-color:#91b2ea;--kpi-ink:#244e91}
+.kpi .dashboard-stat--ongoing{background:#dff6f5;border-color:#65c3c4;--kpi-ink:#116a71}
+.kpi .dashboard-stat--completed{background:#e6f6ea;border-color:#85c89b;--kpi-ink:#277043}
+.kpi .dashboard-stat--overdue{background:#fff0e6;border-color:#e8a07f;--kpi-ink:#ae4d23}
+.kpi .dashboard-stat--critical{background:#f7e9f1;border-color:#d18cac;--kpi-ink:#96375f}
+.kpi .dashboard-stat:hover{filter:brightness(.98);box-shadow:0 8px 20px #142c4920}
+.kpi .dashboard-stat:focus-visible{outline:3px solid #175875;outline-offset:3px}
+.simple-summary button[data-simple-summary="open"]{background:#e9f1ff;border-color:#91b2ea}
+.simple-summary button[data-simple-summary="late"]{background:#fff0e6;border-color:#e8a07f}
+.simple-summary button[data-simple-summary="week"]{background:#dff6f5;border-color:#65c3c4}
+.simple-summary .review-summary{background:#fff0d5;border-color:#e8ba59}
+.simple-summary .review-summary strong{color:#805508}
+@media(max-width:780px){.kpi .dashboard-stat{min-height:110px;border-left-width:4px}}
+
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -447,7 +468,9 @@ const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagy
 // Earlier builds kept the session in localStorage. Clear only that legacy token;
  // retain the user's non-sensitive UI preferences (such as Sade Görünüm).
 try{localStorage.removeItem("sb-gnwliizxuryfnpqrynym-auth-token")}catch{}
-const sb=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:true}});
+// Keep an authenticated session across a refresh in the same browser tab/PWA.
+ // sessionStorage avoids permanent localStorage token persistence on a shared device.
+const sb=createClient(URL,KEY,{auth:{persistSession:true,storage:window.sessionStorage,autoRefreshToken:true,detectSessionInUrl:true}});
 const WS="bd7ea9a8-f1b7-4c32-9c8c-44725374ac6b";
 const $=s=>document.querySelector(s),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -527,11 +550,38 @@ $("#recoveryForm").onsubmit=async ev=>{
 };
 $("#switchAuth").onclick=()=>{authMode=authMode==="login"?"signup":"login";$("#namefield").classList.toggle("hide",authMode!=="signup");$("#submitAuth").textContent=authMode==="signup"?"Hesap Oluştur":"Giriş Yap";$("#switchAuth").textContent=authMode==="signup"?"Girişe dön":"Hesap oluştur";$("#authmsg").textContent=""};
 $("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});$("#authmsg").textContent=e?e.message:"Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderilecektir."};
-$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:authRedirectUrl()}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;securityLocked=false;lastActivityAt=Date.now();await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
+$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:authRedirectUrl()}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;securityLocked=false;recordSecurityActivity(true);await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
 // Device security: signing out does not revoke other partners' device sessions.
 const IDLE_TIMEOUT_MS=15*60*1000;
 const BACKGROUND_TIMEOUT_MS=5*60*1000;
-let lastActivityAt=Date.now(),backgroundSince=null,securityLoggingOut=false,securityLocked=false;
+const ACTIVITY_STORAGE_KEY="ortak-takip-last-activity-v1";
+const BACKGROUND_STORAGE_KEY="ortak-takip-background-since-v1";
+const readSecurityTimestamp=key=>{
+ try{const time=Number(window.sessionStorage.getItem(key));return Number.isFinite(time)&&time>0?time:0}
+ catch{return 0}
+};
+const storeSecurityTimestamp=(key,time)=>{
+ try{if(time)window.sessionStorage.setItem(key,String(time));else window.sessionStorage.removeItem(key)}
+ catch{}
+};
+let lastActivityAt=readSecurityTimestamp(ACTIVITY_STORAGE_KEY)||Date.now();
+let backgroundSince=readSecurityTimestamp(BACKGROUND_STORAGE_KEY)||null;
+let securityLoggingOut=false,securityLocked=false;
+function recordSecurityActivity(force=false){
+ const now=Date.now();
+ // Throttle writes while preserving the original inactivity deadline across reloads.
+ if(force||now-(readSecurityTimestamp(ACTIVITY_STORAGE_KEY)||0)>9000)storeSecurityTimestamp(ACTIVITY_STORAGE_KEY,now);
+ lastActivityAt=now;
+}
+function expiredSecuritySessionMessage(){
+ const now=Date.now();
+ const hiddenAt=backgroundSince||readSecurityTimestamp(BACKGROUND_STORAGE_KEY);
+ if(hiddenAt&&now-hiddenAt>=BACKGROUND_TIMEOUT_MS)
+  return "Uygulama 5 dakikadan uzun süre arka planda kaldığı için oturum kapatıldı.";
+ if(now-lastActivityAt>=IDLE_TIMEOUT_MS)
+  return "15 dakika işlem yapılmadığı için oturum kapatıldı.";
+ return "";
+}
 function eraseSensitiveView(){
  state.user=null;state.role="";
  state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
@@ -549,25 +599,41 @@ async function secureLogout(message="Güvenli çıkış yapıldı. Yeniden giri�
  eraseSensitiveView();
  showAuth();
  $("#authmsg").textContent=message;
+ storeSecurityTimestamp(ACTIVITY_STORAGE_KEY,0);
+ storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  try{
    const {error:signOutError}=await sb.auth.signOut({scope:"local"});
    if(signOutError)console.warn("Yerel oturum kapatma hatası",signOutError.message);
  }catch(e){console.warn("Yerel oturum kapatılamadı");}
- finally{securityLoggingOut=false;lastActivityAt=Date.now();backgroundSince=null}
+ finally{
+   // Even if remote sign-out fails, do not restore saved credentials after a refresh.
+   try{window.sessionStorage.removeItem("sb-gnwliizxuryfnpqrynym-auth-token")}catch{}
+   securityLoggingOut=false;lastActivityAt=Date.now();backgroundSince=null;
+ }
 }
 $("#logout").onclick=()=>secureLogout("Güvenli çıkış yapıldı. Yeniden giriş yapın.");
-const activityEvent=()=>{if(!$("#shell").classList.contains("hide"))lastActivityAt=Date.now()};
+const activityEvent=()=>{
+ if(!document.hidden&&!$("#shell").classList.contains("hide"))recordSecurityActivity();
+};
 for(const name of ["pointerdown","keydown","touchstart","scroll"])
  document.addEventListener(name,activityEvent,{passive:true,capture:true});
 document.addEventListener("visibilitychange",()=>{
  if(document.hidden){
-  if(!$("#shell").classList.contains("hide"))backgroundSince=Date.now();
+  if(!$("#shell").classList.contains("hide")){
+   backgroundSince=Date.now();
+   storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,backgroundSince);
+  }
  }else{
-  const hiddenFor=backgroundSince===null?0:Date.now()-backgroundSince;
+  const hiddenAt=backgroundSince||readSecurityTimestamp(BACKGROUND_STORAGE_KEY);
+  const hiddenFor=hiddenAt?Date.now()-hiddenAt:0;
   backgroundSince=null;
+  // Do not erase the backgound timestamp before checking the timeout.
   if(hiddenFor>=BACKGROUND_TIMEOUT_MS&&!$("#shell").classList.contains("hide")){
    void secureLogout("Uygulama 5 dakikadan uzun süre arka planda kaldığı için oturum kapatıldı.");
-  }else if(!$("#shell").classList.contains("hide"))lastActivityAt=Date.now();
+  }else{
+   storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
+   if(!$("#shell").classList.contains("hide"))recordSecurityActivity(true);
+  }
  }
 });
 setInterval(()=>{
@@ -655,10 +721,20 @@ if(state.role==="owner"){
  }catch(e){console.warn("Admin bilgileri okunamadı")}
 }
 }
-async function boot(){if(securityLocked||securityLoggingOut)return;if(recoveryMode){showRecoveryScreen();return}const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
+async function boot(){
+ if(securityLocked||securityLoggingOut)return;
+ if(recoveryMode){showRecoveryScreen();return}
+ const expired=expiredSecuritySessionMessage();
+ if(expired){await secureLogout(expired);return}
+ const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
-state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");openTaskFromSharedLink()}
+state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
+if(!document.hidden){
+ backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
+ recordSecurityActivity(true);
+}
+openTaskFromSharedLink()}
 async function refresh(){try{await fetchAll();render()}catch(e){error(e)}}
 const streamName=id=>state.streams.find(s=>s.id===id)?.name||"Genel",memberName=id=>state.profiles.find(p=>p.id===id)?.full_name||state.members.find(m=>m.user_id===id)?.user_id.slice(0,8)||"Atanmadı";
 
@@ -986,7 +1062,8 @@ function openDashboardTaskFilter(key){
 function stat(label,num,detail,taskFilter=null){
  const markup='<div class="small muted">'+esc(label)+'</div><div class="num">'+esc(num)+'</div><div class="small muted">'+esc(detail)+'</div>';
  if(taskFilter===null)return '<div class="card">'+markup+'</div>';
- return '<button type="button" class="card dashboard-stat" data-task-jump="'+esc(taskFilter)+'" aria-label="'+esc(label+': '+num+'. İlgili görevleri aç')+'">'+markup+'<div class="stat-hint" aria-hidden="true">Görevleri gör →</div></button>';
+ const colorKey={review:"approval",all:"total",active:"ongoing",completed:"completed",overdue:"overdue",critical:"critical"}[taskFilter]||"total";
+ return '<button type="button" class="card dashboard-stat dashboard-stat--'+colorKey+'" data-task-jump="'+esc(taskFilter)+'" aria-label="'+esc(label+': '+num+'. İlgili görevleri aç')+'">'+markup+'<div class="stat-hint" aria-hidden="true">Görevleri gör →</div></button>';
 }
 function overview(){if(state.simpleMode||isStaff())return simpleOverview();const ts=state.tasks,done=ts.filter(t=>t.status==="tamamlandi").length,active=ts.filter(t=>t.status==="devam_ediyor").length,late=ts.filter(t=>t.due_date&&t.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(t.status)).length,priority=ts.filter(t=>t.priority==="kritik"&&t.status!=="tamamlandi").length;
 const approvals=canManage()?ts.filter(awaitingMyApproval).length:0;
