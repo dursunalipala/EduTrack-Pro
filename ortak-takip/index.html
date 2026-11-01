@@ -380,6 +380,16 @@ body *{visibility:hidden!important}
 .task-action-card textarea,.task-action-card input{width:100%;margin-top:7px}
 .task-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.task-history{font-size:12px;padding:9px 0;border-bottom:1px solid #e3eaf2}
 @media(max-width:600px){.task-info-grid{grid-template-columns:1fr}}
+
+.member-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:13px 0 19px}
+.member-tabs .btn{border-radius:9px}
+.personnel-card{align-items:flex-start}
+.member-data{flex:1;min-width:0;overflow-wrap:anywhere}
+.member-lifecycle-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.member-history{margin-top:9px;background:#f3f8fa;border:1px solid #dce9ef;border-radius:9px;padding:9px 12px}
+.member-history>summary{cursor:pointer;color:#245a72;font-size:12px;font-weight:700}
+.member-history>div{margin:7px 0}
+@media(max-width:700px){.personnel-card{align-items:flex-start}.member-lifecycle-actions .btn{flex:1;min-width:115px}}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -399,7 +409,7 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},taskActivities:[],performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},taskActivities:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -479,7 +489,7 @@ function eraseSensitiveView(){
  state.user=null;state.role="";
  state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
  state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.notifyPrefs=[];
- state.teamEmails={};state.taskActivities=[];state.aiMessages=[];state.aiResult=null;
+ state.teamEmails={};state.taskActivities=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;
  $("#shell").classList.add("hide");
  $("#email").value="";
  $("#password").value="";
@@ -572,14 +582,19 @@ if(isStaff()){
  const ids=[...new Set([state.user.id,...state.members.map(m=>m.user_id)])];
  const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);
  state.profiles=p.data||[];state.goals=[];state.events=[];state.catalog=[];state.invites=[];
- state.notificationQueue=[];state.notifyPrefs=[];state.teamEmails={};return;
+ state.notificationQueue=[];state.notifyPrefs=[];state.teamEmails={};state.taskAssignmentHistory=[];state.memberStatusHistory=[];return;
 }
 const q=[sb.from("workstreams").select("*").eq("workspace_id",WS).order("sort_order"),sb.from("tasks").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("task_catalog").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("goals").select("*").eq("workspace_id",WS),sb.from("calendar_events").select("*").eq("workspace_id",WS),sb.from("workspace_members").select("*").eq("workspace_id",WS),sb.from("workspace_invites").select("email,role,status,created_at").eq("workspace_id",WS).eq("status","pending"),sb.from("notification_queue").select("id,recipient_id,kind,status,payload,created_at,sent_at,last_error").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100),sb.from("notification_preferences").select("*").eq("workspace_id",WS)];
 const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
 [state.streams,state.tasks,state.catalog,state.goals,state.events,state.members,state.invites,state.notificationQueue,state.notifyPrefs]=r.map(a=>a.data||[]);
 let ids=state.members.map(x=>x.user_id);
-const a=await sb.from("task_activity").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(500);
-state.taskActivities=a.data||[];
+const historyResults=await Promise.all([
+ sb.from("task_activity").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(1000),
+ sb.from("task_assignment_history").select("*").eq("workspace_id",WS).order("changed_at",{ascending:false}).limit(1000),
+ sb.from("member_status_history").select("*").eq("workspace_id",WS).order("happened_at",{ascending:false}).limit(1000)
+]);
+for(const result of historyResults)if(result.error)throw result.error;
+[state.taskActivities,state.taskAssignmentHistory,state.memberStatusHistory]=historyResults.map(r=>r.data||[]);
 state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);if(!p.error)state.profiles=p.data||[]}
 if(state.role==="owner"){
  try{
@@ -1273,30 +1288,109 @@ async function sendNotificationBatch(){
  }catch(e){error(e)}finally{btn.disabled=false;btn.textContent="Gönderimi Kontrol Et"}
 }
 
+
+const memberStatusLabel=m=>m.archived_at?"Arşivde":m.is_active?"Aktif":"Pasif";
+const memberVisible=m=>state.memberStatusTab==="archive"?!!m.archived_at:
+ state.memberStatusTab==="inactive"?(!m.is_active&&!m.archived_at):!!m.is_active&&!m.archived_at;
+function memberHistoryStats(userId){
+ const assigned=new Set(),actions=state.taskActivities.filter(a=>a.actor_id===userId);
+ for(const t of state.tasks)if(t.executor_id===userId||(t.helper_user_ids||[]).includes(userId)||t.assigned_to===userId)assigned.add(t.id);
+ for(const a of state.taskAssignmentHistory)if(a.executor_id===userId||a.prior_executor_id===userId||
+ (a.helper_ids||[]).includes(userId)||(a.prior_helper_ids||[]).includes(userId)||a.supervisor_id===userId||a.prior_supervisor_id===userId)assigned.add(a.task_id);
+ const pending=state.tasks.filter(t=>!["tamamlandi","iptal"].includes(t.status)&&
+ (t.executor_id===userId||(t.helper_user_ids||[]).includes(userId)));
+ return {assigned:assigned.size,actions:actions.length,submitted:actions.filter(a=>a.action==="submit").length,
+  pending:pending.length};
+}
+async function changePersonnelStatus(userId,action){
+ if(state.role!=="owner"){toast("Bu işlem yalnızca Admin tarafından yapılabilir.");return}
+ const member=state.members.find(m=>m.user_id===userId);
+ if(!member||!["member","viewer"].includes(member.role)){toast("Admin ve yönetici hesapları bu ekrandan kapatılamaz.");return}
+ const name=memberName(userId),stats=memberHistoryStats(userId);
+ const wording={deactivate_member:"pasife al",archive_member:"sistemden kaldırıp arşivle",reactivate_member:"yeniden aktifleştir"}[action];
+ if(!wording)return;
+ const explanation=action==="archive_member"?
+  "Aktif ekip listesinden kaldırılır ve erişimi kapanır; görevler, performans ve işlem geçmişi silinmez.":
+  action==="deactivate_member"?"Kullanıcı sisteme erişemez; geçmiş kayıtlar korunur.":
+  "Kullanıcı tekrar giriş yapabilir ve aktif personele atanabilir.";
+ const question=name+" adlı kullanıcıyı "+wording+"?\n\n"+explanation+
+  (action==="reactivate_member"?"":"\n\nMevcut açık/atanmış görev: "+stats.pending);
+ if(!window.confirm(question))return;
+ let note="";
+ if(action!=="reactivate_member"){
+  const response=window.prompt("İşlem açıklaması (isteğe bağlı):","");
+  if(response===null)return;
+  note=response.trim();
+  if(note.length>500){toast("Açıklama en fazla 500 karakter olabilir.");return}
+ }
+ const control=document.querySelector('[data-member-action="'+action+'"][data-member-id="'+userId+'"]');
+ if(control)control.disabled=true;
+ try{
+  const session=await requireActiveSession();
+  const resp=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-admin",{
+    method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({action,user_id:userId,note})
+  });
+  const data=await resp.json();
+  if(!resp.ok||!data.ok)throw Error(data.error||"Personel işlemi tamamlanamadı");
+  toast(data.message||"Personel durumu güncellendi.");
+  if(action==="archive_member")state.memberStatusTab="archive";
+  else if(action==="deactivate_member")state.memberStatusTab="inactive";
+  else state.memberStatusTab="active";
+  await refresh();
+ }catch(e){error(e)}finally{if(control)control.disabled=false}
+}
 function membersView(){
-const active=state.members.map(m=>{
- const profile=state.profiles.find(p=>p.id===m.user_id)||{};
- const email=state.teamEmails[m.user_id]?.email||(m.user_id===state.user?.id?state.user?.email:"");
- const phone=profile.whatsapp_phone||"";
- return '<div class="member"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
- '<div style="flex:1;min-width:0"><strong>'+esc(memberName(m.user_id))+'</strong>'+
- '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+' · '+(m.is_active?"Aktif":"Pasif")+'</div>'+
- (state.role==="owner"&&email?'<div class="small muted">'+esc(email)+'</div>':"")+
- (phone?'<div class="small muted">WhatsApp: '+esc(phone)+'</div>':'<div class="small muted">WhatsApp telefonu eklenmedi</div>')+
- '</div><span class="tag">'+esc(labels[m.role]||m.role)+'</span>'+
- (state.role==="owner"?'<div class="actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
- (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+'</div>';
-}).join("");
-const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
-return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
-'<section class="panel"><p class="small muted">Yeni çalışan eklemek için + Personel Ekle düğmesine dokunun. Hesabı zaten olan kişi e-postasıyla doğrudan ekibe bağlanır; hesabı yoksa davet gönderilir.</p><h2>Mevcut Ekip ('+state.members.length+')</h2>'+
-(state.role==="owner"?'<p class="small muted">Admin, ad, pozisyon, e-posta ve yetki düzenleyebilir. Mevcut şifreler görüntülenemez; yeni şifre belirlenebilir.</p>':"")+
-(active||'<p class="muted small">Henüz aktif ekip üyesi yok.</p>')+'</section>'+
-(state.role==="owner"?ownerPasswordView():"")+
-(canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+
-(pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+
-'<p class="muted small">Kullanıcı hesap oluşturup e-postasını doğrulamalıdır.</p></section>':"")+
-'<p class="muted small">Yetki seviyeleri: Admin, Yönetici, Personel ve İzleyici.</p>';
+ const counts={
+  active:state.members.filter(m=>m.is_active&&!m.archived_at).length,
+  inactive:state.members.filter(m=>!m.is_active&&!m.archived_at).length,
+  archive:state.members.filter(m=>!!m.archived_at).length
+ };
+ const tabs=[["active","Aktif"],["inactive","Pasif"],["archive","Arşiv"]].map(([k,l])=>
+  '<button type="button" class="btn sm '+(state.memberStatusTab===k?"primary":"")+
+  '" data-member-tab="'+k+'">'+l+' ('+counts[k]+')</button>').join("");
+ const members=state.members.filter(memberVisible).map(m=>{
+  const profile=state.profiles.find(p=>p.id===m.user_id)||{};
+  const email=state.teamEmails[m.user_id]?.email||(m.user_id===state.user?.id?state.user?.email:"");
+  const phone=profile.whatsapp_phone||"",stats=memberHistoryStats(m.user_id);
+  const editable=state.role==="owner"&&m.is_active&&!m.archived_at;
+  const statusActions=(state.role==="owner"&&["member","viewer"].includes(m.role))?
+   '<div class="actions member-lifecycle-actions">'+
+   (m.is_active?'<button type="button" class="btn sm" data-member-action="deactivate_member" data-member-id="'+esc(m.user_id)+'">Pasife Al</button>':"")+
+   (!m.is_active?'<button type="button" class="btn sm" data-member-action="reactivate_member" data-member-id="'+esc(m.user_id)+'">Yeniden Aktifleştir</button>':"")+
+   (!m.archived_at?'<button type="button" class="btn sm" data-member-action="archive_member" data-member-id="'+esc(m.user_id)+'">Sistemden Kaldır</button>':"")+
+   '</div>':"";
+  const lifecycle=state.memberStatusHistory.filter(a=>a.user_id===m.user_id).slice(0,5);
+  return '<div class="member personnel-card"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
+  '<div class="member-data"><strong>'+esc(memberName(m.user_id))+'</strong>'+
+  '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+
+  ' · '+esc(memberStatusLabel(m))+' · '+esc(labels[m.role]||m.role)+'</div>'+
+  (state.role==="owner"&&email?'<div class="small muted">'+esc(email)+'</div>':"")+
+  (phone?'<div class="small muted">WhatsApp: '+esc(phone)+'</div>':"")+
+  '<div class="small muted">İlgili görev: '+stats.assigned+' · İşlem kaydı: '+stats.actions+
+  ' · Kontrole gönderilen: '+stats.submitted+
+  (stats.pending?' · Devam eden atama: '+stats.pending:"")+'</div>'+
+  (m.archived_at?'<div class="small muted">Arşiv tarihi: '+date(m.archived_at)+'</div>':
+   !m.is_active&&m.deactivated_at?'<div class="small muted">Pasife alma tarihi: '+date(m.deactivated_at)+'</div>':"")+
+  (lifecycle.length?'<details class="member-history"><summary>Yetki değişikliği geçmişi ('+lifecycle.length+')</summary>'+
+  lifecycle.map(h=>'<div class="small muted">'+date(h.happened_at)+' · '+
+    esc(({archived:"Arşivlendi",restored:"Yeniden aktifleştirildi",deactivated:"Pasife alındı",reactivated:"Aktifleştirildi"})[h.action]||h.action)+
+    ' · '+esc(memberName(h.changed_by))+(h.note?' · '+esc(h.note):"")+'</div>').join("")+'</details>':"")+
+  (editable?'<div class="actions member-lifecycle-actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
+   (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+
+  statusActions+'</div></div>';
+ }).join("");
+ const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
+ return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
+ '<section class="panel"><p class="small muted">Personeli pasife alın veya sistemden kaldırarak arşivleyin. Erişimi kapanır; eski görevleri, işlem kayıtları ve raporlardaki adı korunur. Arşivdeki personel tekrar aktifleştirilebilir. Bu işlemler yalnızca Admin yetkisindedir.</p>'+
+ '<div class="member-tabs">'+tabs+'</div>'+
+ '<h2>'+({active:"Aktif Ekip",inactive:"Pasif Personeller",archive:"Personel Arşivi"})[state.memberStatusTab]+' ('+counts[state.memberStatusTab]+')</h2>'+
+ (members||'<p class="muted small">Bu bölümde kayıt bulunmuyor.</p>')+'</section>'+
+ (state.role==="owner"?ownerPasswordView():"")+
+ (canManage()?'<section class="panel"><h2>Aktivasyon Bekleyen Davetler ('+state.invites.filter(i=>i.status==="pending").length+')</h2>'+
+ (pending||'<p class="muted small">Bekleyen davet bulunmuyor.</p>')+
+ '<p class="muted small">Yeni kullanıcı hesap oluşturup e-postasını doğrulamalıdır.</p></section>':"")+
+ '<p class="muted small">Yetki seviyeleri: Admin, Yönetici, Personel ve İzleyici. Silme seçeneği geçmiş kayıtları korumak için arşivleme yapar.</p>';
 }
 function taskOccursOnDay(t,day){
   if(t.status==="iptal")return false;
@@ -1423,6 +1517,10 @@ document.querySelectorAll("[data-catalog-toggle]").forEach(b=>b.onclick=()=>togg
 [["performancePeriod","performancePeriod"],["performanceSchool","performanceSchool"],["performanceStream","performanceStream"],["performancePerson","performancePerson"]].forEach(([id,prop])=>{
  $("#"+id)?.addEventListener("change",e=>{state[prop]=e.target.value;render()});
 });$("#newEvent")?.addEventListener("click",()=>openModal("event"));$("#newMember")?.addEventListener("click",()=>openModal("member"));
+document.querySelectorAll("[data-member-tab]").forEach(b=>b.onclick=()=>{
+ state.memberStatusTab=b.dataset.memberTab;render();
+});
+document.querySelectorAll("[data-member-action]").forEach(b=>b.onclick=()=>changePersonnelStatus(b.dataset.memberId,b.dataset.memberAction));
 document.querySelectorAll("[data-edit-member]").forEach(b=>b.addEventListener("click",()=>{
  if(state.role!=="owner")return;
  const m=state.members.find(x=>x.user_id===b.dataset.editMember);
