@@ -680,6 +680,23 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
+const digitalSortOptions=[
+ ["newest","En yeni eklenen"],
+ ["oldest","En eski eklenen"],
+ ["title_asc","Ada göre A–Z"],
+ ["title_desc","Ada göre Z–A"],
+ ["category","Platform türüne göre"],
+ ["school","Kuruma göre"],
+ ["status","Duruma göre"]
+];
+const digitalSortStorageKey="ortak-takip-digital-sort";
+const loadDigitalSort=()=>{
+ try{
+  const saved=localStorage.getItem(digitalSortStorageKey);
+  return digitalSortOptions.some(([value])=>value===saved)?saved:"newest";
+ }catch{return "newest"}
+};
+
 const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
@@ -1311,23 +1328,6 @@ const digitalCategories=[
  ["email","E-posta Sistemleri","✉"],["other","Diğer Platformlar","↗"]
 ];
 const digitalStates=[["active","Aktif"],["maintenance","Bakımda"],["passive","Pasif"]];
-const digitalSortOptions=[
- ["newest","En yeni eklenen"],
- ["oldest","En eski eklenen"],
- ["title_asc","Ada göre A–Z"],
- ["title_desc","Ada göre Z–A"],
- ["category","Platform türüne göre"],
- ["school","Kuruma göre"],
- ["status","Duruma göre"]
-];
-const digitalSortStorageKey="ortak-takip-digital-sort";
-const loadDigitalSort=()=>{
- try{
-  const saved=localStorage.getItem(digitalSortStorageKey);
-  return digitalSortOptions.some(([value])=>value===saved)?saved:"newest";
- }catch{return "newest"}
-};
-
 const isDigitalAdmin=()=>state.role==="owner";
 const digitalCategory=c=>digitalCategories.find(x=>x[0]===c)||digitalCategories[digitalCategories.length-1];
 const digitalStateLabel=s=>digitalStates.find(x=>x[0]===s)?.[1]||"Belirsiz";
