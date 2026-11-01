@@ -613,6 +613,7 @@ body *{visibility:hidden!important}
  .digital-editor{padding:15px}
 }
 
+.digital-admin-address{background:#f7f8fc;border-color:#e2e5ee;color:#4d6586}.digital-admin-address strong{display:block;color:#243f61;font-size:10px;margin-bottom:4px}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -1345,7 +1346,8 @@ function digitalView(){
     '<div class="digital-card-heading"><strong>'+esc(item.title)+'</strong><small>'+esc(category[1])+' · '+esc(schoolName(item.school_unit))+'</small></div>'+
     '<span class="digital-state digital-state-'+esc(item.is_archived?"passive":item.status)+'">'+esc(item.is_archived?"Arşiv":digitalStateLabel(item.status))+'</span></div>'+
     (item.description?'<p class="digital-description">'+esc(item.description)+'</p>':"")+
-    '<div class="digital-url" title="'+esc(item.url)+'">'+esc(digitalShortUrl(item.url))+'</div>'+
+    '<div class="digital-url" title="'+esc(item.url)+'">'+esc(item.url)+'</div>'+
+    (panelUrl?'<div class="digital-url digital-admin-address"><strong>Yönetim adresi</strong> '+esc(item.admin_url)+'</div>':"")+
     (item.responsible_id?'<div class="digital-owner">Sorumlu: <strong>'+esc(memberName(item.responsible_id))+'</strong></div>':"")+
     audience+
     '<div class="digital-actions">'+
