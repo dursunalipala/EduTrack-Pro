@@ -89,7 +89,7 @@ Deno.serve(async (req:Request)=>{
   groups:streams.map((x:any)=>({group:scrub(x.name,65),open:pending.filter((t:any)=>t.workstream_id===x.id).length,late:overdue.filter((t:any)=>t.workstream_id===x.id).length}))
  };
  const order=(a:any,b:any)=>Number(a.priority!=="kritik")-Number(b.priority!=="kritik")||
-  Number(Boolean(a.due_date))-Number(Boolean(b.due_date))||String(a.due_date||"").localeCompare(String(b.due_date||""));
+  Number(!a.due_date)-Number(!b.due_date)||String(a.due_date||"").localeCompare(String(b.due_date||""));
  const rows=[...pending].sort(order).slice(0,80).map((t:any)=>({
   school:t.school_unit,group:streamNames.get(t.workstream_id)||"Ortak",
   status:t.status,priority:t.priority,due:t.due_date||null,
@@ -108,20 +108,26 @@ Deno.serve(async (req:Request)=>{
  const choose=/gecik|geç kal|süresi geçen/.test(question)?overdue:
   /kritik|acil/.test(question)?critical:
   /hafta|yaklaşan|son tarih/.test(question)?soon:pending;
- const localLines=choose.sort(order).slice(0,7).map((t:any,i)=>
+ const localLines=[...choose].sort(order).slice(0,7).map((t:any,i)=>
   (i+1)+". "+scrub(t.title,120)+" · "+(t.due_date||"tarih yok")+" · "+t.status+
   " · "+(streamNames.get(t.workstream_id)||"Genel"));
+ const goalFocus=/hedef|performans|gerçekleş|kasım/.test(question);
+ const calendarFocus=/takvim|randevu|toplantı|etkinlik/.test(question);
+ const localGoalLines=goals.slice(0,8).map((g:any,i)=>(i+1)+". "+scrub(g.title,120)+" · "+g.actual_value+" / "+g.target_value+" "+scrub(g.unit,20)+" · "+g.approval_status);
+ const localEventLines=events.filter((e:any)=>e.starts_at?.slice(0,10)>=today).slice(0,8).map((e:any,i)=>(i+1)+". "+scrub(e.title,120)+" · "+e.starts_at?.slice(0,16));
+ const focusLines=goalFocus?localGoalLines:calendarFocus?localEventLines:localLines;
+ const focusTitle=goalFocus?"Hedef kayıtları:":calendarFocus?"Takvim kayıtları:":"İlgili görevler:";
  const localText="Güncel kayıtlara göre "+summary.open+" açık, "+summary.overdue+
-  " geciken ve "+summary.critical+" kritik görev bulunuyor.\n"+
-  (localLines.length?"İlgili görevlerden örnekler:\n"+localLines.join("\n"):"Bu ölçütlerde açık görev görünmüyor.")+
-  "\n\nBu bir veri tabanı özetidir; serbest sohbet yapabilen OpenAI modeli henüz etkinleştirilmedi.";
+  " geciken, "+summary.critical+" kritik görev ve "+summary.goalsTotal+" hedef bulunuyor.\\n"+
+  (focusLines.length?focusTitle+"\\n"+focusLines.join("\\n"):"Bu konuda kayıt görünmüyor.")+
+  "\\n\\nBu bir veritabanı özetidir; OpenAI sohbet modeli şu anda kullanılmıyor.";
  const key=(Deno.env.get("OPENAI_API_KEY")||"").trim();
  if(!key)return reply(headers,{
    source:"data",modelConnected:false,text:localText,
    stats:summary,notice:"OpenAI API anahtarı Supabase Secrets alanında tanımlı değil. Yanıt yalnızca yetkili veritabanı kayıtlarından oluşturuldu; OpenAI'ye veri gönderilmedi."
  });
  // Opt-in decision already made by user in app UI; never call OpenAI without it.
- if(body?.allowAI!==true)return reply(headers,{error:"OpenAI ile paylaşım için sohbet ekranından açık izin verin."},400);
+ if(body?.allowAI!==true)return reply(headers,{source:"data",modelConnected:false,text:localText,stats:summary,notice:"OpenAI’ye veri gönderme izni verilmedi. Yalnızca uygulama içindeki gerçek görev kayıtları görüntüleniyor."});
  // Existing atomic quota: 4 per user and 12 per workspace per day; cap bills.
  const quotaClient=createClient(supaURL,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"",{auth:{persistSession:false,autoRefreshToken:false}});
  const q=await quotaClient.rpc("reserve_ortak_ai_request",{p_workspace:WS,p_user:user.id});
