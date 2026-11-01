@@ -535,7 +535,8 @@ body *{visibility:hidden!important}
  <button type="button" id="testDeviceNotifications" hidden>Test Bildirimi Gönder</button></div>
  <div id="notifyDeviceStatus" role="status">Cihaz durumu kontrol ediliyor.</div>
  <label><input type="checkbox" id="notifySoundToggle"> Uygulama açıkken bildirim sesi</label>
- </div><div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">E-posta ve WhatsApp bildirimleri ayrıca devam eder.</div>
+ </div><div id="notifyUndoBar" class="notify-undo-bar" hidden><span>Bildirim listeden kaldırıldı.</span><button type="button" id="notifyUndoButton">Geri al</button></div>
+ <div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">Bildirimi sağa veya sola kaydırarak silebilirsiniz. Görev kayıtları korunur.</div>
  </div><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
@@ -781,6 +782,7 @@ async function checkPushAccountOwner(){
 }
 
 let inboxChannel=null,inboxRequest=0,inboxLoading=false,inboxPollHandle=null;
+let inboxUnreadTotal=0,swipeGesture=null,ignoreNotificationClickUntil=0,undoDismissedNotification=null,undoDismissTimer=null;
 const notificationTitles={
  assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
  due_changed:"Görev tarihi değişti",due_soon:"Görev tarihi yaklaşıyor",
@@ -797,7 +799,7 @@ const notificationDate=d=>{
  try{return new Date(d).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
  catch{return ""}
 };
-const unreadNotificationCount=()=>state.userNotifications.filter(n=>!n.read_at).length;
+const unreadNotificationCount=()=>inboxUnreadTotal;
 const notifyTaskTitle=n=>n.title||"Görev bildirimi";
 function renderNotificationCenter(){
  const bell=$("#notifyBell"),badge=$("#notifyBadge"),panel=$("#notifyPanel");
@@ -806,18 +808,27 @@ function renderNotificationCenter(){
  badge.textContent=unread>99?"99+":String(unread);
  badge.hidden=unread===0;
  bell.setAttribute("aria-label",unread?unread+" okunmamış bildiriminiz var. Bildirimleri aç":"Bildirimlerim");
- $("#notifyUnreadLabel").textContent=unread?unread+" okunmamış bildirim":"Tüm bildirimler okundu";
- $("#notifyMarkAll").disabled=unread===0;
+ $("#notifyUnreadLabel").textContent=unread?unread+" okunmamış bildirim":"Tümü okundu ✓";
+ const allRead=$("#notifyMarkAll");
+ allRead.hidden=unread===0;
+ allRead.disabled=false;
+ allRead.title=unread?"Okunmamış bütün bildirimleri okundu işaretle":"";
+ const undoBar=$("#notifyUndoBar");
+ undoBar.hidden=!undoDismissedNotification;
  if(panel.hidden)return;
  $("#notifyList").innerHTML=state.userNotifications.length?
-  state.userNotifications.map(n=>
-   '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'">'+
-    '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
-    '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
-    '<span>'+esc(notifyTaskTitle(n))+'</span><small>'+esc(notificationDate(n.created_at))+'</small></span>'+
-    (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
-   '</button>'
-  ).join(""):'<div class="notify-empty">Henüz bildiriminiz yok. Yeni görev ve kontrol işlemleri burada görünecek.</div>';
+   state.userNotifications.map(n=>
+    '<div class="notify-swipe-row" data-inbox-row="'+esc(n.id)+'">'+
+    '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'" aria-label="'+esc((notificationTitles[n.kind]||"Görev bildirimi")+' '+notifyTaskTitle(n)+". Görevi aç")+'">'+
+     '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
+     '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
+     '<span>'+esc(notifyTaskTitle(n))+'</span><small>'+esc(notificationDate(n.created_at))+'</small></span>'+
+     (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
+    '</button>'+
+    '<button type="button" class="notify-delete-btn" data-inbox-delete="'+esc(n.id)+'" aria-label="'+esc(notifyTaskTitle(n))+' bildirimini sil" title="Bildirimi listeden kaldır">'+
+      '<span aria-hidden="true">×</span><small>Sil</small></button>'+
+    '</div>'
+   ).join(""):'<div class="notify-empty">Bildirim listeniz boş. Yeni görev ve kontrol işlemleri burada görünecek.</div>';
 }
 function setInboxOpen(open){
  const panel=$("#notifyPanel"),bell=$("#notifyBell");
