@@ -390,6 +390,19 @@ body *{visibility:hidden!important}
 .member-history>summary{cursor:pointer;color:#245a72;font-size:12px;font-weight:700}
 .member-history>div{margin:7px 0}
 @media(max-width:700px){.personnel-card{align-items:flex-start}.member-lifecycle-actions .btn{flex:1;min-width:115px}}
+
+/* Editable comments only: workflow approval events stay immutable. */
+.task-comment-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}
+.task-history-actions{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}
+.task-history-actions .btn{min-width:65px}
+.task-comment-editor{padding:12px;background:#f4f9fc;border:1px solid #cbdfe8;border-radius:10px;margin:10px 0}
+.task-comment-editor label{display:block;margin:8px 0;color:#2e5369;font-weight:650;font-size:12px}
+.task-comment-editor input,.task-comment-editor textarea{display:block;width:100%;margin-top:6px}
+.task-activity-revisions{background:#f4f7fa;border:1px solid #e2eaf1;border-radius:8px;padding:8px 10px;margin-top:9px}
+.task-activity-revisions summary{cursor:pointer;font-weight:650;font-size:11px;color:#526e84}
+.task-activity-revisions>div{margin-top:8px;border-top:1px solid #e2eaf1;padding-top:8px}
+.deleted-comment{opacity:.77}
+
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -409,7 +422,7 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},taskActivities:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -489,7 +502,7 @@ function eraseSensitiveView(){
  state.user=null;state.role="";
  state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
  state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.notifyPrefs=[];
- state.teamEmails={};state.taskActivities=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;
+ state.teamEmails={};state.taskActivities=[];state.activityRevisions=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;
  $("#shell").classList.add("hide");
  $("#email").value="";
  $("#password").value="";
@@ -582,7 +595,7 @@ if(isStaff()){
  const ids=[...new Set([state.user.id,...state.members.map(m=>m.user_id)])];
  const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);
  state.profiles=p.data||[];state.goals=[];state.events=[];state.catalog=[];state.invites=[];
- state.notificationQueue=[];state.notifyPrefs=[];state.teamEmails={};state.taskAssignmentHistory=[];state.memberStatusHistory=[];return;
+ state.notificationQueue=[];state.notifyPrefs=[];state.teamEmails={};state.activityRevisions=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];return;
 }
 const q=[sb.from("workstreams").select("*").eq("workspace_id",WS).order("sort_order"),sb.from("tasks").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("task_catalog").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("goals").select("*").eq("workspace_id",WS),sb.from("calendar_events").select("*").eq("workspace_id",WS),sb.from("workspace_members").select("*").eq("workspace_id",WS),sb.from("workspace_invites").select("email,role,status,created_at").eq("workspace_id",WS).eq("status","pending"),sb.from("notification_queue").select("id,recipient_id,kind,status,payload,created_at,sent_at,last_error").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100),sb.from("notification_preferences").select("*").eq("workspace_id",WS)];
 const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
@@ -591,10 +604,11 @@ let ids=state.members.map(x=>x.user_id);
 const historyResults=await Promise.all([
  sb.from("task_activity").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(1000),
  sb.from("task_assignment_history").select("*").eq("workspace_id",WS).order("changed_at",{ascending:false}).limit(1000),
- sb.from("member_status_history").select("*").eq("workspace_id",WS).order("happened_at",{ascending:false}).limit(1000)
+ sb.from("member_status_history").select("*").eq("workspace_id",WS).order("happened_at",{ascending:false}).limit(1000),
+ sb.from("task_activity_revisions").select("*").eq("workspace_id",WS).order("changed_at",{ascending:false}).limit(1000)
 ]);
 for(const result of historyResults)if(result.error)throw result.error;
-[state.taskActivities,state.taskAssignmentHistory,state.memberStatusHistory]=historyResults.map(r=>r.data||[]);
+[state.taskActivities,state.taskAssignmentHistory,state.memberStatusHistory,state.activityRevisions]=historyResults.map(r=>r.data||[]);
 state.profiles=[];if(ids.length){const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);if(!p.error)state.profiles=p.data||[]}
 if(state.role==="owner"){
  try{
@@ -1104,7 +1118,7 @@ function makeReportSnapshot(){
   }));
   const activityLog=state.taskActivities.filter(a=>taskIds.has(a.task_id)).map(a=>({
    task:taskNames.get(a.task_id)||"",actorId:a.actor_id,actor:memberName(a.actor_id),
-   action:a.action,note:a.note||"",createdAt:a.created_at
+   action:a.deleted_at?"comment_deleted":a.action,note:a.deleted_at?"(Silinmiş not)":a.note||"",createdAt:a.created_at
   }));
   const personnel=state.members.map(m=>{
    const relevant=new Set();
@@ -1760,7 +1774,42 @@ $("#showMemberNewPassword")?.addEventListener("change",e=>{
 });
 }
 
-function openTaskDetail(t){
+
+const canManageComment=(a,t)=>{
+ if(a.action!=="comment"||a.deleted_at)return false;
+ if(canManage())return true;
+ const me=state.user?.id;
+ return !!me&&a.actor_id===me&&
+  (isExecutor(t)||isHelper(t)||t.assigned_to===me||t.reviewer_id===me);
+};
+function taskActivityHistoryEntry(a,t,editingNoteId){
+ const names={start:"Başladı",submit:"Kontrole gönderdi",approve:"Onayladı",return:"Düzeltme istedi",comment:"Not ekledi"};
+ const deleted=!!a.deleted_at;
+ const editing=editingNoteId===a.id&&!deleted&&a.action==="comment"&&canManageComment(a,t);
+ const changes=canManage()?state.activityRevisions.filter(r=>r.activity_id===a.id):[];
+ const history=changes.length?'<details class="task-activity-revisions"><summary>Değişiklik geçmişi ('+changes.length+')</summary>'+
+  changes.map(rev=>'<div class="small muted"><b>'+esc(memberName(rev.actor_id))+'</b> · '+date(rev.changed_at)+' · '+(rev.operation==="delete"?"Silindi":"Düzenlendi")+
+  (rev.old_note?'<p><b>Önceki not:</b> '+esc(rev.old_note)+'</p>':"")+
+  (rev.old_evidence_url?'<p><b>Önceki belge:</b> '+esc(rev.old_evidence_url)+'</p>':"")+'</div>').join("")+
+  '</details>':"";
+ const controls=canManageComment(a,t)?'<div class="task-history-actions">'+
+  '<button type="button" class="btn sm" data-comment-edit="'+esc(a.id)+'">Düzenle</button>'+
+  '<button type="button" class="btn sm" data-comment-delete="'+esc(a.id)+'">Sil</button></div>':"";
+ const editor=editing?'<div class="task-comment-editor">'+
+  '<label>Not<textarea id="editActivityNote" rows="3" maxlength="2000" placeholder="Not metni">'+esc(a.note||"")+'</textarea></label>'+
+  '<label>Belge bağlantısı<input id="editActivityEvidence" type="url" maxlength="700" placeholder="https://..." value="'+esc(a.evidence_url||"")+'"></label>'+
+  '<div class="task-history-actions"><button type="button" class="btn sm primary" data-comment-save="'+esc(a.id)+'">Değişiklikleri Kaydet</button>'+
+  '<button type="button" class="btn sm" data-comment-cancel="1">Vazgeç</button></div></div>':"";
+ return '<div class="task-history'+(deleted?" deleted-comment":"")+'">'+
+  '<div><b>'+esc(memberName(a.actor_id))+'</b> · '+esc(names[a.action]||a.action)+' · '+date(a.created_at)+
+  (deleted?' · <span class="muted">Silindi · '+date(a.deleted_at)+'</span>':
+    a.edited_at?' · <span class="muted">Düzenlendi · '+date(a.edited_at)+'</span>':"")+'</div>'+
+  (deleted?'<p class="muted small">Not ve belge bağlantısı listeden kaldırıldı; işlem kaydı korunuyor.</p>':
+    (a.note?'<p class="task-comment-text">'+esc(a.note)+'</p>':"")+
+    (a.evidence_url?'<p><a href="'+esc(a.evidence_url)+'" target="_blank" rel="noopener noreferrer">Belgeyi Aç</a></p>':""))+
+  (!editing&&!deleted?controls:"")+editor+history+'</div>';
+}
+function openTaskDetail(t,editingNoteId=null){
  if(!t)return;
  modalKind="taskDetail";editing=t;
  $("#modalTitle").textContent=t.title;
@@ -1773,25 +1822,59 @@ function openTaskDetail(t){
  if(t.status==="kontrol_bekliyor"&&reviewer){actions.push(["approve","Onayla"]);actions.push(["return","Düzeltme İste"])}
  if(executor||helper||canManage())actions.push(["comment","Not Ekle"]);
  const fields=[["Üst Sorumlu",memberName(t.assigned_to)],["Ana Uygulayıcı",memberName(t.executor_id)],["Yardımcı Personeller",(t.helper_user_ids||[]).map(memberName).join(", ")||"Yok"],["Kontrol Eden",memberName(t.reviewer_id)],["Görevi Veren",memberName(t.created_by)],["Son Tarih",date(t.due_date)],["Durum",statusName(t.status)],["Kontrole Gönderildi",date(t.submitted_at)],["Kontrol Tarihi",date(t.reviewed_at)],["Tamamlandı",date(t.completed_at)]];
- const names={start:"Başladı",submit:"Kontrole gönderdi",approve:"Onayladı",return:"Düzeltme istedi",comment:"Not ekledi"};
  const log=state.taskActivities.filter(a=>a.task_id===t.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  $("#modalFields").innerHTML='<div class="span2"><p>'+esc(t.description||"")+'</p><div class="task-info-grid">'+fields.map(([k,v])=>'<div><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join("")+'</div>'+
  (t.execution_note?'<p><strong>Uygulama notu: </strong>'+esc(t.execution_note)+'</p>':"")+
  (t.review_note?'<p><strong>Kontrol notu: </strong>'+esc(t.review_note)+'</p>':"")+
  (t.evidence_url?'<p><a href="'+esc(t.evidence_url)+'" target="_blank" rel="noopener noreferrer">Belge bağlantısı</a></p>':"")+
- '<div class="task-action-card">'+(actions.length?'<label>Açıklama<textarea id="taskActionNote" rows="3" placeholder="Yapılan iş veya kontrol notu"></textarea></label><label>Belge bağlantısı (https://)<input type="url" id="taskActionEvidence" placeholder="https://..."></label><div class="task-actions">'+
+ '<div class="task-action-card">'+(actions.length?'<label>Açıklama<textarea id="taskActionNote" rows="3" maxlength="2000" placeholder="Yapılan iş veya kontrol notu"></textarea></label><label>Belge bağlantısı (https://)<input type="url" id="taskActionEvidence" maxlength="700" placeholder="https://..."></label><div class="task-actions">'+
  actions.map(([a,l])=>'<button type="button" class="btn sm" data-task-action="'+a+'">'+l+'</button>').join("")+'</div>':"")+
  '<div class="task-actions">'+(canManage()?'<button type="button" class="btn sm" id="editTaskDetail">Görevi Düzenle</button>':"")+
  '<button type="button" class="btn sm" id="shareTaskDetail">WhatsApp ile Paylaş</button></div></div>'+
- '<h3>İşlem Geçmişi</h3>'+(log.length?log.map(a=>'<div class="task-history"><b>'+esc(memberName(a.actor_id))+'</b> · '+esc(names[a.action]||a.action)+' · '+date(a.created_at)+(a.note?'<p>'+esc(a.note)+'</p>':"")+(a.evidence_url?'<p><a target="_blank" rel="noopener noreferrer" href="'+esc(a.evidence_url)+'">Belge</a></p>':"")+'</div>').join(""):'<p class="muted small">Henüz işlem kaydı yok.</p>')+'</div>';
+ '<h3>İşlem Geçmişi</h3>'+(log.length?log.map(a=>taskActivityHistoryEntry(a,t,editingNoteId)).join(""):'<p class="muted small">Henüz işlem kaydı yok.</p>')+'</div>';
  $("#modalscrim").classList.remove("hide");
  $("#editTaskDetail")?.addEventListener("click",()=>openModal("task",t));
  $("#shareTaskDetail")?.addEventListener("click",()=>shareTaskWhatsApp(t.id));
  document.querySelectorAll("[data-task-action]").forEach(b=>b.onclick=()=>performTaskAction(t.id,b.dataset.taskAction));
+ document.querySelectorAll("[data-comment-edit]").forEach(b=>b.onclick=()=>{
+  const chosen=state.taskActivities.find(x=>x.id===b.dataset.commentEdit&&x.task_id===t.id);
+  if(chosen&&canManageComment(chosen,t))openTaskDetail(t,chosen.id);
+ });
+ document.querySelectorAll("[data-comment-cancel]").forEach(b=>b.onclick=()=>openTaskDetail(t));
+ document.querySelectorAll("[data-comment-save]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentSave,"edit"));
+ document.querySelectorAll("[data-comment-delete]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentDelete,"delete"));
+}
+async function modifyTaskComment(taskId,activityId,operation){
+ const t=state.tasks.find(x=>x.id===taskId);
+ const a=state.taskActivities.find(x=>x.id===activityId&&x.task_id===taskId);
+ if(!t||!a||!canManageComment(a,t)){toast("Notu değiştirme yetkiniz yok.");return}
+ let note=null,evidence=null;
+ if(operation==="delete"){
+  if(!window.confirm("Bu notu ve varsa belge bağlantısını görev ekranından kaldırmak istiyor musunuz?\n\nİşlem geçmişi denetim amacıyla saklanır."))return;
+ }else{
+  note=$("#editActivityNote")?.value??"";
+  evidence=$("#editActivityEvidence")?.value.trim()??"";
+  if(!note.trim()&&!evidence){toast("Boş kayıt için Düzenle yerine Sil seçeneğini kullanın.");return}
+  if(evidence&&!/^https:\/\/\S+$/i.test(evidence)){toast("Belge bağlantısı https:// ile başlamalı.");return}
+ }
+ const selector=operation==="delete"?'[data-comment-delete="'+activityId+'"]':'[data-comment-save="'+activityId+'"]';
+ const button=document.querySelector(selector);
+ if(button)button.disabled=true;
+ try{
+  await requireActiveSession();
+  const {error:e}=await sb.rpc("manage_task_comment",{p_activity_id:activityId,p_operation:operation,
+    p_note:note,p_evidence_url:evidence});
+  if(e)throw e;
+  await refresh();
+  const current=state.tasks.find(x=>x.id===taskId);
+  if(current)openTaskDetail(current);
+  toast(operation==="delete"?"Not listeden kaldırıldı. Denetim geçmişi korundu.":"Not ve belge bağlantısı güncellendi.");
+ }catch(e){error(e)}finally{if(button)button.disabled=false}
 }
 async function performTaskAction(id,action){
  const note=$("#taskActionNote")?.value.trim()||"",evidence=$("#taskActionEvidence")?.value.trim()||"";
  if(action==="return"&&!note){toast("Düzeltme açıklaması yazın.");return}
+ if(action==="comment"&&!note&&!evidence){toast("Not veya belge bağlantısı girin.");return}
  if(["approve","return"].includes(action)&&!window.confirm("Bu kontrol işlemi kaydedilsin mi?"))return;
  const btn=document.querySelector('[data-task-action="'+action+'"]');if(btn)btn.disabled=true;
  try{await requireActiveSession();
