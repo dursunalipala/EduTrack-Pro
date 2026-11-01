@@ -507,6 +507,16 @@ body *{visibility:hidden!important}
  .notify-panel{top:72px;right:10px;width:calc(100vw - 20px);max-height:calc(100dvh - 85px)}
  .topright{gap:7px}.notify-bell{min-width:39px;height:39px}
 }
+
+.notify-device-controls{padding:12px 15px;background:#f4f9fc;border-bottom:1px solid #e2edf3}
+.notify-device-controls>strong{display:block;font-size:12px;margin-bottom:8px}
+.notify-device-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.notify-device-buttons button{border:0;background:#176b82;color:#fff;border-radius:8px;padding:9px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.notify-device-buttons button[hidden]{display:none!important}
+.notify-device-buttons button:disabled{opacity:.55}
+#notifyDeviceStatus{font-size:11px;color:#657e90;margin:8px 0;line-height:1.5}
+.notify-device-controls label{font-size:11px;display:flex;align-items:center;gap:8px;color:#2d5168}
+.notify-device-controls input{width:17px;height:17px;accent-color:#176b82}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
@@ -814,7 +824,7 @@ function setInboxOpen(open){
  if(!panel||!bell)return;
  panel.hidden=!open;
  bell.setAttribute("aria-expanded",String(open));
- if(open)void loadMyNotifications();
+ if(open){void loadMyNotifications();void updatePushControls()}
  renderNotificationCenter();
 }
 async function loadMyNotifications(){
@@ -826,7 +836,13 @@ async function loadMyNotifications(){
    .eq("workspace_id",WS).eq("recipient_id",currentUser).order("created_at",{ascending:false}).limit(80);
   if(error)throw error;
   if(state.user?.id===currentUser&&request===inboxRequest){
-   state.userNotifications=data||[];
+   const rows=data||[];
+   if(lastInboxIds!==null){
+    for(const n of rows)if(!n.read_at&&!lastInboxIds.has(n.id)&&
+       Date.now()-new Date(n.created_at).getTime()<180000)playSoundOnce(n.id);
+   }
+   lastInboxIds=new Set(rows.map(n=>n.id));
+   state.userNotifications=rows;
    renderNotificationCenter();
   }
  }catch(e){console.warn("Uygulama bildirimleri yüklenemedi",e?.message||e)}
@@ -881,6 +897,20 @@ function bindInAppNotifications(){
  bell.onclick=()=>setInboxOpen(panel.hidden);
  $("#notifyClose").onclick=()=>setInboxOpen(false);
  $("#notifyMarkAll").onclick=()=>void markAllNotificationsRead();
+ $("#enableDeviceNotifications").onclick=()=>void enablePushOnDevice();
+ $("#disableDeviceNotifications").onclick=()=>void disablePushOnDevice();
+ $("#testDeviceNotifications").onclick=()=>void testPushOnDevice();
+ $("#notifySoundToggle").onchange=e=>{
+  try{localStorage.setItem(PUSH_SOUND_KEY,e.target.checked?"yes":"no")}catch{}
+  if(e.target.checked)playTaskSound();
+ };
+ if("serviceWorker" in navigator){
+  navigator.serviceWorker.addEventListener("message",e=>{
+   if(e.data?.type==="ortak-push-received"&&state.user&&!securityLocked){
+    playSoundOnce(e.data.id);void loadMyNotifications();
+   }
+  });
+ }
  panel.onclick=e=>{
   const row=e.target.closest("[data-inbox-open]");
   if(row)void openInboxTask(row.dataset.inboxOpen);
@@ -900,7 +930,7 @@ function bindInAppNotifications(){
 function stopInAppNotifications(){
  inboxRequest++;
  if(inboxChannel){const old=inboxChannel;inboxChannel=null;void sb.removeChannel(old)}
- state.userNotifications=[];
+ state.userNotifications=[];lastInboxIds=null;playedSoundIds.clear();
  $("#notifyPanel").hidden=true;$("#notifyBell").setAttribute("aria-expanded","false");
  renderNotificationCenter();
 }
@@ -1071,7 +1101,7 @@ if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
 }
-openTaskFromSharedLink();startInAppNotifications()}
+openTaskFromSharedLink();startInAppNotifications();void checkPushAccountOwner()}
 async function refresh(){try{await fetchAll();render()}catch(e){error(e)}}
 const streamName=id=>state.streams.find(s=>s.id===id)?.name||"Genel",memberName=id=>state.profiles.find(p=>p.id===id)?.full_name||state.members.find(m=>m.user_id===id)?.user_id.slice(0,8)||"Atanmadı";
 
