@@ -462,10 +462,63 @@ body *{visibility:hidden!important}
 .management-kpi{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:780px){.management-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:400px){.management-kpi .dashboard-stat{padding:12px 10px}}
+
+/* Personal task notifications: visible on simple and detailed dashboards. */
+.topright{gap:10px}
+.notify-bell{position:relative;display:grid;place-items:center;min-width:42px;height:42px;
+ border:1px solid #d5e5ed;background:#f4f9fd;border-radius:12px;color:#195c77;cursor:pointer}
+.notify-bell:hover,.notify-bell:focus-visible{background:#e8f7f8;outline:2px solid #2a96aa;outline-offset:2px}
+.notify-badge{position:absolute;right:-7px;top:-8px;min-width:19px;height:19px;padding:0 4px;
+ display:grid;place-items:center;background:#c52d50;color:#fff;border:2px solid #fff;
+ border-radius:20px;font-size:10px;font-weight:800}
+.notify-badge[hidden],.notify-panel[hidden]{display:none!important}
+.notify-panel{position:fixed;right:max(16px,env(safe-area-inset-right));top:78px;
+ width:min(405px,calc(100vw - 25px));max-height:min(620px,calc(100dvh - 95px));
+ background:#fff;z-index:250;border:1px solid #dce8f0;border-radius:16px;
+ box-shadow:0 18px 65px #12283c40;display:flex;flex-direction:column;overflow:hidden;color:#1a4056}
+.notify-panel-head{display:flex;align-items:center;justify-content:space-between;
+ padding:15px 17px 10px;font-size:16px;border-bottom:1px solid #edf2f6}
+.notify-panel-head button{border:0;background:#edf5f9;border-radius:8px;font-size:24px;
+ line-height:1;padding:4px 10px;cursor:pointer;color:#234964}
+.notify-panel-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:9px 16px;color:#657d91;font-size:11px;background:#fafcfd}
+.notify-panel-actions button{border:0;background:transparent;color:#156c82;font-weight:750;
+ cursor:pointer;font-size:11px}
+.notify-panel-actions button:disabled{opacity:.45;cursor:default}
+.notify-list{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0}
+.notify-item{display:flex;align-items:flex-start;gap:11px;width:100%;background:#fff;
+ border:0;border-bottom:1px solid #edf1f5;padding:14px 15px;text-align:left;cursor:pointer;color:#254a62}
+.notify-item.unread{background:#edf8fc}
+.notify-item:hover,.notify-item:focus-visible{background:#e5f4f8;outline:1px solid #c3e4eb;outline-offset:-1px}
+.notify-item-icon{display:grid;place-items:center;flex:none;width:33px;height:33px;
+ background:#e1f1f4;border-radius:10px;color:#16657a;font-size:17px;font-weight:800}
+.notify-kind-overdue,.notify-kind-returned{background:#fff0e6;color:#a44b2b}
+.notify-kind-approved,.notify-kind-completed{background:#e4f5e8;color:#226e40}
+.notify-kind-submitted{background:#fff2d6;color:#926300}
+.notify-item-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.notify-item-info strong{font-size:12px}
+.notify-item-info>span{font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.notify-item-info small{font-size:10px;color:#8293a2}
+.notify-unread-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#1191ae;margin-top:10px}
+.notify-empty{padding:32px 20px;text-align:center;color:#678196;font-size:12px;line-height:1.6}
+.notify-panel-foot{border-top:1px solid #e4edf3;padding:11px 15px;color:#7a8ca0;
+ font-size:10px;text-align:center;background:#fcfdff}
+@media(max-width:700px){
+ .notify-panel{top:72px;right:10px;width:calc(100vw - 20px);max-height:calc(100dvh - 85px)}
+ .topright{gap:7px}.notify-bell{min-width:39px;height:39px}
+}
 </style></head>
 <body>
 <section id="auth"><div class="authbox"><div class="logo">✓</div><h1>Ortak Takip</h1><p>Kurumsal yönetim ve görev takip sistemi</p><form id="authform"><div id="namefield" class="hide"><input id="authname" placeholder="Adınız soyadınız" autocomplete="name"></div><input id="email" type="email" placeholder="E-posta adresiniz" required autocomplete="username"><input id="password" type="password" placeholder="Şifre (en az 8 karakter)" required minlength="8" autocomplete="current-password"><button id="submitAuth" class="btn primary" type="submit">Giriş Yap</button></form><form id="recoveryForm" class="hide"><input id="newRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" required minlength="8"><input id="confirmRecoveryPassword" type="password" autocomplete="new-password" placeholder="Yeni şifre (tekrar)" required minlength="8"><button class="btn primary" type="submit">Yeni Şifreyi Kaydet</button></form><div class="authlinks"><button class="linkbtn" id="switchAuth">Hesap oluştur</button><button class="linkbtn" id="resetAuth">Şifremi unuttum</button></div><p id="authmsg" class="small" style="margin:18px 0 0"></p><p class="tiny" style="margin-top:16px">Güvenli giriş: Hesap oluşturmak tek başına ekip yetkisi vermez; önce Admin tarafından ekibe eklenmeniz gerekir. Oturum kalıcı tutulmaz; 15 dakika işlem yapılmazsa veya 5 dakika arka planda kalırsa yeniden giriş gerekir.</p></div></section>
-<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><div class="mobile-menu-caption" aria-hidden="true">TÜM MENÜLER · 10 BÖLÜM</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="ai"><span class="ic">✦</span> Yapay Zekâ Asistanı</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><button id="viewModeSwitch" class="mode-switch" type="button" aria-pressed="true">☷ Tüm Modüller</button><button id="installApp" type="button" class="install-app-btn">⬇ Telefona Yükle</button><div id="installHelp" class="install-help" hidden role="status"></div><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span><div id="avatar" class="avatar">OT</div></div></header><div class="content" id="content"></div></main></div>
+<div id="shell" class="hide"><aside><div class="brand"><span class="logo">✓</span> Ortak Takip</div><div class="mobile-menu-caption" aria-hidden="true">TÜM MENÜLER · 10 BÖLÜM</div><nav class="nav" id="nav"><button data-view="overview" class="active"><span class="ic">◫</span> Genel Bakış</button><button data-view="tasks"><span class="ic">☑</span> Görev Takibi</button><button data-view="catalog"><span class="ic">▤</span> İş ve Görev Havuzu</button><button data-view="calendar"><span class="ic">▦</span> Takvim</button><button data-view="goals"><span class="ic">◎</span> Performans ve Hedefler</button><button data-view="streams"><span class="ic">▤</span> İş Grupları</button><button data-view="reports"><span class="ic">▥</span> Raporlama</button><button data-view="notifications"><span class="ic">✉</span> Bildirimler</button><button data-view="ai"><span class="ic">✦</span> Yapay Zekâ Asistanı</button><button data-view="members"><span class="ic">♧</span> Ortaklar ve Ekip</button></nav><button id="viewModeSwitch" class="mode-switch" type="button" aria-pressed="true">☷ Tüm Modüller</button><button id="installApp" type="button" class="install-app-btn">⬇ Telefona Yükle</button><div id="installHelp" class="install-help" hidden role="status"></div><div class="sidefoot"><div id="sideemail"></div><button id="logout">Oturumu Kapat</button></div></aside><main><header class="top"><div><h1 id="pageTitle">Genel Bakış</h1><p id="pageSubtitle">Kurumların tüm iş ve sorumlulukları tek ekranda</p></div><div class="topright"><span id="userrole" class="muted small"></span>
+ <button id="notifyBell" class="notify-bell" type="button" aria-label="Bildirimlerim" aria-expanded="false" aria-controls="notifyPanel" title="Bildirimlerim">
+ <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+ <span id="notifyBadge" class="notify-badge" hidden>0</span></button>
+ <div id="avatar" class="avatar">OT</div></div></header><div id="notifyPanel" class="notify-panel" hidden role="region" aria-label="Uygulama içi bildirimler">
+ <div class="notify-panel-head"><strong>Bildirimlerim</strong><button type="button" id="notifyClose" aria-label="Bildirimleri kapat">×</button></div>
+ <div class="notify-panel-actions"><span id="notifyUnreadLabel">Yeni bildirim yok</span><button type="button" id="notifyMarkAll">Tümünü okundu işaretle</button></div>
+ <div id="notifyList" class="notify-list"></div><div class="notify-panel-foot">E-posta ve WhatsApp bildirimleri ayrıca devam eder.</div>
+ </div><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
@@ -483,7 +536,7 @@ function loadSimpleMode(){
  try{return localStorage.getItem("ortak-takip-ui-mode")!=="detailed"}
  catch{return true}
 }
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],notifyPrefs:[],teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -587,10 +640,161 @@ function expiredSecuritySessionMessage(){
   return "15 dakika işlem yapılmadığı için oturum kapatıldı.";
  return "";
 }
+
+/* Each recipient's private in-app inbox is separate from the e-mail queue. */
+let inboxChannel=null,inboxRequest=0,inboxLoading=false,inboxPollHandle=null;
+const notificationTitles={
+ assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
+ due_changed:"Görev tarihi değişti",due_soon:"Görev tarihi yaklaşıyor",
+ overdue:"Görev gecikti",submitted:"Görev kontrolünüzü bekliyor",
+ approved:"Görev onaylandı",completed:"Görev tamamlandı",
+ returned:"Görev düzeltme için geri gönderildi"
+};
+const notificationIcons={
+ assignment:"✚",transfer:"⇄",due_changed:"▦",due_soon:"◷",
+ overdue:"!",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
+};
+const notificationDate=d=>{
+ if(!d)return "";
+ try{return new Date(d).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+ catch{return ""}
+};
+const unreadNotificationCount=()=>state.userNotifications.filter(n=>!n.read_at).length;
+const notifyTaskTitle=n=>n.title||"Görev bildirimi";
+function renderNotificationCenter(){
+ const bell=$("#notifyBell"),badge=$("#notifyBadge"),panel=$("#notifyPanel");
+ if(!bell||!badge||!panel)return;
+ const unread=unreadNotificationCount();
+ badge.textContent=unread>99?"99+":String(unread);
+ badge.hidden=unread===0;
+ bell.setAttribute("aria-label",unread?unread+" okunmamış bildiriminiz var. Bildirimleri aç":"Bildirimlerim");
+ $("#notifyUnreadLabel").textContent=unread?unread+" okunmamış bildirim":"Tüm bildirimler okundu";
+ $("#notifyMarkAll").disabled=unread===0;
+ if(panel.hidden)return;
+ $("#notifyList").innerHTML=state.userNotifications.length?
+  state.userNotifications.map(n=>
+   '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'">'+
+    '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
+    '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
+    '<span>'+esc(notifyTaskTitle(n))+'</span><small>'+esc(notificationDate(n.created_at))+'</small></span>'+
+    (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
+   '</button>'
+  ).join(""):'<div class="notify-empty">Henüz bildiriminiz yok. Yeni görev ve kontrol işlemleri burada görünecek.</div>';
+}
+function setInboxOpen(open){
+ const panel=$("#notifyPanel"),bell=$("#notifyBell");
+ if(!panel||!bell)return;
+ panel.hidden=!open;
+ bell.setAttribute("aria-expanded",String(open));
+ if(open)void loadMyNotifications();
+ renderNotificationCenter();
+}
+async function loadMyNotifications(){
+ if(!state.user||securityLocked||inboxLoading)return;
+ const currentUser=state.user.id,request=++inboxRequest;
+ inboxLoading=true;
+ try{
+  const {data,error}=await sb.from("user_notifications").select("id,task_id,kind,title,read_at,created_at")
+   .eq("workspace_id",WS).eq("recipient_id",currentUser).order("created_at",{ascending:false}).limit(80);
+  if(error)throw error;
+  if(state.user?.id===currentUser&&request===inboxRequest){
+   state.userNotifications=data||[];
+   renderNotificationCenter();
+  }
+ }catch(e){console.warn("Uygulama bildirimleri yüklenemedi",e?.message||e)}
+ finally{inboxLoading=false}
+}
+async function markNotificationRead(id){
+ const n=state.userNotifications.find(x=>x.id===id);
+ if(!n||n.read_at||!state.user)return;
+ const userId=state.user.id;
+ const stamp=new Date().toISOString();
+ const {data,error}=await sb.from("user_notifications").update({read_at:stamp})
+   .eq("id",id).eq("recipient_id",userId).select("id");
+ if(error||!data?.length){toast("Bildirim okundu olarak işaretlenemedi.");return}
+ if(state.user?.id===userId){n.read_at=stamp;renderNotificationCenter()}
+}
+async function markAllNotificationsRead(){
+ const userId=state.user?.id;
+ if(!userId||!unreadNotificationCount())return;
+ const stamp=new Date().toISOString();
+ const {error}=await sb.from("user_notifications").update({read_at:stamp})
+  .eq("workspace_id",WS).eq("recipient_id",userId).is("read_at",null);
+ if(error){toast("Bildirimler güncellenemedi.");return}
+ if(state.user?.id===userId){
+  state.userNotifications.forEach(n=>{if(!n.read_at)n.read_at=stamp});
+  renderNotificationCenter();
+ }
+}
+async function openInboxTask(id){
+ const n=state.userNotifications.find(x=>x.id===id);
+ if(!n)return;
+ await markNotificationRead(id);
+ setInboxOpen(false);
+ if(!n.task_id){toast("Bu bildirimin görevi artık mevcut değil.");return}
+ let t=state.tasks.find(x=>x.id===n.task_id);
+ if(!t){
+  await refresh();
+  t=state.tasks.find(x=>x.id===n.task_id);
+ }
+ if(!t){toast("Görev bulunamadı veya artık erişim yetkiniz yok.");return}
+ resetTaskFilters();
+ state.view="tasks";
+ state.stream="all";state.search=t.title;state.taskScope="mine";
+ state.simpleTaskStatus="all";state.simpleTaskSearch=t.title;
+ if(canManage()||isExecutor(t)||isHelper(t)){
+  render();
+  openTaskDetail(t);
+ }else toast("Bu göreve erişim yetkiniz yok.");
+}
+function bindInAppNotifications(){
+ const bell=$("#notifyBell"),panel=$("#notifyPanel");
+ if(!bell||!panel)return;
+ bell.onclick=()=>setInboxOpen(panel.hidden);
+ $("#notifyClose").onclick=()=>setInboxOpen(false);
+ $("#notifyMarkAll").onclick=()=>void markAllNotificationsRead();
+ panel.onclick=e=>{
+  const row=e.target.closest("[data-inbox-open]");
+  if(row)void openInboxTask(row.dataset.inboxOpen);
+ };
+ document.addEventListener("click",e=>{
+  if(!panel.hidden&&!panel.contains(e.target)&&!bell.contains(e.target))setInboxOpen(false);
+ });
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)setInboxOpen(false)});
+ if(!inboxPollHandle)inboxPollHandle=setInterval(()=>{
+  if(state.user&&!document.hidden&&!$("#shell").classList.contains("hide"))void loadMyNotifications();
+ },45000);
+ document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden&&state.user&&!securityLocked)void loadMyNotifications();
+ });
+ renderNotificationCenter();
+}
+function stopInAppNotifications(){
+ inboxRequest++;
+ if(inboxChannel){const old=inboxChannel;inboxChannel=null;void sb.removeChannel(old)}
+ state.userNotifications=[];
+ $("#notifyPanel").hidden=true;$("#notifyBell").setAttribute("aria-expanded","false");
+ renderNotificationCenter();
+}
+function startInAppNotifications(){
+ if(!state.user)return;
+ if(inboxChannel){const old=inboxChannel;inboxChannel=null;void sb.removeChannel(old)}
+ const userId=state.user.id;
+ void loadMyNotifications();
+ inboxChannel=sb.channel("ortak-inbox-"+userId).on("postgres_changes",{
+  event:"*",schema:"public",table:"user_notifications",filter:"recipient_id=eq."+userId
+ },()=>{
+  if(state.user?.id===userId)void loadMyNotifications();
+ }).subscribe(status=>{
+  if(status==="SUBSCRIBED"&&state.user?.id===userId)void loadMyNotifications();
+ });
+}
+
 function eraseSensitiveView(){
+ stopInAppNotifications();
  state.user=null;state.role="";
  state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
- state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.notifyPrefs=[];
+ state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.userNotifications=[];state.notifyPrefs=[];
  state.teamEmails={};state.taskActivities=[];state.activityRevisions=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;
  $("#shell").classList.add("hide");
  $("#email").value="";
@@ -739,7 +943,7 @@ if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
 }
-openTaskFromSharedLink()}
+openTaskFromSharedLink();startInAppNotifications()}
 async function refresh(){try{await fetchAll();render()}catch(e){error(e)}}
 const streamName=id=>state.streams.find(s=>s.id===id)?.name||"Genel",memberName=id=>state.profiles.find(p=>p.id===id)?.full_name||state.members.find(m=>m.user_id===id)?.user_id.slice(0,8)||"Atanmadı";
 
@@ -2164,5 +2368,6 @@ sb.auth.onAuthStateChange((event)=>{
   if(recoveryMode)return;
   if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&!securityLocked&&!securityLoggingOut)setTimeout(()=>{if($("#shell").classList.contains("hide"))boot()},0);
 });
+bindInAppNotifications();
 boot().catch(error);
 </script></body></html>
