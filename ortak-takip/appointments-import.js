@@ -107,24 +107,25 @@ export function createAppointmentImporter({sb,WS,state,esc,toast,error,requireAc
   const age=parseNumber(get('age')),grade=parseNumber(get('grade')),aol=parseNumber(get('aol_credit')),amount=parseNumber(get('quoted_amount'));
   const problem=[];
   if(get('appointment_date')&&!aDate.date)problem.push('randevu tarihi');
-  if(get('contact_date')&&!cDate.date)problem.push('görüşme tarihi');
-  if(age!==null&&(age>120||!Number.isInteger(age)))problem.push('yaş');
-  if(grade!==null&&(grade>13||!Number.isInteger(grade)))problem.push('sınıf');
-  if(aol!==null&&(aol>1000||!Number.isInteger(aol)))problem.push('kredi');
-  if(amount!==null&&amount>1000000000)problem.push('rakam');
+  if(!cDate.date)problem.push('görüşme tarihi (zorunlu veya geçersiz)');
+  if(get('age')&&age===null||age!==null&&(age>120||!Number.isInteger(age)))problem.push('yaş');
+  if(get('grade')&&grade===null||grade!==null&&(grade>13||!Number.isInteger(grade)))problem.push('sınıf');
+  if(get('aol_credit')&&aol===null||aol!==null&&(aol>1000||!Number.isInteger(aol)))problem.push('kredi');
+  if(get('quoted_amount')&&amount===null||amount!==null&&amount>1000000000)problem.push('rakam');
   if(problem.length)return {error:'Satır '+idx+': Geçersiz '+problem.join(', '),index:idx};
   const education=get('education_status');
   let phone=get('phone').replace(/[^\d+]/g,'');
   if(/^5\d{9}$/.test(phone))phone='0'+phone;
-  const textOutcome=norm(get('outcome')),outcome=statusNames[textOutcome]||'beklemede';
+  const originalOutcome=get('outcome'),textOutcome=norm(originalOutcome),outcome=statusNames[textOutcome]||'beklemede';
+  const notes=get('notes')+(originalOutcome&&!statusNames[textOutcome]?'\nAppSheet özgün sonuç: '+originalOutcome:'');
   return {row:{
     workspace_id:WS,source_record_id:id,full_name:name.slice(0,200),phone:phone.slice(0,30),
     education_status:education.slice(0,200),school_unit:inferredSchool(education),
     age,grade,aol_credit:aol,quoted_amount:amount,province:get('province')||'İstanbul',
-    district:get('district'),staff_name:get('staff_name'),contact_date:cDate.date||aDate.date||today(),
+    district:get('district'),staff_name:get('staff_name'),contact_date:cDate.date,
     first_contact:get('first_contact'),appointment_date:aDate.date,
     appointment_time:parseTime(get('appointment_time'))||aDate.time,
-    branch:get('branch')||'OFİS',outcome,notes:get('notes'),followup_date:fuDate.date,
+    branch:get('branch')||'OFİS',outcome,notes,followup_date:fuDate.date,
     created_by:state.user.id
   },index:idx};
  }
