@@ -3,6 +3,7 @@
  * Dosyalar yalnızca erişim izinleri ayrı yönetilen HTTPS bağlantılarıdır.
  */
 import {createAppointmentImporter} from './appointments-import.js';
+import {createAppointmentFollowup} from './appointments-followup.js';
 export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActiveSession,render}){
  const statuses=[
   ['kayit','Kayıt','✓','#138851'],['on_kayit','Ön Kayıt','☑','#a67d06'],
@@ -20,10 +21,11 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  const statusBadge=x=>{const a=statusObj(x);return '<span class="appt-status" style="--appt-color:'+a[3]+'"><span aria-hidden="true">'+a[2]+'</span> '+esc(a[1])+'</span>'};
  const cell=x=>esc(x??'—');
  const phoneDigits=x=>{let d=String(x||'').replace(/\D/g,'');if(/^0?5\d{9}$/.test(d))d='90'+d.slice(-10);return d.length>=10&&d.length<=15?d:''};
- const phoneButtons=x=>{const d=phoneDigits(x);return d?'<div class="appt-quick"><a title="Ara" aria-label="Telefonla ara" href="tel:+'+d+'">☎</a><a title="WhatsApp üzerinden mesaj gönder" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+d+'?text='+encodeURIComponent('Merhaba, Elit Eğitim Kurumları randevunuz hakkında iletişime geçiyoruz.')+'">◉</a></div>':''};
+ const phoneButtons=r=>followup.quickActions(r);
  const blank=()=>({full_name:'',education_status:'',school_unit:'aksam',followup_date:'',age:'',grade:'',aol_credit:'',quoted_amount:'',province:'İstanbul',district:'',phone:'',staff_user_id:'',staff_name:'',contact_date:today(),first_contact:'',appointment_date:'',appointment_time:'',branch:'SLT',outcome:'beklemede',notes:'',identity_document_url:'',document_url:''});
- const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',search:'',result:'all',school:'all',branch:'all',order:'randevu',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
+ const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',page:1,search:'',result:'all',school:'all',branch:'all',order:'latest',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
  const importer=createAppointmentImporter({sb,WS,state,esc,toast,error,requireActiveSession,render,reload:()=>load(true),getRows:()=>S().rows,today});
+ const followup=createAppointmentFollowup({sb,WS,state,esc,toast,error,requireActiveSession,render,getRow:id=>S().rows.find(r=>r.id===id),getPhone:phoneDigits});
  const mayEdit=r=>['owner','manager'].includes(state.role)||state.role==='member'&&(r.created_by===state.user?.id||r.staff_user_id===state.user?.id);
  const mayArchive=()=>['owner','manager'].includes(state.role);
  const activeRows=()=>S().rows.filter(r=>S().archive?!!r.deleted_at:!r.deleted_at);
@@ -32,6 +34,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   let rows=activeRows().filter(r=>(s.result==='all'||r.outcome===s.result)&&(s.school==='all'||r.school_unit===s.school)&&(s.branch==='all'||r.branch===s.branch)&&(!search||[r.full_name,r.phone,r.district,r.province,r.first_contact,r.staff_name,r.notes,r.source_record_id].some(v=>String(v||'').toLocaleLowerCase('tr-TR').includes(search))));
   if(s.tab==='gecmis')rows=rows.filter(r=>r.appointment_date&&r.appointment_date<today());
   const key=s.order;rows.sort((a,b)=>{
+   if(key==='latest')return (Number(b.source_record_id)||0)-(Number(a.source_record_id)||0)||(b.created_at||'').localeCompare(a.created_at||'');
    if(key==='name')return a.full_name.localeCompare(b.full_name,'tr');
    if(key==='amount')return (Number(b.quoted_amount)||0)-(Number(a.quoted_amount)||0);
    if(key==='contact')return (b.contact_date||'').localeCompare(a.contact_date||'');
@@ -76,20 +79,22 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  }
  function toolbar(){
   const s=S(),branches=[...new Set(s.rows.map(r=>r.branch).filter(Boolean))].sort();
-  return '<div class="appt-toolbar"><div class="appt-toolbar-group"><button type="button" class="btn primary" id="apptNew">＋ Yeni Randevu</button>'+(mayArchive()?'<button type="button" class="btn" id="apptImport">↑ CSV İçe Aktar</button>':'')+'<button type="button" class="btn" id="apptExport">↓ CSV / Excel</button><button type="button" class="btn" id="apptPrint">⎙ Yazdır</button><button type="button" class="btn" id="apptReload">↻ Yenile</button></div><div class="appt-filters">'+
+  return '<div class="appt-toolbar"><div class="appt-actions-row"><button type="button" class="btn primary" id="apptNew">＋ Yeni Randevu</button><div class="appt-utility-row">'+(mayArchive()?'<button type="button" class="btn" id="apptImport">↑ İçe Aktar</button>':'')+'<button type="button" class="btn" id="apptExport">↓ CSV / Excel</button><button type="button" class="btn" id="apptPrint">⎙ Yazdır</button><button type="button" class="btn" id="apptReload">↻ Yenile</button></div></div><div class="appt-filters">'+
    '<input id="apptSearch" type="search" placeholder="Ad, telefon, not veya ilçe ara…" value="'+esc(s.search)+'" aria-label="Randevu ara">'+
    '<select id="apptResult" aria-label="Sonuç filtresi"><option value="all">Tüm sonuçlar</option>'+statuses.map(x=>'<option value="'+x[0]+'"'+(s.result===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+
    '<select id="apptSchool" aria-label="Kurum filtresi"><option value="all">Tüm kurumlar</option>'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(x=>'<option value="'+x[0]+'"'+(s.school===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+ 
    '<select id="apptBranch" aria-label="Şube filtresi"><option value="all">Tüm şubeler</option>'+branches.map(x=>'<option value="'+esc(x)+'"'+(s.branch===x?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>'+
-   '<select id="apptOrder" aria-label="Sıralama"><option value="randevu"'+(s.order==='randevu'?' selected':'')+'>Randevu tarihine göre</option><option value="contact"'+(s.order==='contact'?' selected':'')+'>Görüşme tarihine göre</option><option value="name"'+(s.order==='name'?' selected':'')+'>Ad A-Z</option><option value="amount"'+(s.order==='amount'?' selected':'')+'>Tutar (yüksekten)</option></select>'+
+   '<select id="apptOrder" aria-label="Sıralama"><option value="latest"'+(s.order==='latest'?' selected':'')+'>En son eklenen / ID ↓</option><option value="randevu"'+(s.order==='randevu'?' selected':'')+'>Randevu tarihine göre</option><option value="contact"'+(s.order==='contact'?' selected':'')+'>Görüşme tarihine göre</option><option value="name"'+(s.order==='name'?' selected':'')+'>Ad A-Z</option><option value="amount"'+(s.order==='amount'?' selected':'')+'>Tutar (yüksekten)</option></select>'+
    (mayArchive()?'<label class="appt-check"><input type="checkbox" id="apptArchive"'+(s.archive?' checked':'')+'> Arşiv</label>':'')+
    '</div></div>';
  }
  function sheet(){
-  const rows=filterRows();
-  const header=['Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
-  const tr=rows.map(r=>'<tr><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
-   '<td>'+esc(r.phone||'—')+phoneButtons(r.phone)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
+  const allRows=filterRows(),pageSize=50,pages=Math.max(1,Math.ceil(allRows.length/pageSize));
+  const page=Math.max(1,Math.min(Number(S().page||1),pages));S().page=page;
+  const rows=allRows.slice((page-1)*pageSize,page*pageSize);
+  const header=['ID','Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
+  const tr=rows.map(r=>'<tr class="appt-data-row"><td class="appt-id">#'+esc(r.source_record_id||'—')+'</td><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
+   '<td>'+esc(r.phone||'—')+phoneButtons(r)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
    '<td>'+cell(r.age)+'</td><td>'+cell(r.grade)+'</td><td>'+cell(r.aol_credit)+'</td><td>'+money(r.quoted_amount)+'</td>'+
    '<td>'+cell(r.province||'—')+'</td><td>'+cell(r.district||'—')+'</td><td>'+esc(r.staff_name||'—')+'</td>'+
    '<td>'+dateLabel(r.contact_date)+'</td><td class="appt-truncate" title="'+esc(r.first_contact||'')+'">'+esc(r.first_contact||'—')+'</td>'+
@@ -98,7 +103,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    '<td>'+[r.identity_document_url?'<a target="_blank" rel="noopener noreferrer" href="'+esc(r.identity_document_url)+'">Kimlik</a>':'',r.document_url?'<a target="_blank" rel="noopener noreferrer" href="'+esc(r.document_url)+'">Evrak</a>':''].filter(Boolean).join(' · ')+'</td>'+
    '<td><button type="button" class="btn sm" data-appt-edit="'+r.id+'">Aç</button> '+(mayArchive()?(r.deleted_at?'<button type="button" class="btn sm" data-appt-restore="'+r.id+'">Geri Al</button>':'<button type="button" class="btn sm" data-appt-archive="'+r.id+'">Arşivle</button>'):'')+'</td></tr>').join('');
   return '<div class="appt-table-wrap"><table class="appt-table"><thead><tr>'+header.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+tr+'</tbody></table></div>'+
-   '<div class="appt-counter">'+rows.length+' kayıt gösteriliyor · Tabloyu sağa/sola kaydırarak tüm sütunları görebilirsiniz.</div>';
+   '<div class="appt-pagination"><span>'+allRows.length+' kaydın '+(allRows.length?((page-1)*pageSize+1):0)+'–'+Math.min(page*pageSize,allRows.length)+' arası · Sütunları sağa/sola kaydırabilirsiniz.</span><div><button class="btn sm" id="apptPagePrev" '+(page<=1?'disabled':'')+'>‹ Önceki</button><span>Sayfa '+page+' / '+pages+'</span><button class="btn sm" id="apptPageNext" '+(page>=pages?'disabled':'')+'>Sonraki ›</button></div></div>';
  }
  function monthAdd(isoDate,mode,num){
   const a=isoDate.split('-').map(Number),d=new Date(a[0],a[1]-1,a[2],12);
@@ -122,7 +127,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   return '<div class="appt-calbar"><div class="appt-toolbar-group"><button class="btn sm" id="apptPrev">‹</button><button class="btn sm" id="apptCurrent">Bugün</button><button class="btn sm" id="apptNext">›</button><b>'+esc(heading)+'</b></div><div class="appt-toolbar-group"><button class="btn sm'+(s.calendarMode==='day'?' primary':'')+'" data-appt-mode="day">Gün</button><button class="btn sm'+(s.calendarMode==='week'?' primary':'')+'" data-appt-mode="week">Hafta</button><button class="btn sm'+(s.calendarMode==='month'?' primary':'')+'" data-appt-mode="month">Ay</button></div></div>'+
   '<div class="appt-calgrid">'+(count>1?['Pt','Sa','Ça','Pe','Cu','Ct','Pz'].map(t=>'<div class="appt-dow">'+t+'</div>').join(''):'')+days+'</div>'+
   '<div class="appt-daydetail"><h3>'+dateLabel(s.selectedDay)+' · '+selected.length+' randevu</h3>'+
-  (selected.map(r=>'<div class="appt-event"><div><b>'+esc((r.appointment_time||'').slice(0,5)||'Saat yok')+' · '+esc(r.full_name)+'</b><div>'+statusBadge(r.outcome)+' <span class="muted">'+esc(r.branch||'')+'</span></div></div><div>'+phoneButtons(r.phone)+'<button type="button" class="btn sm" data-appt-edit="'+r.id+'">Detay</button></div></div>').join('')||'<p class="muted">Bu güne ait randevu bulunmuyor.</p>')+'</div>';
+  (selected.map(r=>'<div class="appt-event"><div><b>'+esc((r.appointment_time||'').slice(0,5)||'Saat yok')+' · '+esc(r.full_name)+'</b><div>'+statusBadge(r.outcome)+' <span class="muted">'+esc(r.branch||'')+'</span></div></div><div>'+phoneButtons(r)+'<button type="button" class="btn sm" data-appt-edit="'+r.id+'">Detay</button></div></div>').join('')||'<p class="muted">Bu güne ait randevu bulunmuyor.</p>')+'</div>';
  }
 
  function analysis(){
@@ -157,10 +162,12 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const s=S(),r=s.editingId?s.rows.find(x=>x.id===s.editingId):null;
   if(r&&!mayEdit(r))return '<div class="panel">Bu randevuyu düzenleme yetkiniz bulunmuyor. <button type="button" class="btn" id="apptCancel">Geri dön</button></div>';
   const d=r||blank();
+  const nextNumber=['owner','manager'].includes(state.role)?'#'+(Math.max(0,...s.rows.map(x=>Number(x.source_record_id)||0))+1):'Otomatik';
   const staffOptions=state.members.filter(m=>m.is_active).map(m=>{const p=state.profiles.find(p=>p.id===m.user_id);return '<option value="'+esc(m.user_id)+'"'+(d.staff_user_id===m.user_id?' selected':'')+'>'+esc(p?.full_name||m.user_id.slice(0,8))+'</option>'}).join('');
   const resultButtons=statuses.map(a=>'<label class="appt-result-option"><input type="radio" name="outcome" value="'+a[0]+'"'+(d.outcome===a[0]?' checked':'')+'><span style="--appt-color:'+a[3]+'">'+a[2]+' '+esc(a[1])+'</span></label>').join('');
   return '<section class="appt-form"><div class="appt-form-head"><h2>'+(r?'Randevu Düzenle':'Yeni Randevu')+'</h2><button type="button" class="btn" id="apptCancel">← İcmale Dön</button></div><p class="muted small">* işaretli alanlar zorunludur. Belgeler için dosya yüklemek yerine kurumca yetkilendirilmiş bağlantı girin.</p>'+
-  '<form id="apptForm" class="appt-form-grid">'+
+  '<div class="appt-form-actions">'+(r?phoneButtons(r):'')+'</div><form id="apptForm" class="appt-form-grid">'+
+  '<div class="appt-wide appt-new-id"><span>Kayıt ID</span><strong>'+esc(r?.source_record_id?'#'+r.source_record_id:nextNumber)+'</strong><small>'+(r?'Değiştirilemez':'Kaydederken veritabanı tarafından otomatik ve güvenli oluşturulur.')+'</small></div>'+
   inp('Veli / Öğrenci Adı Soyadı','full_name','text',d.full_name,true)+inp('Telefon','phone','tel',d.phone,true)+
   '<label>Kurum<select name="school_unit">'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(v=>'<option value="'+v[0]+'"'+(v[0]===(d.school_unit||'aksam')?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label>'+inp('Eğitim Durumu','education_status','text',d.education_status)+inp('Yaş','age','number',d.age)+
   inp('Sınıf','grade','number',d.grade)+inp('AÖL Kredisi','aol_credit','number',d.aol_credit)+
@@ -184,7 +191,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(importer.isOpen())return importer.view();
   return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet düzenini koruyan, Sheet benzeri kayıt ve randevu takibi</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
    stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal">▤ Randevu İcmali</button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim">▦ Takvim</button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis">◷ Geçmiş Randevular</button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz">▥ Kayıt Analizi</button></div>'+
-   (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():sheet()))+'</div>';
+   (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():sheet()))+'</div>'+followup.view();
  }
  async function quickStatus(el){
   const row=S().rows.find(r=>r.id===el.dataset.apptQuick);if(!row||!mayEdit(row))return;
@@ -216,10 +223,10 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const key of ['age','grade','aol_credit','quoted_amount'])if(payload[key]!==null&&(!Number.isFinite(payload[key])||payload[key]<0))throw Error('Sayısal alan geçersiz.');
    const old=s.rows.find(r=>r.id===s.editingId);
    if(old&&!mayEdit(old))throw Error('Düzenleme yetkisi bulunmuyor.');
-   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).select('id').single():
-    await sb.from('appointments').insert({...payload,workspace_id:WS,created_by:state.user.id}).select('id').single();
+   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).select('id,source_record_id').single():
+    await sb.from('appointments').insert({...payload,workspace_id:WS,created_by:state.user.id}).select('id,source_record_id').single();
    if(result.error)throw result.error;
-   s.form=false;s.editingId=null;await load(true);toast(old?'Randevu güncellendi.':'Randevu eklendi.');
+   s.form=false;s.editingId=null;await load(true);toast(old?'Randevu güncellendi.':'#'+result.data.source_record_id+' numaralı randevu eklendi.');
   }catch(e){error(e)}finally{if(btn)btn.disabled=false}
  }
  async function archive(id,restore){
@@ -231,7 +238,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    if(e)throw e;await load(true);toast(restore?'Kayıt geri yüklendi.':'Kayıt arşivlendi.');
   }catch(e){error(e)}
  }
- const exportColumns=[['full_name','Veli / Öğrenci'],['education_status','Eğitim Durumu'],['age','Yaş'],['grade','Sınıf'],['aol_credit','AÖL Kredi'],['quoted_amount','Rakam'],['province','İl'],['district','İlçe'],['phone','Telefon'],['staff_name','Görüşen Kişi'],['contact_date','Görüşme Tarihi'],['first_contact','İlk Görüşme'],['appointment_date','Randevu Tarihi'],['appointment_time','Randevu Saati'],['branch','Randevu Şubesi'],['outcome','Randevu Sonucu'],['notes','Notlar'],['identity_document_url','Kimlik'],['document_url','Evrak']];
+ const exportColumns=[['source_record_id','ID'],['full_name','Veli / Öğrenci'],['education_status','Eğitim Durumu'],['age','Yaş'],['grade','Sınıf'],['aol_credit','AÖL Kredi'],['quoted_amount','Rakam'],['province','İl'],['district','İlçe'],['phone','Telefon'],['staff_name','Görüşen Kişi'],['contact_date','Görüşme Tarihi'],['first_contact','İlk Görüşme'],['appointment_date','Randevu Tarihi'],['appointment_time','Randevu Saati'],['branch','Randevu Şubesi'],['outcome','Randevu Sonucu'],['notes','Notlar'],['identity_document_url','Kimlik'],['document_url','Evrak']];
  function csv(){
   const safe=x=>{let t=String(x??'');if(/^[\s]*[=+\-@]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const rows=[exportColumns.map(x=>safe(x[1])).join(';'),...filterRows().map(r=>exportColumns.map(x=>safe(r[x[0]])).join(';'))];
@@ -243,6 +250,8 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(s.ownerId!==state.user.id){reset();s=S();s.ownerId=state.user.id}
   if(importer.isOpen()){importer.bind();return;}
   if(!s.loaded){if(!s.loading)void load();return}
+  if(followup.isOpen()){followup.bindModal();return;}
+  followup.bindLaunch();
   if(s.form){
    for(const id of ['apptCancel','apptCancelBottom'])document.getElementById(id)?.addEventListener('click',()=>{s.form=false;s.editingId=null;render()});
    document.getElementById('apptForm')?.addEventListener('submit',e=>{e.preventDefault();void save(e.currentTarget)});
@@ -251,16 +260,18 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   document.getElementById('apptNew')?.addEventListener('click',()=>{s.form=true;s.editingId=null;render()});
   document.getElementById('apptImport')?.addEventListener('click',()=>importer.show());
   document.querySelectorAll('[data-appt-quick]').forEach(el=>el.addEventListener('change',()=>void quickStatus(el)));
+  document.getElementById('apptPagePrev')?.addEventListener('click',()=>{s.page=Math.max(1,s.page-1);render()});
+  document.getElementById('apptPageNext')?.addEventListener('click',()=>{s.page=(s.page||1)+1;render()});
   document.getElementById('apptReload')?.addEventListener('click',()=>void load(true));
   document.getElementById('apptExport')?.addEventListener('click',csv);
   document.getElementById('apptPrint')?.addEventListener('click',()=>window.print());
   document.getElementById('apptArchive')?.addEventListener('change',e=>{s.archive=e.target.checked;render()});
-  for(const [id,key] of [['apptResult','result'],['apptSchool','school'],['apptBranch','branch'],['apptOrder','order']])document.getElementById(id)?.addEventListener('change',e=>{s[key]=e.target.value;render()});
+  for(const [id,key] of [['apptResult','result'],['apptSchool','school'],['apptBranch','branch'],['apptOrder','order']])document.getElementById(id)?.addEventListener('change',e=>{s[key]=e.target.value;s.page=1;render()});
   document.getElementById('apptSearch')?.addEventListener('input',e=>{
-   s.search=e.target.value;const pos=e.target.selectionStart;
+   s.search=e.target.value;s.page=1;const pos=e.target.selectionStart;
    clearTimeout(s.searchTimer);s.searchTimer=setTimeout(()=>{if(state.view!=='appointments'||s.form)return;render();const input=document.getElementById('apptSearch');if(input){input.focus();input.setSelectionRange(pos,pos)}},180);
   });
-  document.querySelectorAll('[data-appt-tab]').forEach(b=>b.addEventListener('click',()=>{s.tab=b.dataset.apptTab;render()}));
+  document.querySelectorAll('[data-appt-tab]').forEach(b=>b.addEventListener('click',()=>{s.tab=b.dataset.apptTab;s.page=1;render()}));
   document.querySelectorAll('[data-appt-edit]').forEach(b=>b.addEventListener('click',()=>{s.editingId=b.dataset.apptEdit;s.form=true;render()}));
   document.querySelectorAll('[data-appt-archive]').forEach(b=>b.addEventListener('click',()=>void archive(b.dataset.apptArchive,false)));
   document.querySelectorAll('[data-appt-restore]').forEach(b=>b.addEventListener('click',()=>void archive(b.dataset.apptRestore,true)));
@@ -271,6 +282,6 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const [id,delta] of [['apptPrev',-1],['apptNext',1]])document.getElementById(id)?.addEventListener('click',()=>{s.calendarDate=monthAdd(s.calendarDate,s.calendarMode,delta);s.selectedDay=s.calendarDate;render()});
   }
  }
- function reset(){importer.reset();state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
+ function reset(){importer.reset();followup.reset();state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
  return {view,bind,load,reset,report};
 }

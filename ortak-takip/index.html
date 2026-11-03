@@ -977,13 +977,13 @@ let inboxUnreadTotal=0,swipeGesture=null,ignoreNotificationClickUntil=0,undoDism
 const notificationTitles={
  assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
  due_changed:"Görev tarihi değişti",due_soon:"Görev tarihi yaklaşıyor",
- overdue:"Görev gecikti",admin_message:"Admin mesajı",submitted:"Görev kontrolünüzü bekliyor",
+ overdue:"Görev gecikti",appointment_overdue:"Geciken randevu / veli takibi",admin_message:"Admin mesajı",submitted:"Görev kontrolünüzü bekliyor",
  approved:"Görev onaylandı",completed:"Görev tamamlandı",
  returned:"Görev düzeltme için geri gönderildi"
 };
 const notificationIcons={
  assignment:"✚",transfer:"⇄",due_changed:"▦",due_soon:"◷",
- overdue:"!",admin_message:"✉",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
+ overdue:"!",appointment_overdue:"◷",admin_message:"✉",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
 };
 const notificationDate=d=>{
  if(!d)return "";
@@ -1011,11 +1011,11 @@ function renderNotificationCenter(){
  $("#notifyList").innerHTML=state.userNotifications.length?
    state.userNotifications.map(n=>
     '<div class="notify-swipe-row" data-inbox-row="'+esc(n.id)+'">'+
-    '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'" aria-label="'+esc((notificationTitles[n.kind]||"Görev bildirimi")+' '+notifyTaskTitle(n)+(n.kind==="admin_message"?". Mesajı oku":". Görevi aç"))+'">'+
+    '<button type="button" class="notify-item'+(!n.read_at?" unread":"")+'" data-inbox-open="'+esc(n.id)+'" aria-label="'+esc((notificationTitles[n.kind]||"Görev bildirimi")+' '+notifyTaskTitle(n)+(n.kind==="admin_message"?". Mesajı oku":n.kind==="appointment_overdue"?". Randevuyu aç":". Görevi aç"))+'">'+
      '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
      '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
      '<span>'+esc(notifyTaskTitle(n))+'</span>'+
-     (n.kind==="admin_message"&&n.payload?.body?'<small class="notify-message-preview">'+esc(String(n.payload.body).slice(0,90))+'</small>':"")+
+     ((n.kind==="admin_message"||n.kind==="appointment_overdue")&&n.payload?.body?'<small class="notify-message-preview">'+esc(String(n.payload.body).slice(0,90))+'</small>':"")+
      '<small>'+esc(notificationDate(n.created_at))+'</small></span>'+
      (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
     '</button>'+
@@ -1135,6 +1135,19 @@ async function undoInboxDismissal(){
 async function openInboxTask(id){
  const n=state.userNotifications.find(x=>x.id===id);
  if(!n)return;
+ if(n.kind==="appointment_overdue"&&n.payload?.appointment_id){
+  await markNotificationRead(id);
+  setInboxOpen(false);
+  state.view="appointments";
+  await appointments.load();
+  const s=state.appointmentsModule;
+  if(!s?.rows?.some(r=>r.id===n.payload.appointment_id)){
+   render();toast("İlgili randevu bulunamadı veya görüntüleme yetkiniz bulunmuyor.");return;
+  }
+  s.tab="icmal";s.editingId=n.payload.appointment_id;s.form=true;
+  render();
+  return;
+ }
  if(n.kind==="admin_message"){
   await markNotificationRead(id);
   const detail=$("#notifyMessageDetail");
