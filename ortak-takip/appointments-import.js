@@ -200,5 +200,5 @@ export function createAppointmentImporter({sb,WS,state,esc,toast,error,requireAc
   });
   document.getElementById('apptImportCommit')?.addEventListener('click',commit);
  }
- return {show:()=>{st.open=true;render()},cancel,view,bind,isOpen:()=>st.open};
+ return {show:()=>{st.open=true;render()},cancel,view,bind,isOpen:()=>st.open,reset:()=>{st.open=false;clear();}};
 }
