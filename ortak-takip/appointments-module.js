@@ -23,7 +23,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  const phoneDigits=x=>{let d=String(x||'').replace(/\D/g,'');if(/^0?5\d{9}$/.test(d))d='90'+d.slice(-10);return d.length>=10&&d.length<=15?d:''};
  const phoneButtons=r=>followup.quickActions(r);
  const blank=()=>({full_name:'',education_status:'',school_unit:'aksam',followup_date:'',age:'',grade:'',aol_credit:'',quoted_amount:'',province:'İstanbul',district:'',phone:'',staff_user_id:'',staff_name:'',contact_date:today(),first_contact:'',appointment_date:'',appointment_time:'',branch:'SLT',outcome:'beklemede',notes:'',identity_document_url:'',document_url:''});
- const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',search:'',result:'all',school:'all',branch:'all',order:'latest',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
+ const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',page:1,search:'',result:'all',school:'all',branch:'all',order:'latest',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
  const importer=createAppointmentImporter({sb,WS,state,esc,toast,error,requireActiveSession,render,reload:()=>load(true),getRows:()=>S().rows,today});
  const followup=createAppointmentFollowup({sb,WS,state,esc,toast,error,requireActiveSession,render,getRow:id=>S().rows.find(r=>r.id===id),getPhone:phoneDigits});
  const mayEdit=r=>['owner','manager'].includes(state.role)||state.role==='member'&&(r.created_by===state.user?.id||r.staff_user_id===state.user?.id);
@@ -89,7 +89,9 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    '</div></div>';
  }
  function sheet(){
-  const rows=filterRows();
+  const allRows=filterRows(),pageSize=50,pages=Math.max(1,Math.ceil(allRows.length/pageSize));
+  const page=Math.max(1,Math.min(Number(S().page||1),pages));S().page=page;
+  const rows=allRows.slice((page-1)*pageSize,page*pageSize);
   const header=['ID','Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
   const tr=rows.map(r=>'<tr class="appt-data-row"><td class="appt-id">#'+esc(r.source_record_id||'—')+'</td><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
    '<td>'+esc(r.phone||'—')+phoneButtons(r)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
@@ -101,7 +103,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    '<td>'+[r.identity_document_url?'<a target="_blank" rel="noopener noreferrer" href="'+esc(r.identity_document_url)+'">Kimlik</a>':'',r.document_url?'<a target="_blank" rel="noopener noreferrer" href="'+esc(r.document_url)+'">Evrak</a>':''].filter(Boolean).join(' · ')+'</td>'+
    '<td><button type="button" class="btn sm" data-appt-edit="'+r.id+'">Aç</button> '+(mayArchive()?(r.deleted_at?'<button type="button" class="btn sm" data-appt-restore="'+r.id+'">Geri Al</button>':'<button type="button" class="btn sm" data-appt-archive="'+r.id+'">Arşivle</button>'):'')+'</td></tr>').join('');
   return '<div class="appt-table-wrap"><table class="appt-table"><thead><tr>'+header.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+tr+'</tbody></table></div>'+
-   '<div class="appt-counter">'+rows.length+' kayıt gösteriliyor · Tabloyu sağa/sola kaydırarak tüm sütunları görebilirsiniz.</div>';
+   '<div class="appt-pagination"><span>'+allRows.length+' kaydın '+(allRows.length?((page-1)*pageSize+1):0)+'–'+Math.min(page*pageSize,allRows.length)+' arası · Sütunları sağa/sola kaydırabilirsiniz.</span><div><button class="btn sm" id="apptPagePrev" '+(page<=1?'disabled':'')+'>‹ Önceki</button><span>Sayfa '+page+' / '+pages+'</span><button class="btn sm" id="apptPageNext" '+(page>=pages?'disabled':'')+'>Sonraki ›</button></div></div>';
  }
  function monthAdd(isoDate,mode,num){
   const a=isoDate.split('-').map(Number),d=new Date(a[0],a[1]-1,a[2],12);
@@ -258,16 +260,18 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   document.getElementById('apptNew')?.addEventListener('click',()=>{s.form=true;s.editingId=null;render()});
   document.getElementById('apptImport')?.addEventListener('click',()=>importer.show());
   document.querySelectorAll('[data-appt-quick]').forEach(el=>el.addEventListener('change',()=>void quickStatus(el)));
+  document.getElementById('apptPagePrev')?.addEventListener('click',()=>{s.page=Math.max(1,s.page-1);render()});
+  document.getElementById('apptPageNext')?.addEventListener('click',()=>{s.page=(s.page||1)+1;render()});
   document.getElementById('apptReload')?.addEventListener('click',()=>void load(true));
   document.getElementById('apptExport')?.addEventListener('click',csv);
   document.getElementById('apptPrint')?.addEventListener('click',()=>window.print());
   document.getElementById('apptArchive')?.addEventListener('change',e=>{s.archive=e.target.checked;render()});
-  for(const [id,key] of [['apptResult','result'],['apptSchool','school'],['apptBranch','branch'],['apptOrder','order']])document.getElementById(id)?.addEventListener('change',e=>{s[key]=e.target.value;render()});
+  for(const [id,key] of [['apptResult','result'],['apptSchool','school'],['apptBranch','branch'],['apptOrder','order']])document.getElementById(id)?.addEventListener('change',e=>{s[key]=e.target.value;s.page=1;render()});
   document.getElementById('apptSearch')?.addEventListener('input',e=>{
-   s.search=e.target.value;const pos=e.target.selectionStart;
+   s.search=e.target.value;s.page=1;const pos=e.target.selectionStart;
    clearTimeout(s.searchTimer);s.searchTimer=setTimeout(()=>{if(state.view!=='appointments'||s.form)return;render();const input=document.getElementById('apptSearch');if(input){input.focus();input.setSelectionRange(pos,pos)}},180);
   });
-  document.querySelectorAll('[data-appt-tab]').forEach(b=>b.addEventListener('click',()=>{s.tab=b.dataset.apptTab;render()}));
+  document.querySelectorAll('[data-appt-tab]').forEach(b=>b.addEventListener('click',()=>{s.tab=b.dataset.apptTab;s.page=1;render()}));
   document.querySelectorAll('[data-appt-edit]').forEach(b=>b.addEventListener('click',()=>{s.editingId=b.dataset.apptEdit;s.form=true;render()}));
   document.querySelectorAll('[data-appt-archive]').forEach(b=>b.addEventListener('click',()=>void archive(b.dataset.apptArchive,false)));
   document.querySelectorAll('[data-appt-restore]').forEach(b=>b.addEventListener('click',()=>void archive(b.dataset.apptRestore,true)));
