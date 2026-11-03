@@ -22,7 +22,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  const phoneDigits=x=>{let d=String(x||'').replace(/\D/g,'');if(/^0?5\d{9}$/.test(d))d='90'+d.slice(-10);return d.length>=10&&d.length<=15?d:''};
  const phoneButtons=x=>{const d=phoneDigits(x);return d?'<div class="appt-quick"><a title="Ara" aria-label="Telefonla ara" href="tel:+'+d+'">☎</a><a title="WhatsApp üzerinden mesaj gönder" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+d+'?text='+encodeURIComponent('Merhaba, Elit Eğitim Kurumları randevunuz hakkında iletişime geçiyoruz.')+'">◉</a></div>':''};
  const blank=()=>({full_name:'',education_status:'',school_unit:'aksam',followup_date:'',age:'',grade:'',aol_credit:'',quoted_amount:'',province:'İstanbul',district:'',phone:'',staff_user_id:'',staff_name:'',contact_date:today(),first_contact:'',appointment_date:'',appointment_time:'',branch:'SLT',outcome:'beklemede',notes:'',identity_document_url:'',document_url:''});
- const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',search:'',result:'all',school:'all',branch:'all',order:'randevu',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
+ const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',search:'',result:'all',school:'all',branch:'all',order:'latest',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
  const importer=createAppointmentImporter({sb,WS,state,esc,toast,error,requireActiveSession,render,reload:()=>load(true),getRows:()=>S().rows,today});
  const mayEdit=r=>['owner','manager'].includes(state.role)||state.role==='member'&&(r.created_by===state.user?.id||r.staff_user_id===state.user?.id);
  const mayArchive=()=>['owner','manager'].includes(state.role);
@@ -32,6 +32,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   let rows=activeRows().filter(r=>(s.result==='all'||r.outcome===s.result)&&(s.school==='all'||r.school_unit===s.school)&&(s.branch==='all'||r.branch===s.branch)&&(!search||[r.full_name,r.phone,r.district,r.province,r.first_contact,r.staff_name,r.notes,r.source_record_id].some(v=>String(v||'').toLocaleLowerCase('tr-TR').includes(search))));
   if(s.tab==='gecmis')rows=rows.filter(r=>r.appointment_date&&r.appointment_date<today());
   const key=s.order;rows.sort((a,b)=>{
+   if(key==='latest')return (Number(b.source_record_id)||0)-(Number(a.source_record_id)||0)||(b.created_at||'').localeCompare(a.created_at||'');
    if(key==='name')return a.full_name.localeCompare(b.full_name,'tr');
    if(key==='amount')return (Number(b.quoted_amount)||0)-(Number(a.quoted_amount)||0);
    if(key==='contact')return (b.contact_date||'').localeCompare(a.contact_date||'');
@@ -81,14 +82,14 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    '<select id="apptResult" aria-label="Sonuç filtresi"><option value="all">Tüm sonuçlar</option>'+statuses.map(x=>'<option value="'+x[0]+'"'+(s.result===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+
    '<select id="apptSchool" aria-label="Kurum filtresi"><option value="all">Tüm kurumlar</option>'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(x=>'<option value="'+x[0]+'"'+(s.school===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+ 
    '<select id="apptBranch" aria-label="Şube filtresi"><option value="all">Tüm şubeler</option>'+branches.map(x=>'<option value="'+esc(x)+'"'+(s.branch===x?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>'+
-   '<select id="apptOrder" aria-label="Sıralama"><option value="randevu"'+(s.order==='randevu'?' selected':'')+'>Randevu tarihine göre</option><option value="contact"'+(s.order==='contact'?' selected':'')+'>Görüşme tarihine göre</option><option value="name"'+(s.order==='name'?' selected':'')+'>Ad A-Z</option><option value="amount"'+(s.order==='amount'?' selected':'')+'>Tutar (yüksekten)</option></select>'+
+   '<select id="apptOrder" aria-label="Sıralama"><option value="latest"'+(s.order==='latest'?' selected':'')+'>En son eklenen / ID ↓</option><option value="randevu"'+(s.order==='randevu'?' selected':'')+'>Randevu tarihine göre</option><option value="contact"'+(s.order==='contact'?' selected':'')+'>Görüşme tarihine göre</option><option value="name"'+(s.order==='name'?' selected':'')+'>Ad A-Z</option><option value="amount"'+(s.order==='amount'?' selected':'')+'>Tutar (yüksekten)</option></select>'+
    (mayArchive()?'<label class="appt-check"><input type="checkbox" id="apptArchive"'+(s.archive?' checked':'')+'> Arşiv</label>':'')+
    '</div></div>';
  }
  function sheet(){
   const rows=filterRows();
-  const header=['Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
-  const tr=rows.map(r=>'<tr><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
+  const header=['ID','Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
+  const tr=rows.map(r=>'<tr><td class="appt-id">#'+esc(r.source_record_id||'—')+'</td><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
    '<td>'+esc(r.phone||'—')+phoneButtons(r.phone)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
    '<td>'+cell(r.age)+'</td><td>'+cell(r.grade)+'</td><td>'+cell(r.aol_credit)+'</td><td>'+money(r.quoted_amount)+'</td>'+
    '<td>'+cell(r.province||'—')+'</td><td>'+cell(r.district||'—')+'</td><td>'+esc(r.staff_name||'—')+'</td>'+
@@ -157,10 +158,12 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const s=S(),r=s.editingId?s.rows.find(x=>x.id===s.editingId):null;
   if(r&&!mayEdit(r))return '<div class="panel">Bu randevuyu düzenleme yetkiniz bulunmuyor. <button type="button" class="btn" id="apptCancel">Geri dön</button></div>';
   const d=r||blank();
+  const nextNumber=Math.max(0,...s.rows.map(x=>Number(x.source_record_id)||0))+1;
   const staffOptions=state.members.filter(m=>m.is_active).map(m=>{const p=state.profiles.find(p=>p.id===m.user_id);return '<option value="'+esc(m.user_id)+'"'+(d.staff_user_id===m.user_id?' selected':'')+'>'+esc(p?.full_name||m.user_id.slice(0,8))+'</option>'}).join('');
   const resultButtons=statuses.map(a=>'<label class="appt-result-option"><input type="radio" name="outcome" value="'+a[0]+'"'+(d.outcome===a[0]?' checked':'')+'><span style="--appt-color:'+a[3]+'">'+a[2]+' '+esc(a[1])+'</span></label>').join('');
   return '<section class="appt-form"><div class="appt-form-head"><h2>'+(r?'Randevu Düzenle':'Yeni Randevu')+'</h2><button type="button" class="btn" id="apptCancel">← İcmale Dön</button></div><p class="muted small">* işaretli alanlar zorunludur. Belgeler için dosya yüklemek yerine kurumca yetkilendirilmiş bağlantı girin.</p>'+
   '<form id="apptForm" class="appt-form-grid">'+
+  '<div class="appt-wide appt-new-id"><span>Kayıt ID</span><strong>#'+esc(r?.source_record_id||nextNumber)+'</strong><small>'+(r?'Değiştirilemez':'Kaydederken veritabanı tarafından otomatik ve güvenli oluşturulur.')+'</small></div>'+
   inp('Veli / Öğrenci Adı Soyadı','full_name','text',d.full_name,true)+inp('Telefon','phone','tel',d.phone,true)+
   '<label>Kurum<select name="school_unit">'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(v=>'<option value="'+v[0]+'"'+(v[0]===(d.school_unit||'aksam')?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label>'+inp('Eğitim Durumu','education_status','text',d.education_status)+inp('Yaş','age','number',d.age)+
   inp('Sınıf','grade','number',d.grade)+inp('AÖL Kredisi','aol_credit','number',d.aol_credit)+
@@ -216,10 +219,10 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const key of ['age','grade','aol_credit','quoted_amount'])if(payload[key]!==null&&(!Number.isFinite(payload[key])||payload[key]<0))throw Error('Sayısal alan geçersiz.');
    const old=s.rows.find(r=>r.id===s.editingId);
    if(old&&!mayEdit(old))throw Error('Düzenleme yetkisi bulunmuyor.');
-   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).select('id').single():
-    await sb.from('appointments').insert({...payload,workspace_id:WS,created_by:state.user.id}).select('id').single();
+   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).select('id,source_record_id').single():
+    await sb.from('appointments').insert({...payload,workspace_id:WS,created_by:state.user.id}).select('id,source_record_id').single();
    if(result.error)throw result.error;
-   s.form=false;s.editingId=null;await load(true);toast(old?'Randevu güncellendi.':'Randevu eklendi.');
+   s.form=false;s.editingId=null;await load(true);toast(old?'Randevu güncellendi.':'#'+result.data.source_record_id+' numaralı randevu eklendi.');
   }catch(e){error(e)}finally{if(btn)btn.disabled=false}
  }
  async function archive(id,restore){
@@ -231,7 +234,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    if(e)throw e;await load(true);toast(restore?'Kayıt geri yüklendi.':'Kayıt arşivlendi.');
   }catch(e){error(e)}
  }
- const exportColumns=[['full_name','Veli / Öğrenci'],['education_status','Eğitim Durumu'],['age','Yaş'],['grade','Sınıf'],['aol_credit','AÖL Kredi'],['quoted_amount','Rakam'],['province','İl'],['district','İlçe'],['phone','Telefon'],['staff_name','Görüşen Kişi'],['contact_date','Görüşme Tarihi'],['first_contact','İlk Görüşme'],['appointment_date','Randevu Tarihi'],['appointment_time','Randevu Saati'],['branch','Randevu Şubesi'],['outcome','Randevu Sonucu'],['notes','Notlar'],['identity_document_url','Kimlik'],['document_url','Evrak']];
+ const exportColumns=[['source_record_id','ID'],['full_name','Veli / Öğrenci'],['education_status','Eğitim Durumu'],['age','Yaş'],['grade','Sınıf'],['aol_credit','AÖL Kredi'],['quoted_amount','Rakam'],['province','İl'],['district','İlçe'],['phone','Telefon'],['staff_name','Görüşen Kişi'],['contact_date','Görüşme Tarihi'],['first_contact','İlk Görüşme'],['appointment_date','Randevu Tarihi'],['appointment_time','Randevu Saati'],['branch','Randevu Şubesi'],['outcome','Randevu Sonucu'],['notes','Notlar'],['identity_document_url','Kimlik'],['document_url','Evrak']];
  function csv(){
   const safe=x=>{let t=String(x??'');if(/^[\s]*[=+\-@]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const rows=[exportColumns.map(x=>safe(x[1])).join(';'),...filterRows().map(r=>exportColumns.map(x=>safe(r[x[0]])).join(';'))];
