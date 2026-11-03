@@ -179,6 +179,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  }
  function view(){
   const s=S();
+  if(!state.user||s.ownerId!==state.user.id)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">Oturum randevu kayıtları için hazırlanıyor…</p></section>';
   if(!s.loaded)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">'+(s.loading?'Randevular alınıyor…':'Randevu verileri yükleniyor…')+'</p></section>';
   if(importer.isOpen())return importer.view();
   return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet düzenini koruyan, Sheet benzeri kayıt ve randevu takibi</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
