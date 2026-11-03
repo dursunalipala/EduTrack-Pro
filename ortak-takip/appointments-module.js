@@ -124,6 +124,33 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   '<div class="appt-daydetail"><h3>'+dateLabel(s.selectedDay)+' · '+selected.length+' randevu</h3>'+
   (selected.map(r=>'<div class="appt-event"><div><b>'+esc((r.appointment_time||'').slice(0,5)||'Saat yok')+' · '+esc(r.full_name)+'</b><div>'+statusBadge(r.outcome)+' <span class="muted">'+esc(r.branch||'')+'</span></div></div><div>'+phoneButtons(r.phone)+'<button type="button" class="btn sm" data-appt-edit="'+r.id+'">Detay</button></div></div>').join('')||'<p class="muted">Bu güne ait randevu bulunmuyor.</p>')+'</div>';
  }
+
+ function analysis(){
+  const rows=filterRows();
+  const total=rows.length;
+  const conversion=total?Math.round(100*rows.filter(r=>r.outcome==='kayit').length/total):0;
+  const sum=rows.reduce((a,r)=>a+(Number(r.quoted_amount)||0),0);
+  const byStatus=statuses.map(([id,label])=>({label,count:rows.filter(r=>r.outcome===id).length}));
+  const schoolLabels={aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'};
+  const bySchool=Object.entries(schoolLabels).map(([id,label])=>({label,count:rows.filter(r=>(r.school_unit||'aksam')===id).length}));
+  const byPerson=[...new Set(rows.map(r=>r.staff_name?.trim()||'Belirtilmemiş'))]
+   .map(name=>({label:name,count:rows.filter(r=>(r.staff_name?.trim()||'Belirtilmemiş')===name).length}))
+   .sort((a,b)=>b.count-a.count).slice(0,12);
+  const byMonth=[...new Set(rows.map(r=>r.contact_date?.slice(0,7)).filter(Boolean))].sort().reverse().slice(0,12).reverse()
+   .map(m=>({label:m.split('-').reverse().join('.'),count:rows.filter(r=>r.contact_date?.startsWith(m)).length}));
+  const chart=(title,items)=>'<section class="panel appt-analysis-panel"><h2>'+esc(title)+'</h2><div class="appt-report-bars">'+
+   (items.filter(x=>x.count>0).map(x=>'<div class="appt-report-row"><span title="'+esc(x.label)+'">'+esc(x.label)+'</span>'+
+    '<div class="appt-report-track"><i style="width:'+Math.min(100,100*x.count/Math.max(1,total))+'%"></i></div><b>'+x.count+'</b></div>').join('')||'<p class="muted small">Bu filtrede kayıt yok.</p>')+
+   '</div></section>';
+  return '<div class="appt-analytics-header"><div><h2>Kayıt ve Randevu Analizi</h2><p class="muted small">Yukarıdaki filtreler bu raporlara uygulanır. Kayıt dönüşümü kesin kayıt / toplam görüşme oranıdır.</p></div>'+
+   '<div><strong>'+conversion+'%</strong><small>Kayıt dönüşüm oranı</small></div></div>'+
+   '<div class="appt-stats"><div class="appt-metric"><small>Filtrelenen Görüşme</small><strong>'+total+'</strong></div>'+
+   '<div class="appt-metric"><small>Kesin Kayıt</small><strong>'+rows.filter(r=>r.outcome==='kayit').length+'</strong></div>'+
+   '<div class="appt-metric"><small>Ön Kayıt</small><strong>'+rows.filter(r=>r.outcome==='on_kayit').length+'</strong></div>'+
+   '<div class="appt-metric"><small>Görüşülen Tutar (Gelir Değil)</small><strong>'+money(sum)+'</strong></div></div>'+
+   '<div class="appt-analysis-grid">'+chart('Randevu Sonuçları',byStatus)+chart('Kurumlara Göre',bySchool)+
+    chart('Görüşen Kişiye Göre',byPerson)+chart('Görüşme Ayları',byMonth)+'</div>';
+ }
  const inp=(label,name,type,value,required=false)=>'<label>'+label+(required?' <em>*</em>':'')+'<input name="'+name+'" type="'+type+'" value="'+esc(value??'')+'"'+(required?' required':'')+(type==='number'?' min="0"':'')+'></label>';
  const area=(label,name,value,rows=2)=>'<label class="appt-wide">'+label+'<textarea name="'+name+'" rows="'+rows+'">'+esc(value||'')+'</textarea></label>';
  function editForm(){
@@ -155,8 +182,8 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(!s.loaded)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">'+(s.loading?'Randevular alınıyor…':'Randevu verileri yükleniyor…')+'</p></section>';
   if(importer.isOpen())return importer.view();
   return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet düzenini koruyan, Sheet benzeri kayıt ve randevu takibi</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
-   stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal">▤ Randevu İcmali</button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim">▦ Takvim</button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis">◷ Geçmiş Randevular</button></div>'+
-   (s.tab==='takvim'?calendar():sheet()))+'</div>';
+   stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal">▤ Randevu İcmali</button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim">▦ Takvim</button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis">◷ Geçmiş Randevular</button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz">▥ Kayıt Analizi</button></div>'+
+   (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():sheet()))+'</div>';
  }
  async function quickStatus(el){
   const row=S().rows.find(r=>r.id===el.dataset.apptQuick);if(!row||!mayEdit(row))return;
