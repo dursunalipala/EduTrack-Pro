@@ -730,13 +730,13 @@ const loadDigitalSort=()=>{
 };
 
 const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
-const reporting=createReportingModule({state,sb,WS,esc,options,toast,render,memberName:id=>memberName(id),streamName:id=>streamName(id),loadReportLibrary,canManage,refresh});
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
 const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0")};
 const canManage=()=>["owner","manager"].includes(state.role);
 const isStaff=()=>!canManage();
+const reporting=createReportingModule({state,sb,WS,esc,options,toast,render,memberName:id=>memberName(id),streamName:id=>streamName(id),loadReportLibrary,canManage,refresh});
 const inspection=createInspectionModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage,
  openFindingTask:(finding)=>{
   openModal("task");
