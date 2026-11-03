@@ -1,0 +1,38 @@
+name: Task lifecycle UI checks
+on:
+  push:
+    branches: [ "feature/reversible-task-and-catalog-delete" ]
+  pull_request:
+    paths:
+      - "ortak-takip/index.html"
+      - ".github/workflows/task-lifecycle-check.yml"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate UI scripts and action wiring
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Parser(HTMLParser):
+              def __init__(self): super().__init__();self.module=False;self.scripts=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='script' and dict(attrs).get('type')=='module':self.module=True
+              def handle_endtag(self,tag):
+                  if tag=='script':self.module=False
+              def handle_data(self,data):
+                  if self.module:self.scripts.append(data)
+          html=Path('ortak-takip/index.html').read_text()
+          p=Parser();p.feed(html)
+          assert p.scripts
+          source=''.join(p.scripts)
+          for term in ('deletedCatalogView','deletedTasksView','manage_task_lifecycle',
+                       'changeCatalogDeletion','Görevlendirmeyi Geri Al','data-catalog-restore',
+                       'data-task-restore','state.deletedTasks=state.tasks.filter',
+                       'state.deletedCatalog=state.catalog.filter'):
+              assert term in source, term
+          Path('/tmp/task-lifecycle.mjs').write_text(source)
+          PY
+          node --check /tmp/task-lifecycle.mjs

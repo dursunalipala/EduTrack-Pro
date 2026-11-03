@@ -728,7 +728,7 @@ const loadDigitalSort=()=>{
  }catch{return "newest"}
 };
 
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],catalog:[],catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -1271,7 +1271,7 @@ function startInAppNotifications(){
 function eraseSensitiveView(){
  stopInAppNotifications();
  state.user=null;state.role="";
- state.tasks=[];state.catalog=[];state.streams=[];state.goals=[];state.events=[];
+ state.tasks=[];state.deletedTasks=[];state.showDeletedTasks=false;state.catalog=[];state.deletedCatalog=[];state.showDeletedCatalog=false;state.streams=[];state.goals=[];state.events=[];
  state.members=[];state.profiles=[];state.invites=[];state.notificationQueue=[];state.userNotifications=[];state.notifyPrefs=[];state.adminSentNotifications=[];state.adminHistoryLoaded=false;state.digitalResources=[];state.digitalAudit=[];state.digitalEditingId=null;state.digitalFormOpen=false;
  state.teamEmails={};inspection.reset();state.taskActivities=[];state.activityRevisions=[];state.taskAssignmentHistory=[];state.memberStatusHistory=[];state.aiMessages=[];state.aiResult=null;state.aiAllowOpenAI=false;state.aiIncludeDetails=false;
  $("#shell").classList.add("hide");
@@ -1688,6 +1688,7 @@ if(isStaff()){
   sb.from("task_activity").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(300)];
  const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
  [state.tasks,state.streams,state.members,state.taskActivities]=r.map(a=>a.data||[]);
+ state.tasks=state.tasks.filter(t=>!t.deleted_at);state.deletedTasks=[];state.deletedCatalog=[];
  const ids=[...new Set([state.user.id,...state.members.map(m=>m.user_id)])];
  const p=await sb.from("profiles").select("id,full_name,position_title,whatsapp_phone").in("id",ids);
  state.profiles=p.data||[];state.goals=[];state.events=[];state.catalog=[];state.invites=[];
@@ -1696,6 +1697,8 @@ if(isStaff()){
 const q=[sb.from("workstreams").select("*").eq("workspace_id",WS).order("sort_order"),sb.from("tasks").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("task_catalog").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}),sb.from("goals").select("*").eq("workspace_id",WS),sb.from("calendar_events").select("*").eq("workspace_id",WS),sb.from("workspace_members").select("*").eq("workspace_id",WS),sb.from("workspace_invites").select("email,role,status,created_at").eq("workspace_id",WS).eq("status","pending"),sb.from("notification_queue").select("id,recipient_id,kind,status,payload,created_at,sent_at,last_error").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100),sb.from("notification_preferences").select("*").eq("workspace_id",WS)];
 const r=await Promise.all(q);for(const a of r)if(a.error)throw a.error;
 [state.streams,state.tasks,state.catalog,state.goals,state.events,state.members,state.invites,state.notificationQueue,state.notifyPrefs]=r.map(a=>a.data||[]);
+state.deletedTasks=state.tasks.filter(t=>!!t.deleted_at);state.tasks=state.tasks.filter(t=>!t.deleted_at);
+state.deletedCatalog=state.catalog.filter(c=>!!c.deleted_at);state.catalog=state.catalog.filter(c=>!c.deleted_at);
 let ids=state.members.map(x=>x.user_id);
 const historyResults=await Promise.all([
  sb.from("task_activity").select("*").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(1000),
@@ -1872,6 +1875,7 @@ const catalogSections=()=>[...new Map(state.catalog.filter(c=>c.section_code).ma
  return order(a[0])-order(b[0]);});
 const catalogSectionOrder=code=>code==="0.0"?9900:code?Number(code.split(".")[0])*100+Number(code.split(".")[1]||0):9999;
 function catalogView(){
+ if(state.showDeletedCatalog)return deletedCatalogView();
  const search=state.catalogSearch.trim().toLocaleLowerCase("tr-TR");
  const filtered=state.catalog.filter(c=>
   (state.catalogStream==="all"||c.workstream_id===state.catalogStream)&&
@@ -1902,6 +1906,7 @@ function catalogView(){
      '<p class="small muted">'+count+' oluşturulmuş görev · '+(c.is_active?"Aktif":"Taslak / Pasif")+(c.auto_enabled?" · Otomatik 07.10":" · Manuel üretim")+'</p></div>'+
      '<div class="actions">'+(manage?'<button class="btn sm" data-catalog-edit="'+esc(c.id)+'">Düzenle</button>':"")+
      (manage?'<button class="btn sm" data-catalog-toggle="'+esc(c.id)+'">'+(c.is_active?"Arşivle":"Aktifleştir")+'</button>':"")+
+     (manage?'<button class="btn sm" data-catalog-delete="'+esc(c.id)+'">Sil</button>':"")+
      (manage&&c.is_active?'<button class="btn sm primary" data-catalog-generate="'+esc(c.id)+'">Görev Oluştur</button>':"")+
      '</div></div></div>';
    }).join("");
@@ -1914,7 +1919,8 @@ function catalogView(){
     '<p class="small muted">Bölüm sorumlusu: '+esc(memberName(w.lead_user_id))+'</p>'+sectionHtml+'</section>';
  }).join("");
  return '<div class="titlebar"><h2>İş ve Görev Havuzu</h2>'+
-  (editableCatalogStreams().length?'<button class="btn primary" id="newCatalogItem">+ Yeni İş Ekle</button>':"")+'</div>'+
+  (editableCatalogStreams().length?'<button class="btn primary" id="newCatalogItem">+ Yeni İş Ekle</button>':"")+
+  (state.deletedCatalog.some(canEditCatalog)?'<button class="btn" type="button" id="catalogTrashToggle">Silinenler ('+state.deletedCatalog.filter(canEditCatalog).length+')</button>':"")+'</div>'+
   '<p class="small muted">Elit Eğitim Kurumları iş bölümü planı: '+planCount+' ayrıntılı iş, '+sectionCount+' alt başlık, '+(total-planCount)+' başlangıç operasyon şablonu. İşler onaylanana kadar pasiftir.</p>'+
   '<div class="kpi">'+stat("İş tanımı",total,"Havuzdaki tüm işler")+stat("Aktif",active,"Görev üretilebilir")+
   stat("Taslak / Pasif",total-active,"Onay bekliyor")+stat("Oluşturulan görev",fromCatalog,"Havuzdan açılan")+'</div>'+
@@ -1927,6 +1933,36 @@ function catalogView(){
   (groups||'<section class="panel">Bu filtrede iş tanımı bulunamadı.</section>')+
   '<section class="panel"><h2>Havuzun Kullanımı</h2><p class="small">Alt başlığı aç → İşin sorumlusunu ve doğrulama bilgisini incele → Tarih ve sıklığı belirle → Aktifleştir → Görev Oluştur.</p>'+
   '<p class="small muted">Taslak işleri aktifleştirmek veya otomatik görev oluşturmak için ayrıca onay gerekir. Önceden oluşturulan görevler korunur.</p></section>';
+}
+
+function deletedCatalogView(){
+ const items=state.deletedCatalog.filter(canEditCatalog).sort((a,b)=>String(b.deleted_at).localeCompare(String(a.deleted_at)));
+ return '<div class="titlebar"><h2>İş Havuzu · Silinenler ('+items.length+')</h2>'+
+  '<button type="button" id="catalogTrashToggle" class="btn">← Havuz Listesine Dön</button></div>'+
+  '<p class="small muted">Silinen iş tanımları ve geçmiş görev bağlantıları korunur. Geri yüklenen şablonlar pasif kalır; otomatik görev oluşturma kendiliğinden başlamaz.</p>'+
+  (items.map(c=>'<section class="panel"><div class="row" style="gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:180px"><strong>'+esc(c.title)+'</strong>'+
+   '<p class="small muted">'+esc(streamName(c.workstream_id))+' · Silinme: '+date(c.deleted_at)+'</p></div>'+
+   '<button type="button" class="btn sm primary" data-catalog-restore="'+esc(c.id)+'">Geri Yükle</button></div></section>').join("")||
+  '<section class="panel">Bu iş gruplarında silinmiş kayıt yok.</section>');
+}
+async function changeCatalogDeletion(id,restore=false){
+ const item=(restore?state.deletedCatalog:state.catalog).find(c=>c.id===id);
+ if(!item||!canEditCatalog(item)){toast("Bu iş grubunda yetkiniz yok.");return}
+ if(!window.confirm(restore?
+   "İş tanımını pasif olarak geri yüklemek istiyor musunuz?":
+   "“"+item.title+"” işini havuzdan kaldırmak istiyor musunuz?\n\nÖnceden oluşturulan görevler ve geçmiş kayıtları korunacaktır. Geri yükleme mümkündür."))return;
+ try{
+  await requireActiveSession();
+  const payload=restore?
+   {deleted_at:null,deleted_by:null,is_active:false,auto_enabled:false,updated_at:new Date().toISOString()}:
+   {deleted_at:new Date().toISOString(),deleted_by:state.user.id,is_active:false,auto_enabled:false,updated_at:new Date().toISOString()};
+  let query=sb.from("task_catalog").update(payload).eq("id",item.id).eq("workspace_id",WS);
+  query=restore?query.not("deleted_at","is",null):query.is("deleted_at",null);
+  const {data,error:e}=await query.select("id").single();
+  if(e||!data)throw Error(e?.message||"İş havuzu güncellenemedi.");
+  toast(restore?"İş tanımı pasif olarak geri yüklendi.":"İş havuzundan kaldırıldı; Silinenler alanından geri alınabilir.");
+  await refresh();
+ }catch(e){error(e)}
 }
 async function toggleCatalogItem(id){
  const item=state.catalog.find(c=>c.id===id);if(!item||!canEditCatalog(item))return;
@@ -2011,7 +2047,8 @@ function reviewQueueShortcut(){
 function simpleTasksView(){
  const can=canManage();
  return '<div class="titlebar"><h2>'+(state.simpleTaskStatus==="review"&&canManage()?"Onayımı Bekleyen Görevler":"İş Takibi")+'</h2>'+
-  (can?'<button class="btn primary" id="newTask">+ Yeni İş</button>':"")+'</div>'+
+  (can?'<button class="btn primary" id="newTask">+ Yeni İş</button>':"")+
+  (can&&state.deletedTasks.length?'<button type="button" class="btn" id="taskTrashToggle">Silinenler ('+state.deletedTasks.length+')</button>':"")+'</div>'+
   reviewQueueShortcut()+
   '<div class="simple-tab-group"><button type="button" data-simple-scope="mine" class="'+(state.taskScope==="mine"?"active":"")+'">Benim İşlerim</button>'+
   (canManage()?'<button type="button" data-simple-scope="all" class="'+(state.taskScope==="all"?"active":"")+'">Tüm İşler</button>':"")+'</div>'+
@@ -2070,10 +2107,13 @@ function overview(){if(state.simpleMode||isStaff())return simpleOverview();const
 const approvals=canManage()?ts.filter(awaitingMyApproval).length:0;
 const soon=[...ts].filter(t=>t.status!=="tamamlandi"&&t.status!=="iptal").sort((a,b)=>(a.due_date||"9999").localeCompare(b.due_date||"9999")).slice(0,6);
 return '<div class="kpi management-kpi">'+(canManage()?stat("Onayımı Bekleyen",approvals,"Kontrolünüze sunulan görevler","review"):"")+stat("Toplam görev",ts.length,"Kayıtlı işler","all")+stat("Devam eden",active,"Aktif çalışmalar","active")+stat("Tamamlanan",done,"Sonuçlanan işler","completed")+stat("Geciken",late,"Süresi geçen","overdue")+stat("Kritik",priority,"Öncelikli takip","critical")+'</div><div class="twocol"><section class="panel"><div class="titlebar"><h2>Yakın Takip</h2><button class="btn sm" data-view="tasks">Tüm görevler</button></div>'+(soon.length?soon.map(t=>'<div class="stream"><div class="row"><div style="min-width:0"><div style="font-weight:700;font-size:14px">'+esc(t.title)+'</div><div class="small muted" style="margin-top:5px">'+esc(streamName(t.workstream_id))+' · '+(t.due_date?date(t.due_date):"Tarih atanmamış")+'</div></div><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></div></div>').join(""):'<div class="empty">Takip edilecek görev yok.</div>')+'</section><section class="panel"><h2>İş Grupları İlerlemesi</h2>'+state.streams.map(s=>{const list=ts.filter(t=>t.workstream_id===s.id),pct=list.length?Math.round(list.filter(t=>t.status==="tamamlandi").length/list.length*100):0;return '<div class="stream"><div class="row small"><strong>'+esc(s.name)+'</strong><span>'+list.length+' iş · %'+pct+'</span></div><div class="bar" style="margin-top:11px"><i style="width:'+pct+'%;background:'+esc(s.color)+'"></i></div></div>'}).join("")+'</section></div><section class="panel"><div class="row"><div><h2>Hedef Gerçekleşmesi</h2><div class="muted small">'+state.goals.length+' hedef tanımlı</div></div><button data-view="goals" class="btn sm">Hedefleri Gör</button></div></section>'}
-function tasksView(){if(state.simpleMode||isStaff())return simpleTasksView();const can=canManage();
+function tasksView(){
+ if(state.showDeletedTasks&&canManage())return deletedTasksView();
+ if(state.simpleMode||isStaff())return simpleTasksView();const can=canManage();
  const filtersActive=state.quickFilter!=="all"||state.status!=="all"||state.stream!=="all"||!!state.search;
  return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+
-  (can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+'</div>'+
+  (can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+
+  (can&&state.deletedTasks.length?'<button type="button" class="btn" id="taskTrashToggle">Silinenler ('+state.deletedTasks.length+')</button>':'')+'</div>'+
   reviewQueueShortcut()+
   '<div class="filters">'+
   '<select id="quickFilter" aria-label="Görev hızlı filtresi">'+options(dashboardTaskFilters,state.quickFilter)+'</select>'+
@@ -2084,7 +2124,16 @@ function tasksView(){if(state.simpleMode||isStaff())return simpleTasksView();con
   '<p class="small muted" id="taskResultCount" role="status" aria-live="polite"></p>'+
   '<section class="panel tablewrap" style="padding:7px"><table><thead><tr><th>Görev</th><th>İş Grubu</th><th>Sorumlu</th><th>Öncelik</th><th>Durum</th><th>Bitiş</th><th>İlerleme</th><th></th></tr></thead><tbody id="taskBody"></tbody></table></section>';
 }
-function renderTaskRows(){if(state.simpleMode||isStaff()){showSimpleTaskRows();return;}const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'<br>Uygulayıcı: '+esc(memberName(t.executor_id))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button> <button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
+function deletedTasksView(){
+ const rows=[...state.deletedTasks].sort((a,b)=>String(b.deleted_at).localeCompare(String(a.deleted_at)));
+ return '<div class="titlebar"><h2>Görevler · Silinenler ('+rows.length+')</h2><button type="button" class="btn" id="taskTrashToggle">← Görev Listesine Dön</button></div>'+
+ '<p class="small muted">Silinen görevlendirmeler, notlar ve işlem geçmişi saklanır. Geri yüklenen görev iptal durumunda açılır; yeniden görevlendirme ayrı onay gerektirir.</p>'+
+ (rows.map(t=>'<section class="panel"><div class="row" style="gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:190px"><strong>'+esc(t.title)+'</strong>'+
+ '<p class="small muted">'+esc(streamName(t.workstream_id))+' · Uygulayıcı: '+esc(memberName(t.executor_id))+' · Silinme: '+date(t.deleted_at)+'</p></div>'+
+ '<button type="button" class="btn sm primary" data-task-restore="'+esc(t.id)+'">Geri Yükle</button></div></section>').join("")||
+ '<section class="panel">Silinen görev kaydı yok.</section>');
+}
+function renderTaskRows(){if(state.showDeletedTasks)return;if(state.simpleMode||isStaff()){showSimpleTaskRows();return;}const el=$("#taskBody");if(!el)return;const filtered=filteredTaskRows();const count=$("#taskResultCount");if(count)count.textContent=filtered.length+" görev listeleniyor (toplam "+state.tasks.length+")";el.innerHTML=filtered.map(t=>'<tr><td><div class="taskname">'+esc(t.title)+'</div></td><td>'+esc(streamName(t.workstream_id))+'</td><td>'+esc(memberName(t.assigned_to))+'<br>Uygulayıcı: '+esc(memberName(t.executor_id))+'</td><td><span class="tag '+esc(t.priority)+'">'+esc(labels[t.priority])+'</span></td><td><span class="tag '+esc(t.status)+'">'+esc(labels[t.status])+'</span></td><td>'+date(t.due_date)+'</td><td>%'+esc(t.progress)+'</td><td><button class="btn sm" data-edit-task="'+esc(t.id)+'">Aç</button> <button type="button" class="btn sm" data-wa-task="'+esc(t.id)+'">WhatsApp</button></td></tr>').join("")||'<tr><td colspan="8" class="empty">Bu filtreye uygun görev yok.</td></tr>'}
 function goalsView(){
  const range=performanceWindow(),today=iso(new Date());
  const tasks=state.tasks.filter(t=>t.status!=="iptal"&&
@@ -2813,6 +2862,11 @@ $("#aiChatInput")?.addEventListener("keydown",e=>{
 if(state.view==="ai")scrollAIChat();
 $("#newTask")?.addEventListener("click",()=>openModal("task"));
 $("#newCatalogItem")?.addEventListener("click",()=>openModal("catalog"));
+ $("#catalogTrashToggle")?.addEventListener("click",()=>{state.showDeletedCatalog=!state.showDeletedCatalog;render()});
+ $("#taskTrashToggle")?.addEventListener("click",()=>{state.showDeletedTasks=!state.showDeletedTasks;render()});
+ document.querySelectorAll("[data-catalog-delete]").forEach(b=>b.onclick=()=>changeCatalogDeletion(b.dataset.catalogDelete,false));
+ document.querySelectorAll("[data-catalog-restore]").forEach(b=>b.onclick=()=>changeCatalogDeletion(b.dataset.catalogRestore,true));
+ document.querySelectorAll("[data-task-restore]").forEach(b=>b.onclick=()=>manageTaskLifecycle(b.dataset.taskRestore,"restore"));
 [["catalogStreamFilter","catalogStream"],["catalogSectionFilter","catalogSection"],["catalogCadenceFilter","catalogCadence"],["catalogStatusFilter","catalogStatus"]].forEach(([id,key])=>
  $("#"+id)?.addEventListener("change",e=>{state[key]=e.target.value;render()}));
 $("#catalogSearchInput")?.addEventListener("input",e=>{
@@ -3022,7 +3076,7 @@ const canManageComment=(a,t)=>{
   (isExecutor(t)||isHelper(t)||t.assigned_to===me||t.reviewer_id===me);
 };
 function taskActivityHistoryEntry(a,t,editingNoteId){
- const names={start:"Başladı",submit:"Kontrole gönderdi",approve:"Onayladı",return:"Düzeltme istedi",comment:"Not ekledi"};
+ const names={start:"Başladı",submit:"Kontrole gönderdi",approve:"Onayladı",return:"Düzeltme istedi",comment:"Not ekledi",cancel:"Görevlendirmeyi geri aldı",delete:"Görevi sildi",restore:"Görevi geri yükledi",reopen:"Görevi yeniden açtı"};
  const deleted=!!a.deleted_at;
  const editing=editingNoteId===a.id&&!deleted&&a.action==="comment"&&canManageComment(a,t);
  const changes=canManage()?state.activityRevisions.filter(r=>r.activity_id===a.id):[];
@@ -3069,11 +3123,17 @@ function openTaskDetail(t,editingNoteId=null){
  '<div class="task-action-card">'+(actions.length?'<label>Açıklama<textarea id="taskActionNote" rows="3" maxlength="2000" placeholder="Yapılan iş veya kontrol notu"></textarea></label><label>Belge bağlantısı (https://)<input type="url" id="taskActionEvidence" maxlength="700" placeholder="https://..."></label><div class="task-actions">'+
  actions.map(([a,l])=>'<button type="button" class="btn sm" data-task-action="'+a+'">'+l+'</button>').join("")+'</div>':"")+
  '<div class="task-actions">'+(canManage()?'<button type="button" class="btn sm" id="editTaskDetail">Görevi Düzenle</button>':"")+
- '<button type="button" class="btn sm" id="shareTaskDetail">WhatsApp ile Paylaş</button></div></div>'+
+ '<button type="button" class="btn sm" id="shareTaskDetail">WhatsApp ile Paylaş</button>'+ 
+ (canManage()&&!t.deleted_at&&t.status!=="tamamlandi"&&t.status!=="iptal"?'<button type="button" class="btn sm" id="cancelTaskDetail">Görevlendirmeyi Geri Al</button>':'')+
+ (canManage()&&!t.deleted_at&&!['tamamlandi','kontrol_bekliyor'].includes(t.status)?'<button type="button" class="btn sm" id="deleteTaskDetail">Sil</button>':'')+
+ (canManage()&&!t.deleted_at&&t.status==="iptal"?'<button type="button" class="btn sm" id="reopenTaskDetail">Yeniden Aç</button>':'')+'</div></div>'+
  '<h3>İşlem Geçmişi</h3>'+(log.length?log.map(a=>taskActivityHistoryEntry(a,t,editingNoteId)).join(""):'<p class="muted small">Henüz işlem kaydı yok.</p>')+'</div>';
  $("#modalscrim").classList.remove("hide");
  $("#editTaskDetail")?.addEventListener("click",()=>openModal("task",t));
  $("#shareTaskDetail")?.addEventListener("click",()=>shareTaskWhatsApp(t.id));
+ $("#cancelTaskDetail")?.addEventListener("click",()=>manageTaskLifecycle(t.id,"cancel"));
+ $("#deleteTaskDetail")?.addEventListener("click",()=>manageTaskLifecycle(t.id,"delete"));
+ $("#reopenTaskDetail")?.addEventListener("click",()=>manageTaskLifecycle(t.id,"reopen"));
  document.querySelectorAll("[data-task-action]").forEach(b=>b.onclick=()=>performTaskAction(t.id,b.dataset.taskAction));
  document.querySelectorAll("[data-comment-edit]").forEach(b=>b.onclick=()=>{
   const chosen=state.taskActivities.find(x=>x.id===b.dataset.commentEdit&&x.task_id===t.id);
@@ -3082,6 +3142,35 @@ function openTaskDetail(t,editingNoteId=null){
  document.querySelectorAll("[data-comment-cancel]").forEach(b=>b.onclick=()=>openTaskDetail(t));
  document.querySelectorAll("[data-comment-save]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentSave,"edit"));
  document.querySelectorAll("[data-comment-delete]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentDelete,"delete"));
+}
+
+async function manageTaskLifecycle(id,action){
+ if(!canManage()){toast("Yönetici yetkiniz bulunmuyor.");return}
+ const task=(action==="restore"?state.deletedTasks:state.tasks).find(t=>t.id===id);
+ if(!task){toast("Görev bulunamadı.");return}
+ const messages={
+  cancel:"“"+task.title+"” görevlendirmesi geri alınacak. Görev İptal durumuna geçer, geçmiş korunur. Devam edilsin mi?",
+  delete:"“"+task.title+"” görevi listeden kaldırılacak. İşlem geçmişi ve belgeler saklanır. Silinenler bölümünden geri yükleyebilirsiniz. Devam edilsin mi?",
+  restore:"“"+task.title+"” görevini İptal durumunda geri yükleyelim mi?",
+  reopen:"“"+task.title+"” görevini Beklemede durumunda tekrar aktifleştirelim mi?"
+ };
+ if(!window.confirm(messages[action]||"İşlem onaylansın mı?"))return;
+ let reason="";
+ if(["cancel","delete"].includes(action)){
+   const entered=window.prompt("İşlem gerekçesini yazın (en az 3 karakter):","");
+   if(entered===null)return;
+   reason=entered.trim();
+   if(reason.length<3){toast("Gerekçe en az 3 karakter olmalıdır.");return}
+ }
+ try{
+  await requireActiveSession();
+  const {data,error:e}=await sb.rpc("manage_task_lifecycle",{p_task_id:id,p_action:action,p_reason:reason});
+  if(e||!data)throw Error(e?.message||"Görev işlemi başarısız");
+  closeModal();
+  if(action==="restore")state.showDeletedTasks=false;
+  toast(action==="cancel"?"Görevlendirme geri alındı.":action==="delete"?"Görev silinenlere taşındı.":action==="restore"?"Görev İptal durumunda geri yüklendi.":"Görev yeniden açıldı.");
+  await refresh();
+ }catch(e){error(e)}
 }
 async function modifyTaskComment(taskId,activityId,operation){
  const t=state.tasks.find(x=>x.id===taskId);
