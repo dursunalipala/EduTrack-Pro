@@ -40,9 +40,9 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   return rows;
  };
  async function load(force=false){
-  const s=S(),uid=state.user?.id;
+  let s=S();const uid=state.user?.id;
   if(!uid)return;
-  if(s.ownerId!==uid){reset();s.ownerId=uid}
+  if(s.ownerId!==uid){reset();s=S();s.ownerId=uid}
   if(s.loading||s.loaded&&!force)return;
   s.loading=true;
   try{
@@ -238,9 +238,9 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='elit-randevu-'+today()+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
  }
  function bind(){
-  const s=S();if(!state.user)return;
+  let s=S();if(!state.user)return;
+  if(s.ownerId!==state.user.id){reset();s=S();s.ownerId=state.user.id}
   if(importer.isOpen()){importer.bind();return;}
-  if(s.ownerId!==state.user.id){reset()}
   if(!s.loaded){if(!s.loading)void load();return}
   if(s.form){
    for(const id of ['apptCancel','apptCancelBottom'])document.getElementById(id)?.addEventListener('click',()=>{s.form=false;s.editingId=null;render()});
@@ -270,6 +270,6 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const [id,delta] of [['apptPrev',-1],['apptNext',1]])document.getElementById(id)?.addEventListener('click',()=>{s.calendarDate=monthAdd(s.calendarDate,s.calendarMode,delta);s.selectedDay=s.calendarDate;render()});
   }
  }
- function reset(){state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
+ function reset(){importer.reset();state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
  return {view,bind,load,reset,report};
 }
