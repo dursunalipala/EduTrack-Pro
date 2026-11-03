@@ -160,12 +160,12 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const s=S(),r=s.editingId?s.rows.find(x=>x.id===s.editingId):null;
   if(r&&!mayEdit(r))return '<div class="panel">Bu randevuyu düzenleme yetkiniz bulunmuyor. <button type="button" class="btn" id="apptCancel">Geri dön</button></div>';
   const d=r||blank();
-  const nextNumber=Math.max(0,...s.rows.map(x=>Number(x.source_record_id)||0))+1;
+  const nextNumber=['owner','manager'].includes(state.role)?'#'+(Math.max(0,...s.rows.map(x=>Number(x.source_record_id)||0))+1):'Otomatik';
   const staffOptions=state.members.filter(m=>m.is_active).map(m=>{const p=state.profiles.find(p=>p.id===m.user_id);return '<option value="'+esc(m.user_id)+'"'+(d.staff_user_id===m.user_id?' selected':'')+'>'+esc(p?.full_name||m.user_id.slice(0,8))+'</option>'}).join('');
   const resultButtons=statuses.map(a=>'<label class="appt-result-option"><input type="radio" name="outcome" value="'+a[0]+'"'+(d.outcome===a[0]?' checked':'')+'><span style="--appt-color:'+a[3]+'">'+a[2]+' '+esc(a[1])+'</span></label>').join('');
   return '<section class="appt-form"><div class="appt-form-head"><h2>'+(r?'Randevu Düzenle':'Yeni Randevu')+'</h2><button type="button" class="btn" id="apptCancel">← İcmale Dön</button></div><p class="muted small">* işaretli alanlar zorunludur. Belgeler için dosya yüklemek yerine kurumca yetkilendirilmiş bağlantı girin.</p>'+
   '<div class="appt-form-actions">'+(r?phoneButtons(r):'')+'</div><form id="apptForm" class="appt-form-grid">'+
-  '<div class="appt-wide appt-new-id"><span>Kayıt ID</span><strong>#'+esc(r?.source_record_id||nextNumber)+'</strong><small>'+(r?'Değiştirilemez':'Kaydederken veritabanı tarafından otomatik ve güvenli oluşturulur.')+'</small></div>'+
+  '<div class="appt-wide appt-new-id"><span>Kayıt ID</span><strong>'+esc(r?.source_record_id?'#'+r.source_record_id:nextNumber)+'</strong><small>'+(r?'Değiştirilemez':'Kaydederken veritabanı tarafından otomatik ve güvenli oluşturulur.')+'</small></div>'+
   inp('Veli / Öğrenci Adı Soyadı','full_name','text',d.full_name,true)+inp('Telefon','phone','tel',d.phone,true)+
   '<label>Kurum<select name="school_unit">'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(v=>'<option value="'+v[0]+'"'+(v[0]===(d.school_unit||'aksam')?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label>'+inp('Eğitim Durumu','education_status','text',d.education_status)+inp('Yaş','age','number',d.age)+
   inp('Sınıf','grade','number',d.grade)+inp('AÖL Kredisi','aol_credit','number',d.aol_credit)+
