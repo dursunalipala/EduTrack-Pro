@@ -34,6 +34,7 @@ export function createAppointmentImporter({sb,WS,state,esc,toast,error,requireAc
   kayitdegil:'olumsuz'
  };
  const safeValue=(s,max=1500)=>String(s??'').trim().slice(0,max);
+ const blankNumeric=v=>!String(v??'').trim()||/^[-—–]+$/.test(String(v).replace(/[₺\s]/g,''));
  const parseNumber=v=>{
   let s=String(v??'').trim().replace(/[₺\s]/g,'');
   if(!s||s==='-'||s==='—')return null;
@@ -108,10 +109,10 @@ export function createAppointmentImporter({sb,WS,state,esc,toast,error,requireAc
   const problem=[];
   if(get('appointment_date')&&!aDate.date)problem.push('randevu tarihi');
   if(!cDate.date)problem.push('görüşme tarihi (zorunlu veya geçersiz)');
-  if(get('age')&&age===null||age!==null&&(age>120||!Number.isInteger(age)))problem.push('yaş');
-  if(get('grade')&&grade===null||grade!==null&&(grade>13||!Number.isInteger(grade)))problem.push('sınıf');
-  if(get('aol_credit')&&aol===null||aol!==null&&(aol>1000||!Number.isInteger(aol)))problem.push('kredi');
-  if(get('quoted_amount')&&amount===null||amount!==null&&amount>1000000000)problem.push('rakam');
+  if(!blankNumeric(get('age'))&&age===null||age!==null&&(age>120||!Number.isInteger(age)))problem.push('yaş');
+  if(!blankNumeric(get('grade'))&&grade===null||grade!==null&&(grade>13||!Number.isInteger(grade)))problem.push('sınıf');
+  if(!blankNumeric(get('aol_credit'))&&aol===null||aol!==null&&(aol>1000||!Number.isInteger(aol)))problem.push('kredi');
+  if(!blankNumeric(get('quoted_amount'))&&amount===null||amount!==null&&amount>1000000000)problem.push('rakam');
   if(problem.length)return {error:'Satır '+idx+': Geçersiz '+problem.join(', '),index:idx};
   const education=get('education_status');
   let phone=get('phone').replace(/[^\d+]/g,'');
