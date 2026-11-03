@@ -3,6 +3,7 @@
  * Dosyalar yalnızca erişim izinleri ayrı yönetilen HTTPS bağlantılarıdır.
  */
 import {createAppointmentImporter} from './appointments-import.js';
+import {createAppointmentFollowup} from './appointments-followup.js';
 export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActiveSession,render}){
  const statuses=[
   ['kayit','Kayıt','✓','#138851'],['on_kayit','Ön Kayıt','☑','#a67d06'],
@@ -20,10 +21,11 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  const statusBadge=x=>{const a=statusObj(x);return '<span class="appt-status" style="--appt-color:'+a[3]+'"><span aria-hidden="true">'+a[2]+'</span> '+esc(a[1])+'</span>'};
  const cell=x=>esc(x??'—');
  const phoneDigits=x=>{let d=String(x||'').replace(/\D/g,'');if(/^0?5\d{9}$/.test(d))d='90'+d.slice(-10);return d.length>=10&&d.length<=15?d:''};
- const phoneButtons=x=>{const d=phoneDigits(x);return d?'<div class="appt-quick"><a title="Ara" aria-label="Telefonla ara" href="tel:+'+d+'">☎</a><a title="WhatsApp üzerinden mesaj gönder" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+d+'?text='+encodeURIComponent('Merhaba, Elit Eğitim Kurumları randevunuz hakkında iletişime geçiyoruz.')+'">◉</a></div>':''};
+ const phoneButtons=r=>followup.quickActions(r);
  const blank=()=>({full_name:'',education_status:'',school_unit:'aksam',followup_date:'',age:'',grade:'',aol_credit:'',quoted_amount:'',province:'İstanbul',district:'',phone:'',staff_user_id:'',staff_name:'',contact_date:today(),first_contact:'',appointment_date:'',appointment_time:'',branch:'SLT',outcome:'beklemede',notes:'',identity_document_url:'',document_url:''});
  const S=()=>state.appointmentsModule||(state.appointmentsModule={rows:[],loaded:false,loading:false,ownerId:null,tab:'icmal',search:'',result:'all',school:'all',branch:'all',order:'latest',calendarMode:'month',calendarDate:today(),selectedDay:today(),form:false,editingId:null,archive:false});
  const importer=createAppointmentImporter({sb,WS,state,esc,toast,error,requireActiveSession,render,reload:()=>load(true),getRows:()=>S().rows,today});
+ const followup=createAppointmentFollowup({sb,WS,state,esc,toast,error,requireActiveSession,render,getRow:id=>S().rows.find(r=>r.id===id),getPhone:phoneDigits});
  const mayEdit=r=>['owner','manager'].includes(state.role)||state.role==='member'&&(r.created_by===state.user?.id||r.staff_user_id===state.user?.id);
  const mayArchive=()=>['owner','manager'].includes(state.role);
  const activeRows=()=>S().rows.filter(r=>S().archive?!!r.deleted_at:!r.deleted_at);
@@ -77,7 +79,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  }
  function toolbar(){
   const s=S(),branches=[...new Set(s.rows.map(r=>r.branch).filter(Boolean))].sort();
-  return '<div class="appt-toolbar"><div class="appt-toolbar-group"><button type="button" class="btn primary" id="apptNew">＋ Yeni Randevu</button>'+(mayArchive()?'<button type="button" class="btn" id="apptImport">↑ CSV İçe Aktar</button>':'')+'<button type="button" class="btn" id="apptExport">↓ CSV / Excel</button><button type="button" class="btn" id="apptPrint">⎙ Yazdır</button><button type="button" class="btn" id="apptReload">↻ Yenile</button></div><div class="appt-filters">'+
+  return '<div class="appt-toolbar"><div class="appt-actions-row"><button type="button" class="btn primary" id="apptNew">＋ Yeni Randevu</button><div class="appt-utility-row">'+(mayArchive()?'<button type="button" class="btn" id="apptImport">↑ İçe Aktar</button>':'')+'<button type="button" class="btn" id="apptExport">↓ CSV / Excel</button><button type="button" class="btn" id="apptPrint">⎙ Yazdır</button><button type="button" class="btn" id="apptReload">↻ Yenile</button></div></div><div class="appt-filters">'+
    '<input id="apptSearch" type="search" placeholder="Ad, telefon, not veya ilçe ara…" value="'+esc(s.search)+'" aria-label="Randevu ara">'+
    '<select id="apptResult" aria-label="Sonuç filtresi"><option value="all">Tüm sonuçlar</option>'+statuses.map(x=>'<option value="'+x[0]+'"'+(s.result===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+
    '<select id="apptSchool" aria-label="Kurum filtresi"><option value="all">Tüm kurumlar</option>'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(x=>'<option value="'+x[0]+'"'+(s.school===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'+ 
@@ -89,8 +91,8 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
  function sheet(){
   const rows=filterRows();
   const header=['ID','Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];
-  const tr=rows.map(r=>'<tr><td class="appt-id">#'+esc(r.source_record_id||'—')+'</td><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
-   '<td>'+esc(r.phone||'—')+phoneButtons(r.phone)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
+  const tr=rows.map(r=>'<tr class="appt-data-row"><td class="appt-id">#'+esc(r.source_record_id||'—')+'</td><td class="appt-name"><button type="button" class="appt-name-btn" data-appt-edit="'+r.id+'">'+esc(r.full_name)+'</button><small>'+esc(r.source_record_id||'')+'</small></td>'+
+   '<td>'+esc(r.phone||'—')+phoneButtons(r)+'</td><td>'+esc(({aksam:'Akşam Lisesi',ilkokul:'İlkokul',anasinifi:'Anaokulu',ortak:'Ortak'})[r.school_unit]||'—')+'</td><td>'+cell(r.education_status||'—')+'</td>'+
    '<td>'+cell(r.age)+'</td><td>'+cell(r.grade)+'</td><td>'+cell(r.aol_credit)+'</td><td>'+money(r.quoted_amount)+'</td>'+
    '<td>'+cell(r.province||'—')+'</td><td>'+cell(r.district||'—')+'</td><td>'+esc(r.staff_name||'—')+'</td>'+
    '<td>'+dateLabel(r.contact_date)+'</td><td class="appt-truncate" title="'+esc(r.first_contact||'')+'">'+esc(r.first_contact||'—')+'</td>'+
@@ -123,7 +125,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   return '<div class="appt-calbar"><div class="appt-toolbar-group"><button class="btn sm" id="apptPrev">‹</button><button class="btn sm" id="apptCurrent">Bugün</button><button class="btn sm" id="apptNext">›</button><b>'+esc(heading)+'</b></div><div class="appt-toolbar-group"><button class="btn sm'+(s.calendarMode==='day'?' primary':'')+'" data-appt-mode="day">Gün</button><button class="btn sm'+(s.calendarMode==='week'?' primary':'')+'" data-appt-mode="week">Hafta</button><button class="btn sm'+(s.calendarMode==='month'?' primary':'')+'" data-appt-mode="month">Ay</button></div></div>'+
   '<div class="appt-calgrid">'+(count>1?['Pt','Sa','Ça','Pe','Cu','Ct','Pz'].map(t=>'<div class="appt-dow">'+t+'</div>').join(''):'')+days+'</div>'+
   '<div class="appt-daydetail"><h3>'+dateLabel(s.selectedDay)+' · '+selected.length+' randevu</h3>'+
-  (selected.map(r=>'<div class="appt-event"><div><b>'+esc((r.appointment_time||'').slice(0,5)||'Saat yok')+' · '+esc(r.full_name)+'</b><div>'+statusBadge(r.outcome)+' <span class="muted">'+esc(r.branch||'')+'</span></div></div><div>'+phoneButtons(r.phone)+'<button type="button" class="btn sm" data-appt-edit="'+r.id+'">Detay</button></div></div>').join('')||'<p class="muted">Bu güne ait randevu bulunmuyor.</p>')+'</div>';
+  (selected.map(r=>'<div class="appt-event"><div><b>'+esc((r.appointment_time||'').slice(0,5)||'Saat yok')+' · '+esc(r.full_name)+'</b><div>'+statusBadge(r.outcome)+' <span class="muted">'+esc(r.branch||'')+'</span></div></div><div>'+phoneButtons(r)+'<button type="button" class="btn sm" data-appt-edit="'+r.id+'">Detay</button></div></div>').join('')||'<p class="muted">Bu güne ait randevu bulunmuyor.</p>')+'</div>';
  }
 
  function analysis(){
@@ -162,7 +164,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const staffOptions=state.members.filter(m=>m.is_active).map(m=>{const p=state.profiles.find(p=>p.id===m.user_id);return '<option value="'+esc(m.user_id)+'"'+(d.staff_user_id===m.user_id?' selected':'')+'>'+esc(p?.full_name||m.user_id.slice(0,8))+'</option>'}).join('');
   const resultButtons=statuses.map(a=>'<label class="appt-result-option"><input type="radio" name="outcome" value="'+a[0]+'"'+(d.outcome===a[0]?' checked':'')+'><span style="--appt-color:'+a[3]+'">'+a[2]+' '+esc(a[1])+'</span></label>').join('');
   return '<section class="appt-form"><div class="appt-form-head"><h2>'+(r?'Randevu Düzenle':'Yeni Randevu')+'</h2><button type="button" class="btn" id="apptCancel">← İcmale Dön</button></div><p class="muted small">* işaretli alanlar zorunludur. Belgeler için dosya yüklemek yerine kurumca yetkilendirilmiş bağlantı girin.</p>'+
-  '<form id="apptForm" class="appt-form-grid">'+
+  '<div class="appt-form-actions">'+(r?phoneButtons(r):'')+'</div><form id="apptForm" class="appt-form-grid">'+
   '<div class="appt-wide appt-new-id"><span>Kayıt ID</span><strong>#'+esc(r?.source_record_id||nextNumber)+'</strong><small>'+(r?'Değiştirilemez':'Kaydederken veritabanı tarafından otomatik ve güvenli oluşturulur.')+'</small></div>'+
   inp('Veli / Öğrenci Adı Soyadı','full_name','text',d.full_name,true)+inp('Telefon','phone','tel',d.phone,true)+
   '<label>Kurum<select name="school_unit">'+[['aksam','Akşam Lisesi'],['ilkokul','İlkokul'],['anasinifi','Anaokulu'],['ortak','Ortak']].map(v=>'<option value="'+v[0]+'"'+(v[0]===(d.school_unit||'aksam')?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label>'+inp('Eğitim Durumu','education_status','text',d.education_status)+inp('Yaş','age','number',d.age)+
@@ -187,7 +189,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(importer.isOpen())return importer.view();
   return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet düzenini koruyan, Sheet benzeri kayıt ve randevu takibi</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
    stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal">▤ Randevu İcmali</button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim">▦ Takvim</button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis">◷ Geçmiş Randevular</button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz">▥ Kayıt Analizi</button></div>'+
-   (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():sheet()))+'</div>';
+   (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():sheet()))+'</div>'+followup.view();
  }
  async function quickStatus(el){
   const row=S().rows.find(r=>r.id===el.dataset.apptQuick);if(!row||!mayEdit(row))return;
@@ -246,6 +248,8 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(s.ownerId!==state.user.id){reset();s=S();s.ownerId=state.user.id}
   if(importer.isOpen()){importer.bind();return;}
   if(!s.loaded){if(!s.loading)void load();return}
+  if(followup.isOpen()){followup.bindModal();return;}
+  followup.bindLaunch();
   if(s.form){
    for(const id of ['apptCancel','apptCancelBottom'])document.getElementById(id)?.addEventListener('click',()=>{s.form=false;s.editingId=null;render()});
    document.getElementById('apptForm')?.addEventListener('submit',e=>{e.preventDefault();void save(e.currentTarget)});
@@ -274,6 +278,6 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const [id,delta] of [['apptPrev',-1],['apptNext',1]])document.getElementById(id)?.addEventListener('click',()=>{s.calendarDate=monthAdd(s.calendarDate,s.calendarMode,delta);s.selectedDay=s.calendarDate;render()});
   }
  }
- function reset(){importer.reset();state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
+ function reset(){importer.reset();followup.reset();state.appointmentsModule={...S(),rows:[],loaded:false,loading:false,ownerId:null,form:false,editingId:null};}
  return {view,bind,load,reset,report};
 }
