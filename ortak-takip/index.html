@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#142c49"><meta name="application-name" content="Ortak Takip"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Ortak Takip">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./reporting-module.css"><link rel="stylesheet" href="./randevu-module.css"><link rel="icon" type="image/svg+xml" href="./icons/ortak-takip.svg"><link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./reporting-module.css"><link rel="stylesheet" href="./appointments-module.css"><link rel="icon" type="image/svg+xml" href="./icons/ortak-takip.svg"><link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
 <title>Ortak Takip | Yönetim Paneli</title>
 <style>
 :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:#1b2e45;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.hide{display:none!important}
@@ -698,7 +698,7 @@ body *{visibility:hidden!important}
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import {createInspectionModule} from "./inspection-module.js";
 import {createReportingModule} from "./reporting-module.js";
-import {createAppointmentsModule} from "./randevu-module.js";
+import {createAppointmentModule} from "./appointments-module.js";
 const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagytmTUtlvUL6MYOmw_UQJANk3C";
 // Earlier builds kept the session in localStorage. Clear only that legacy token;
  // retain the user's non-sensitive UI preferences (such as Sade Görünüm).
@@ -738,7 +738,7 @@ const iso=d=>{const a=new Date(d);return a.getFullYear()+"-"+String(a.getMonth()
 const canManage=()=>["owner","manager"].includes(state.role);
 const isStaff=()=>!canManage();
 const reporting=createReportingModule({state,sb,WS,esc,options,toast,render,memberName:id=>memberName(id),streamName:id=>streamName(id),loadReportLibrary,canManage,refresh});
-const appointments=createAppointmentsModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage});
+const appointments=createAppointmentModule({sb,WS,state,esc,toast,error,requireActiveSession,render});
 const inspection=createInspectionModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage,
  openFindingTask:(finding)=>{
   openModal("task");
