@@ -163,7 +163,7 @@ export function createReportingModule(api){
      (r.tab==='goals'?panel('Hedef Gerçekleşme',dGoalBars(a)):'')+
      (r.tab==='people'?panel('Kişi Bazında Tamamlanan / Toplam Görev',a.people.map((p,i)=>bar(p.name,p.done,Math.max(p.total,1),chartColors[i%chartColors.length],p.done+'/'+p.total)).join('')||empty):'')+
      (r.tab==='streams'?panel('İş Grubu Performansı',a.groups.map((p,i)=>bar(p.name,p.done,Math.max(p.total,1),chartColors[i%chartColors.length],p.done+'/'+p.total)).join('')||empty):'')+
-     panel('Ayrıntılı '+sets[r.tab].name+' Tablosu',table(sets[r.tab].cols,sets[r.tab].rows))))+
+     panel('Ayrıntılı '+sets[r.tab].name+' Tablosu',table(sets[r.tab].cols,sets[r.tab].rows)))+
    '<p class="rep-footnote">Raporlar giriş yapan kişinin kurum içi yetkileriyle erişebildiği verilere dayanır. PDF ve Excel dosyaları kullanıcı cihazına indirilir; rapor üretimi başka bir sunucuya veri göndermez. Kayıt / finansal sonuçlar yalnızca sistemde gerçek veri girilmişse raporlanır.</p></div>';
  }
  function dGoalBars(a){const goals=a.d.goals.filter(x=>Number(x.target_value)>0).slice(0,20);return goals.length?goals.map((g,i)=>bar(g.title,Math.min(Number(g.actual_value||0),Number(g.target_value)),Number(g.target_value),chartColors[i%chartColors.length],String(g.actual_value??'—')+' / '+g.target_value+' '+(g.unit||''))).join(''):empty;}
