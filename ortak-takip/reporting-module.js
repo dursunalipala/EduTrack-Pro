@@ -10,7 +10,7 @@ export function createReportingModule(api){
  const schoolName={all:'Tüm kurumlar',ortak:'Ortak',aksam:'Elit Akşam Lisesi',ilkokul:'Elit İlkokulu',anasinifi:'Elit Anaokulu',ortaokul:'Ortaokul'};
  const statusName={taslak:'Taslak',beklemede:'Beklemede',devam_ediyor:'Devam ediyor',kontrol_bekliyor:'Kontrol bekliyor',tamamlandi:'Tamamlandı',iptal:'İptal'};
  const priorityName={dusuk:'Düşük',normal:'Normal',yuksek:'Yüksek',kritik:'Kritik'};
- const tabs=[['overview','Genel Bakış'],['tasks','Görevler'],['goals','Hedefler'],['people','Ortaklar & Ekip'],['streams','İş Grupları'],['catalog','İş Havuzu'],['calendar','Takvim'],['inspection','Teftiş'],['documents','Evrak Merkezi'],['digital','Dijital Merkez'],['notifications','Bildirimler'],['audit','İşlem Geçmişi']];
+ const tabs=[['overview','Genel Bakış'],['tasks','Görevler'],['goals','Hedefler'],['people','Ortaklar & Ekip'],['streams','İş Grupları'],['catalog','İş Havuzu'],['calendar','Takvim'],['inspection','Teftiş'],['findings','Teftiş Bulguları'],['documents','Evrak Merkezi'],['digital','Dijital Merkez'],['notifications','Bildirimler'],['audit','İşlem Geçmişi'],['archive','Silinen Kayıtlar']];
  const R=()=>state.managementReport||(state.managementReport={
   period:'all',from:'',to:'',school:'all',stream:'all',person:'all',status:'all',priority:'all',tab:'overview',
   extras:{answers:[],queue:[],audit:[]},loaded:false,loading:false,loadError:'',truncated:[]});
@@ -22,6 +22,9 @@ export function createReportingModule(api){
  const matchesSchool=x=>R().school==='all'||(x.school_unit||'ortak')===R().school;
  const matchesStream=x=>R().stream==='all'||x.workstream_id===R().stream;
  const matchesPerson=x=>R().person==='all'||selectPerson(x).includes(R().person);
+ const taskById=id=>state.tasks.find(x=>x.id===id)||state.deletedTasks?.find(x=>x.id===id);
+ const allowedTaskRef=id=>{const t=taskById(id);return t&&matchesSchool(t)&&matchesStream(t)&&matchesPerson(t)};
+ const connectedSchoolRecord=x=>R().school==='all'&&R().stream==='all'||(x.task_id&&allowedTaskRef(x.task_id));
  const effectiveRange=()=>{
   const r=R(),now=new Date(),today=nowDay(),fromMonth=localISO(new Date(now.getFullYear(),now.getMonth(),1));
   if(r.period==='month')return {from:fromMonth,to:today,label:'Bu ay'};
@@ -41,14 +44,16 @@ export function createReportingModule(api){
   goals:state.goals.filter(g=>matchesSchool(g)&&matchesStream(g)&&(R().person==='all'||g.owner_id===R().person)
     &&(R().period==='all'||inRange(g.period_start||g.created_at)||inRange(g.period_end))),
   catalog:state.catalog.filter(c=>matchesSchool(c)&&matchesStream(c)&&(R().person==='all'||c.assigned_to===R().person)&&inRange(c.created_at)),
-  events:state.events.filter(e=>(R().person==='all'||e.assigned_to===R().person)&&inRange(e.starts_at)),
+  events:state.events.filter(e=>(R().person==='all'||e.assigned_to===R().person)&&inRange(e.starts_at)&&connectedSchoolRecord(e)),
   resources:state.digitalResources.filter(d=>!d.is_archived&&matchesSchool(d)&&(R().person==='all'||d.responsible_id===R().person)&&inRange(d.created_at)),
   documents:(state.inspection?.docs||[]).filter(d=>matchesSchool(d)&&inRange(d.created_at)),
   sessions:(state.inspection?.sessions||[]).filter(s=>matchesSchool(s)&&inRange(s.created_at)),
-  queue:(R().loaded?R().extras.queue:state.notificationQueue).filter(n=>(R().person==='all'||n.recipient_id===R().person)&&inRange(n.created_at)),
-  activity:state.taskActivities.filter(a=>inRange(a.created_at)&&(R().person==='all'||a.actor_id===R().person)),
-  transfers:state.taskAssignmentHistory.filter(h=>inRange(h.changed_at)&&(R().person==='all'||[h.changed_by,h.executor_id].includes(R().person))),
-  audit:(R().extras.audit||[]).filter(a=>inRange(a.happened_at)&&(R().person==='all'||a.actor_id===R().person))
+  queue:(R().loaded?R().extras.queue:state.notificationQueue).filter(n=>(R().person==='all'||n.recipient_id===R().person)&&inRange(n.created_at)&&connectedSchoolRecord(n)),
+  activity:state.taskActivities.filter(a=>inRange(a.created_at)&&(R().person==='all'||a.actor_id===R().person)&&allowedTaskRef(a.task_id)),
+  transfers:state.taskAssignmentHistory.filter(h=>inRange(h.changed_at)&&(R().person==='all'||[h.changed_by,h.executor_id].includes(R().person))&&allowedTaskRef(h.task_id)),
+  audit:(R().extras.audit||[]).filter(a=>inRange(a.happened_at)&&(R().person==='all'||a.actor_id===R().person)&&(R().school==='all'||state.digitalResources.some(d=>d.id===a.resource_id&&matchesSchool(d)))),
+  deleted:state.deletedTasks.filter(t=>matchesSchool(t)&&matchesStream(t)&&matchesPerson(t)&&inRange(t.deleted_at||t.created_at)),
+  deletedCatalog:state.deletedCatalog.filter(t=>matchesSchool(t)&&matchesStream(t)&&inRange(t.deleted_at||t.created_at))
  });
  function aggregate(){
   const d=scopedItems(),tasks=d.tasks,valid=tasks.filter(t=>t.status!=='iptal'),done=valid.filter(t=>t.status==='tamamlandi'),open=tasks.filter(isOpen),today=nowDay(),
@@ -106,16 +111,18 @@ export function createReportingModule(api){
   for(const t of state.memberStatusHistory.filter(x=>inRange(x.happened_at)))notes.push([trDate(t.happened_at),'Üye durumu',memberName(t.changed_by),memberName(t.user_id),t.action||'',t.note||'']);
   notes.sort((x,y)=>y[0].localeCompare(x[0],'tr'));
   const ds={
-   tasks:{name:'Görevler',cols:['Görev','Kurum','İş grubu','Üst sorumlu','Uygulayıcı','Kontrol','Durum','Öncelik','İlerleme %','Başlangıç','Son tarih','Tamamlanma'],rows:d.tasks.map(t=>[t.title,schoolName[t.school_unit]||'Ortak',streamName(t.workstream_id),memberName(t.assigned_to),memberName(t.executor_id),memberName(t.reviewer_id),statusName[t.status]||t.status,priorityName[t.priority]||t.priority,t.progress||0,trDate(t.start_date),trDate(t.due_date),trDate(t.completed_at)])},
-   goals:{name:'Hedefler',cols:['Hedef','Kurum','Tür','Kategori','İş grubu','Sorumlu','Hedef değer','Gerçekleşme','Birim','Oran %','Onay','Başlangıç','Bitiş'],rows:d.goals.map(g=>[g.title,schoolName[g.school_unit]||'Ortak',g.goal_level,g.metric_category,streamName(g.workstream_id),memberName(g.owner_id),g.target_value??'—',g.actual_value??'—',g.unit,Number(g.target_value)>0&&g.actual_value!=null?percent(g.actual_value,g.target_value):'—',g.approval_status,trDate(g.period_start),trDate(g.period_end)])},
+   tasks:{name:'Görevler',cols:['Görev','Açıklama','Kurum','İş grubu','Üst sorumlu','Uygulayıcı','Yardımcılar','Kontrol','Durum','Öncelik','İlerleme %','Başlangıç','Son tarih','Tamamlanma','Uygulama notu','Kontrol notu','Kanıt bağlantısı'],rows:d.tasks.map(t=>[t.title,t.description||'',schoolName[t.school_unit]||'Ortak',streamName(t.workstream_id),memberName(t.assigned_to),memberName(t.executor_id),(t.helper_user_ids||[]).map(memberName).join(', '),memberName(t.reviewer_id),statusName[t.status]||t.status,priorityName[t.priority]||t.priority,t.progress||0,trDate(t.start_date),trDate(t.due_date),trDate(t.completed_at),t.execution_note||'',t.review_note||'',t.evidence_url||''])},
+   goals:{name:'Hedefler',cols:['Hedef','Kurum','Tür','Kategori','İş grubu','Sorumlu','Hedef değer','Gerçekleşme','Birim','Oran %','Ölçüm tanımı','Onay','Onaylayan','Onay tarihi','Başlangıç','Bitiş'],rows:d.goals.map(g=>[g.title,schoolName[g.school_unit]||'Ortak',g.goal_level,g.metric_category,streamName(g.workstream_id),memberName(g.owner_id),g.target_value??'—',g.actual_value??'—',g.unit,Number(g.target_value)>0&&g.actual_value!=null?percent(g.actual_value,g.target_value):'—',g.measurement_definition||'',g.approval_status,memberName(g.approved_by),trDate(g.approved_at),trDate(g.period_start),trDate(g.period_end)])},
    people:{name:'Ortaklar ve Ekip',cols:['Kişi','Rol','Üyelik','İlgili görev','Tamamlanan','Geciken','Kontrol bekleyen','Hedef','İşlem'],rows:a.people.map(x=>[x.name,x.role,x.active?'Aktif':'Pasif/Arşiv',x.total,x.done,x.late,x.pending,x.goals,x.actions])},
    streams:{name:'İş Grupları',cols:['İş grubu','Yönetici','Toplam görev','Tamamlanan','Geciken','Tamamlanma %'],rows:a.groups.map(x=>[x.name,x.lead,x.total,x.done,x.late,percent(x.done,x.total)])},
    catalog:{name:'İş ve Görev Havuzu',cols:['Görev tanımı','Kurum','İş grubu','Sorumlu','Tekrar','Öncelik','Otomatik','Durum','Başlangıç','Bitiş'],rows:d.catalog.map(x=>[x.title,schoolName[x.school_unit]||'Ortak',streamName(x.workstream_id),memberName(x.assigned_to),x.cadence,priorityName[x.priority]||x.priority,x.auto_enabled?'Evet':'Hayır',x.is_active?'Aktif':'Pasif',trDate(x.start_on),trDate(x.end_on)])},
    calendar:{name:'Takvim',cols:['Etkinlik','Başlangıç','Bitiş','Sorumlu','Bağlı görev','Açıklama'],rows:d.events.map(e=>[e.title,new Date(e.starts_at).toLocaleString('tr-TR'),new Date(e.ends_at).toLocaleString('tr-TR'),memberName(e.assigned_to),state.tasks.find(t=>t.id===e.task_id)?.title||'—',e.details||''])},
    inspection:{name:'Teftiş',cols:['Oturum','Kurum','Eğitim yılı','Durum','Kontrol sayısı','Uygun','Eksik','İncelenmedi','Kritik eksik','Tarih'],rows:inspectionRows},
-   documents:{name:'Evrak Merkezi',cols:['Belge','Kurum','Kategori','Son geçerlilik','Durum','Açıklama'],rows:d.documents.map(x=>[x.title,schoolName[x.school_unit]||'Ortak',x.category,trDate(x.expires_on),x.expires_on&&x.expires_on<today?'Süresi geçmiş':x.expires_on&&x.expires_on<=localISO(new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()+30))?'30 gün içinde dolacak':'Takipte',x.notes||''])},
-   digital:{name:'Dijital Merkez',cols:['Bağlantı','Kurum','Kategori','Sorumlu','Durum','Eklenme'],rows:d.resources.map(x=>[x.title,schoolName[x.school_unit]||'Ortak',x.category,memberName(x.responsible_id),x.status,trDate(x.created_at)])},
+   documents:{name:'Evrak Merkezi',cols:['Belge','Kurum','Kategori','Son geçerlilik','Durum','Açıklama','Drive bağlantısı'],rows:d.documents.map(x=>[x.title,schoolName[x.school_unit]||'Ortak',x.category,trDate(x.expires_on),x.expires_on&&x.expires_on<today?'Süresi geçmiş':x.expires_on&&x.expires_on<=localISO(new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()+30))?'30 gün içinde dolacak':'Takipte',x.notes||'',x.drive_url||''])},
+   digital:{name:'Dijital Merkez',cols:['Bağlantı','Kurum','Kategori','Sorumlu','Durum','Eklenme','Web adresi'],rows:d.resources.map(x=>[x.title,schoolName[x.school_unit]||'Ortak',x.category,memberName(x.responsible_id),x.status,trDate(x.created_at),x.url||''])},
    notifications:{name:'Bildirimler',cols:['Bildirim türü','Alıcı','Durum','Oluşturma','Gönderim','Hata'],rows:d.queue.map(x=>[x.kind,memberName(x.recipient_id),x.status,trDate(x.created_at),trDate(x.sent_at),x.last_error||''])},
+   findings:{name:'Teftiş Bulguları',cols:['Ön denetim','Kontrol maddesi','Kategori','Durum','Kritik','Açıklama','Güncelleme'],rows:answers.map(x=>[d.sessions.find(s=>s.id===x.session_id)?.title||'Ön denetim',x.criterion_title||x.criterion_key,x.category,x.status,x.is_critical?'Evet':'Hayır',x.note||'',trDate(x.updated_at)])},
+   archive:{name:'Silinen Kayıtlar',cols:['Kayıt türü','Başlık','Kurum','İş grubu','Silinme tarihi','Silen'],rows:[...d.deleted.map(x=>['Görev',x.title,schoolName[x.school_unit]||'Ortak',streamName(x.workstream_id),trDate(x.deleted_at),memberName(x.deleted_by)]),...d.deletedCatalog.map(x=>['İş havuzu',x.title,schoolName[x.school_unit]||'Ortak',streamName(x.workstream_id),trDate(x.deleted_at),memberName(x.deleted_by)])]},
    audit:{name:'İşlem Geçmişi',cols:['Tarih','Alan','İşlemi yapan','Kayıt','İşlem','Açıklama'],rows:notes}
   };
   return ds;
@@ -131,7 +138,8 @@ export function createReportingModule(api){
   const groups=a.groups.map((w,i)=>bar(w.name,w.done,Math.max(w.total,1),chartColors[i%chartColors.length],w.done+'/'+w.total+' · %'+percent(w.done,w.total)));
   const people=a.people.map((m,i)=>bar(m.name,m.done,Math.max(m.total,1),chartColors[i%chartColors.length],m.done+'/'+m.total));
   const months=[],now=new Date();for(let i=5;i>=0;i--)months.push(localISO(new Date(now.getFullYear(),now.getMonth()-i,1)).slice(0,7));
-  const trend=months.map(m=>({month:m,created:a.tasks.filter(t=>monthKey(t.created_at)===m).length,done:a.tasks.filter(t=>monthKey(t.completed_at)===m).length}));
+  const trendBase=state.tasks.filter(t=>matchesSchool(t)&&matchesStream(t)&&matchesPerson(t));
+  const trend=months.map(m=>({month:m,created:trendBase.filter(t=>monthKey(t.created_at)===m).length,done:trendBase.filter(t=>monthKey(t.completed_at)===m).length}));
   const max=Math.max(1,...trend.map(x=>Math.max(x.created,x.done)));
   const trendChart='<div class="rep-trend">'+trend.map(x=>'<div class="rep-trend-month"><div class="rep-trend-bars"><i title="Açılan: '+x.created+'" style="height:'+Math.max(2,Math.round(100*x.created/max))+'%;background:#207d9b"></i><i title="Tamamlanan: '+x.done+'" style="height:'+Math.max(2,Math.round(100*x.done/max))+'%;background:#37b6a5"></i></div><small>'+esc(x.month.slice(5))+'/'+esc(x.month.slice(2,4))+'</small></div>').join('')+'</div><p class="rep-hint">■ Açılan görev &nbsp; <span style="color:#36a985">■</span> Tamamlanan görev · Son 6 takvim ayı</p>';
   return '<div class="rep-kpis">'+stats.map((s,i)=>'<div class="rep-kpi"><span>'+esc(s[0])+'</span><strong>'+num(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('')+'</div>'+
@@ -180,8 +188,8 @@ export function createReportingModule(api){
   };
   try{
    const jobs=await Promise.allSettled([
-    fetchPages('inspection_answers','session_id,status,is_critical,updated_at','updated_at'),
-    fetchPages('notification_queue','recipient_id,kind,status,created_at,sent_at,last_error','created_at'),
+    fetchPages('inspection_answers','session_id,criterion_key,criterion_title,category,status,is_critical,note,updated_at','updated_at'),
+    fetchPages('notification_queue','recipient_id,task_id,kind,status,created_at,sent_at,last_error','created_at'),
     fetchPages('digital_resource_audit','resource_id,actor_id,action,happened_at','happened_at')
    ]);
    const keys=['answers','queue','audit'];
