@@ -107,3 +107,30 @@
 .appt-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:13px 15px;background:#f9fcfd;border:1px solid #e1eaf0;border-radius:0 0 12px 12px;font-size:12px;color:#5e788b}
 .appt-pagination>div{display:flex;gap:8px;align-items:center;font-weight:700}.appt-pagination .btn:disabled{opacity:.42;cursor:not-allowed}
 @media(max-width:720px){.appt-pagination{padding:12px;flex-direction:column;align-items:stretch}.appt-pagination>div{justify-content:space-between}}
+
+
+/* Automatic appointment follow-up queue */
+.appt-task-link{display:inline-flex;align-items:center;gap:5px;border-color:#cce6eb!important;background:#eff9fb!important;color:#126a7b!important;text-decoration:none!important;font-weight:800}
+.appt-task-link:hover{background:#dff3f6!important}
+.appt-task-queue{display:flex;flex-direction:column;gap:13px}
+.appt-task-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid #d9e8f0;background:linear-gradient(110deg,#f0f9fc,#fff);padding:18px;border-radius:13px}
+.appt-task-head h2{margin:0 0 6px;color:#183c56;font-size:17px}
+.appt-task-head p{margin:0;color:#748999;font-size:12px;line-height:1.5}
+.appt-task-head>span{white-space:nowrap;background:#e0f2f6;color:#145e78;border-radius:99px;padding:7px 12px;font-weight:750;font-size:12px}
+.appt-task-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.appt-task-kpis>div{padding:14px;border:1px solid #e1eaf1;background:white;border-radius:12px}
+.appt-task-kpis>div:first-child b{color:#b34838}
+.appt-task-kpis b{font-size:24px;display:block;color:#1a5776}
+.appt-task-kpis small{color:#718999;font-size:11px}
+.appt-task-table-wrap{overflow-x:auto;border:1px solid #e4edf3;border-radius:12px;background:white}
+.appt-task-table{width:100%;min-width:850px;border-collapse:collapse}
+.appt-task-table th{font-size:11px;text-align:left;padding:12px 11px;background:#eaf4f8;white-space:nowrap;color:#3a5b70}
+.appt-task-table td{font-size:12px;border-top:1px solid #edf1f4;padding:11px;white-space:nowrap;color:#29495f}
+.appt-task-table tr:hover td{background:#f5fbfc}
+.appt-task-table td .appt-task-link{white-space:nowrap}
+.appt-task-late{color:#be4633;font-weight:800}
+.appt-task-empty{text-align:center;padding:29px 16px;border:1px dashed #ccdde7;border-radius:12px;background:white;color:#7c91a0;font-size:12px}
+@media(max-width:720px){.appt-task-head{padding:13px}.appt-task-head h2{font-size:15px}
+.appt-task-kpis{gap:6px}.appt-task-kpis>div{padding:11px}.appt-task-kpis b{font-size:21px}
+.appt-task-table th,.appt-task-table td{padding:8px}
+}
