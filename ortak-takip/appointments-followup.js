@@ -1,7 +1,7 @@
 /* Ortak Takip | Randevu iletişim merkezi
    WhatsApp bağlantısı kullanıcı onayıyla açılır. Sistem kendiliğinden veliye mesaj göndermez.
  */
-export function createAppointmentFollowup({sb,WS,state,esc,toast,error,requireActiveSession,render,getRow,getPhone}) {
+export function createAppointmentFollowup({sb,WS,state,esc,toast,error,requireActiveSession,render,getRow,getPhone,reload}) {
  const stages=[
   ['hatirlatma','Randevu hatırlatması'],['yeniden','Yeni randevu planlama'],
   ['takip','Görüşme sonrası takip'],['kayit','Kayıt teşekkür mesajı'],
@@ -100,7 +100,7 @@ export function createAppointmentFollowup({sb,WS,state,esc,toast,error,requireAc
     workspace_id:WS,appointment_id:S.id,actor_id:state.user.id,channel,
     note:channel==='whatsapp_confirmed'?'WhatsApp gönderimi personel tarafından onaylandı.':''
    });
-   if(err)throw err;toast('İletişim işlemi kaydedildi.');await loadEvents(S.id);
+   if(err)throw err;toast('İletişim kaydedildi. Uygun durumlarda takip görevi otomatik güncellenir.');await loadEvents(S.id);if(reload)await reload();
   }catch(e){error(e)}finally{S.busy=false}
  }
  function bindModal(){
