@@ -782,6 +782,16 @@ const periodIncludes=(day,r)=>!r.start||!!day&&(day>=r.start&&day<=r.end);
 const periodOverlaps=(start,end,r)=>!r.start||((!start||start<=r.end)&&(!end||end>=r.start));
 function toast(m){const a=$("#toast");a.textContent=m;a.style.display="block";clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>a.style.display="none",4500)}
 function error(e){toast(e?.message||String(e)||"İşlem başarısız");console.error(e)}
+async function sendAuthVerification(payload){
+ const response=await fetch(URL+"/functions/v1/ortak-takip-auth-mail",{
+  method:"POST",
+  headers:{"Content-Type":"application/json","apikey":KEY},
+  body:JSON.stringify(payload)
+ });
+ const info=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(info.error||"E-posta işlemi tamamlanamadı");
+ return info;
+}
 let authMode="login";
 let recoveryMode=new URLSearchParams(window.location.hash.replace(/^#/,"")).get("type")==="recovery";
 function showRecoveryScreen(){
@@ -817,8 +827,8 @@ $("#recoveryForm").onsubmit=async ev=>{
   finally{btn.disabled=false}
 };
 $("#switchAuth").onclick=()=>{authMode=authMode==="login"?"signup":"login";$("#namefield").classList.toggle("hide",authMode!=="signup");$("#submitAuth").textContent=authMode==="signup"?"Hesap Oluştur":"Giriş Yap";$("#switchAuth").textContent=authMode==="signup"?"Girişe dön":"Hesap oluştur";$("#authmsg").textContent=""};
-$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});$("#authmsg").textContent=e?e.message:"Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderilecektir."};
-$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){r=await sb.auth.signUp({email,password,options:{data:{full_name:$("#authname").value.trim()},emailRedirectTo:authRedirectUrl()}});if(r.error)throw r.error;$("#authmsg").textContent="Hesabınız oluşturuldu. E-posta doğrulama bağlantısını açıp ardından giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;securityLocked=false;recordSecurityActivity(true);await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
+$("#resetAuth").onclick=async()=>{const email=$("#email").value.trim();if(!email){$("#authmsg").textContent="Önce e-posta adresinizi giriniz.";return}try{const r=await sendAuthVerification({operation:"recovery",email});$("#authmsg").textContent=r.message||"Şifre yenileme bağlantısı gönderildi."}catch(e){$("#authmsg").textContent=e.message}};
+$("#authform").onsubmit=async ev=>{ev.preventDefault();const b=$("#submitAuth");b.disabled=true;$("#authmsg").textContent="";const email=$("#email").value.trim(),password=$("#password").value;try{let r;if(authMode==="signup"){const mailResult=await sendAuthVerification({operation:"signup",email,password,full_name:$("#authname").value.trim()});$("#authmsg").textContent=mailResult.message||"Doğrulama e-postası gönderildi. Bağlantıyı açtıktan sonra giriş yapınız."}else{r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;securityLocked=false;recordSecurityActivity(true);await boot()}}catch(e){$("#authmsg").textContent=e.message}finally{b.disabled=false}};
 // Device security: signing out does not revoke other partners' device sessions.
 const IDLE_TIMEOUT_MS=15*60*1000;
 const BACKGROUND_TIMEOUT_MS=5*60*1000;
