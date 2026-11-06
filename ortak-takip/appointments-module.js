@@ -64,7 +64,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
       .select('appointment_id,task_id,task:tasks!appointment_task_links_task_id_fkey(id,title,status,due_date,executor_id,deleted_at)')
       .eq('workspace_id',WS).eq('is_current',true);
    if(linked.error)console.warn('Takip görevleri alınamadı:',linked.error.message);
-   s.rows=rows;s.taskLinks=linked.error?[]:(linked.data||[]);s.loaded=true;
+   s.rows=rows;s.taskLinks=linked.error?[]:(linked.data||[]);s.loaded=true;s.lastLoadedAt=Date.now();
   }catch(e){error(e)}
   finally{s.loading=false;if(state.view==='appointments')render()}
  }
@@ -227,7 +227,9 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(!state.user||s.ownerId!==state.user.id)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">Oturum randevu kayıtları için hazırlanıyor…</p></section>';
   if(!s.loaded)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">'+(s.loading?'Randevular alınıyor…':'Randevu verileri yükleniyor…')+'</p></section>';
   if(importer.isOpen())return importer.view();
-  return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet düzenini koruyan, Sheet benzeri kayıt ve randevu takibi</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
+  const lastSync=s.rows.reduce((m,r)=>r.last_synced_at&&r.last_synced_at>m?r.last_synced_at:m,'');
+  const syncLabel=lastSync?'Son AppSheet veri aktarımı: '+new Date(lastSync).toLocaleString('tr-TR'):'AppSheet otomatik aktarımı: ilk gerçek veri gönderimi bekleniyor';
+  return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet kayıtları → Ortak Takip · tek yönlü geçiş dönemi</p><p class="muted small">'+esc(syncLabel)+'</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
    stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal">▤ Randevu İcmali</button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim">▦ Takvim</button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis">◷ Geçmiş Randevular</button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz">▥ Kayıt Analizi</button><button class="'+(s.tab==='takip'?'active':'')+'" data-appt-tab="takip">☎ Takip Görevleri</button></div>'+
    (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():s.tab==='takip'?taskQueue():sheet()))+'</div>'+followup.view();
  }
@@ -288,6 +290,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(s.ownerId!==state.user.id){reset();s=S();s.ownerId=state.user.id}
   if(importer.isOpen()){importer.bind();return;}
   if(!s.loaded){if(!s.loading)void load();return}
+  if(!s.loading&&!s.form&&!importer.isOpen()&&Date.now()-(s.lastLoadedAt||0)>60000)void load(true);
   if(followup.isOpen()){followup.bindModal();return;}
   followup.bindLaunch();
   if(s.form){
