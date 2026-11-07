@@ -3374,4 +3374,86 @@ sb.auth.onAuthStateChange((event)=>{
 });
 bindInAppNotifications();
 boot().catch(error);
-</script></body></html>
+</script>
+<style>
+.team-access-overlay{position:fixed;inset:0;background:#10213bb8;z-index:80;display:grid;place-items:center;padding:15px}
+.team-access-dialog{background:#fff;color:#203750;border-radius:17px;padding:22px;width:min(820px,100%);max-height:92dvh;overflow:auto;box-shadow:0 18px 70px #0003}
+.team-access-dialog h2{margin:0 0 12px}.team-access-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team-access-fields label{display:grid;gap:5px;font-size:13px;font-weight:650}.team-access-fields input,.team-access-fields select{width:100%}
+.team-access-permissions{width:100%;border-collapse:collapse;font-size:12px;white-space:normal}
+.team-access-permissions th,.team-access-permissions td{padding:7px 4px;text-align:center}
+.team-access-permissions td:first-child{text-align:left;font-weight:650}
+.team-access-permissions input{width:17px;height:17px}
+@media(max-width:650px){.team-access-fields{grid-template-columns:1fr}.team-access-dialog{padding:14px}.team-access-permissions{font-size:10px}.team-access-permissions th,.team-access-permissions td{padding:5px 2px}}
+</style>
+<script>
+(()=>{
+const roles=[["ust_yonetici","Üst Yönetici"],["yonetici","Yönetici"],["mudur","Müdür"],["mudur_yardimcisi","Müdür Yardımcısı"],["kayit_danismani","Kayıt Danışmanı"],["muhasebe","Muhasebe"],["memur","Memur"],["izleyici","İzleyici"]];
+const modules=[["overview","Genel Bakış"],["tasks","Görevler"],["catalog","İş Havuzu"],["calendar","Takvim"],["goals","Hedefler"],["streams","İş Grupları"],["reports","Raporlama"],["appointments","Randevu"],["notifications","Bildirimler"],["digital","Dijital Merkez"],["ai","Yapay Zekâ"],["inspection","Teftiş"],["documents","Evrak Merkezi"],["members","Ortaklar ve Ekip"]];
+const actions=[["view","Gör"],["create","Ekle"],["edit","Düzenle"],["delete","Sil"],["approve","Onay"],["manage","Yönet"]];
+const endpoint="https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-admin";
+let access=[];
+const escTeam=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function request(body){
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session?.access_token)throw Error("Oturum bulunamadı");
+ const res=await fetch(endpoint,{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify(body)});
+ const data=await res.json();if(!res.ok)throw Error(data.error||"İşlem başarısız");return data;
+}
+function defaults(role){
+ const out={};
+ modules.forEach(([m])=>{const allowed=role==="izleyici"?["overview","calendar"].includes(m):role==="muhasebe"?["overview","reports","documents","tasks"].includes(m):role==="kayit_danismani"?["overview","appointments","tasks","calendar"].includes(m):role==="memur"?["overview","documents","tasks","calendar"].includes(m):true;
+ out[m]={view:allowed,create:allowed&&role!=="izleyici",edit:allowed&&role!=="izleyici",delete:false,approve:false,manage:false};
+ });return out;
+}
+function close(){document.getElementById("teamAccessOverlay")?.remove()}
+function openEditor(member){
+ if(state.role!=="owner")return;
+ const current=access.find(x=>x.user_id===member?.user_id);
+ const profile=state.profiles.find(x=>x.id===member?.user_id)||{};
+ const role=member?(current?.job_role||(member.role==="owner"?"admin":member.role==="manager"?"yonetici":member.role==="viewer"?"izleyici":"memur")):"memur";
+ const perms=current?.permissions&&Object.keys(current.permissions).length?current.permissions:defaults(role);
+ const edit=!!member;
+ const overlay=document.createElement("div");overlay.id="teamAccessOverlay";overlay.className="team-access-overlay";
+ overlay.innerHTML='<form class="team-access-dialog"><div class="row"><h2>'+(edit?"Rol ve Yetki Düzenle":"Doğrudan Personel Oluştur")+'</h2><button class="btn sm" type="button" data-close>✕</button></div>'+
+ (edit?'<p class="small muted">'+escTeam(profile.full_name||member.user_id)+'</p>':
+ '<div class="team-access-fields"><label>Ad Soyad<input name="full_name" required minlength="2" maxlength="120"></label><label>E-posta<input name="email" type="email" required></label><label>Unvan<input name="position_title" maxlength="120"></label><label>Başlangıç şifresi<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label></div>')+
+ '<div class="team-access-fields" style="margin:14px 0"><label>Personel rolü<select name="job_role">'+(role==="admin"?'<option value="admin">Admin</option>':roles.map(([k,v])=>'<option value="'+k+'"'+(k===role?" selected":"")+'>'+v+'</option>').join(""))+'</select></label></div>'+
+ '<div class="tablewrap"><table class="team-access-permissions"><thead><tr><th>Modül</th>'+actions.map(x=>'<th>'+x[1]+'</th>').join("")+'</tr></thead><tbody>'+
+ modules.map(([key,label])=>'<tr><td>'+label+'</td>'+actions.map(([a])=>'<td><input type="checkbox" data-module="'+key+'" data-action="'+a+'" '+(perms[key]?.[a]?"checked":"")+' '+(role==="admin"?"disabled":"")+'></td>').join("")+'</tr>').join("")+'</tbody></table></div>'+
+ '<p class="small muted">Not: Yeni yetkiler kaydedilir. Tüm modüllerde sunucu tarafı izin uygulaması tamamlanana kadar mevcut temel rol kuralları geçerlidir.</p>'+
+ '<div class="actions" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn" data-close>Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div></form>';
+ document.body.append(overlay);
+ overlay.querySelectorAll("[data-close]").forEach(b=>b.onclick=close);
+ overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+ const roleSelect=overlay.querySelector('[name="job_role"]');
+ roleSelect.addEventListener("change",()=>{const p=defaults(roleSelect.value);overlay.querySelectorAll("[data-module]").forEach(x=>x.checked=!!p[x.dataset.module]?.[x.dataset.action])});
+ overlay.querySelector("form").addEventListener("submit",async e=>{
+ e.preventDefault();const form=e.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;
+ try{
+ const permissions={};form.querySelectorAll("[data-module]").forEach(x=>{(permissions[x.dataset.module]??={})[x.dataset.action]=x.checked});
+ const payload={action:edit?"set_access":"create_member",job_role:roleSelect.value,permissions};
+ if(edit)payload.user_id=member.user_id;else{
+ const fd=new FormData(form);Object.assign(payload,{full_name:fd.get("full_name"),email:fd.get("email"),position_title:fd.get("position_title"),password:fd.get("password")});
+ }
+ const result=await request(payload);close();toast(result.message||"Kaydedildi");await refresh();await loadAccess();
+ }catch(err){toast(err.message||"İşlem başarısız")}finally{button.disabled=false}
+ });
+}
+async function loadAccess(){if(state.role!=="owner")return;try{const r=await request({action:"list_access"});access=r.access||[]}catch(e){console.warn("Rol ayarları okunamadı",e.message)}}
+document.addEventListener("click",e=>{
+ const add=e.target.closest("#newMember");if(add&&state.role==="owner"){e.preventDefault();e.stopImmediatePropagation();openEditor(null);return}
+ const btn=e.target.closest("[data-team-access]");if(btn&&state.role==="owner"){e.preventDefault();e.stopImmediatePropagation();const m=state.members.find(x=>x.user_id===btn.dataset.teamAccess);if(m)openEditor(m)}
+},true);
+const observer=new MutationObserver(()=>{
+ if(state?.view!=="members"||state.role!=="owner")return;
+ document.querySelectorAll("[data-edit-member]").forEach(btn=>{
+ if(btn.parentElement?.querySelector("[data-team-access]"))return;
+ const b=document.createElement("button");b.type="button";b.className="btn sm";b.textContent="Rol ve Yetkiler";b.dataset.teamAccess=btn.dataset.editMember;btn.parentElement.append(b);
+ });
+});
+observer.observe(document.body,{subtree:true,childList:true});
+document.addEventListener("DOMContentLoaded",()=>{setTimeout(loadAccess,1500)});
+})();
+</script>
+</body></html>
