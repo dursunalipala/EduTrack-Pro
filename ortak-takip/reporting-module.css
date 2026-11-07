@@ -72,3 +72,16 @@
 .rep-filters{padding:10px}.rep-kpis{gap:9px}.rep-kpi{padding:13px 11px}.rep-kpi strong{font-size:23px}.rep-kpi span{font-size:11px}.rep-kpi small{font-size:10px}.rep-panel{padding:15px 13px}.rep-donut-row{gap:12px}.rep-donut{width:134px;height:134px}.rep-donut>span{width:94px;height:94px}.rep-donut strong{font-size:26px}.rep-donut-legend>div{font-size:10px}.rep-table-title h3{font-size:18px}
 }
 @media print{.rep-root{display:none!important}#printReport .rep-tablewrap{overflow:visible!important;max-height:none!important;border:0!important}#printReport .rep-table{min-width:0!important;table-layout:fixed!important}#printReport .rep-table th,#printReport .rep-table td{font-size:7pt!important;max-width:none!important;overflow-wrap:anywhere!important;border:1px solid #d7e0ec!important}}
+
+/* Desktop sidebar accessibility: keep every module reachable on short screens. */
+@media (min-width:781px){
+  body aside{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+  body aside .brand{flex:0 0 auto;margin-bottom:18px}
+  body aside .nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#6485a5 transparent;padding-right:5px;padding-bottom:12px}
+  body aside .nav button{flex-shrink:0}
+  body aside .sidefoot{flex:0 0 auto;margin-top:0;padding-top:12px}
+}
+@media (max-width:780px){
+  body aside{height:auto;overflow:visible}
+  body aside .nav{overflow-x:auto;overflow-y:hidden}
+}
