@@ -1750,12 +1750,37 @@ if(state.role==="owner"){
  }catch(e){console.warn("Admin bilgileri okunamadı")}
 }
 }
+async function enforceInitialPassword(user){
+ if(user?.app_metadata?.must_change_password!==true)return true;
+ $("#auth").classList.add("hide");$("#shell").classList.add("hide");
+ let overlay=document.getElementById("initialPasswordOverlay");
+ if(!overlay){
+ overlay=document.createElement("div");overlay.id="initialPasswordOverlay";overlay.className="team-access-overlay";
+ overlay.innerHTML='<form class="team-access-dialog" style="max-width:460px"><h2>Başlangıç Şifresini Değiştir</h2><p>Hesabınızın güvenliği için devam etmeden önce yeni bir şifre belirleyin.</p><label>Yeni şifre<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Yeni şifre tekrar<input name="confirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><p class="small muted">En az 12 karakter; harf, rakam ve özel işaret içermelidir.</p><p id="initialPasswordError" role="alert"></p><button class="btn primary" type="submit">Şifreyi Değiştir ve Devam Et</button><button class="btn" type="button" id="initialPasswordLogout">Çıkış Yap</button></form>';
+ document.body.append(overlay);
+ overlay.querySelector("#initialPasswordLogout").onclick=async()=>{overlay.remove();await sb.auth.signOut();showAuth()};
+ overlay.querySelector("form").onsubmit=async e=>{
+ e.preventDefault();const form=e.currentTarget;const password=form.elements.password.value;
+ const msg=overlay.querySelector("#initialPasswordError");msg.textContent="";
+ if(password!==form.elements.confirm.value){msg.textContent="Şifreler eşleşmiyor";return}
+ if(!/[a-zA-Z]/.test(password)||!/[0-9]/.test(password)||!/[^a-zA-Z0-9]/.test(password)){msg.textContent="Harf, rakam ve özel işaret kullanın";return}
+ const button=form.querySelector('[type="submit"]');button.disabled=true;
+ try{
+ const {data:{session}}=await sb.auth.getSession();
+ const res=await fetch("https://gnwliizxuryfnpqrynym.supabase.co/functions/v1/ortak-takip-admin",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({action:"change_initial_password",password})});
+ const result=await res.json();if(!res.ok)throw Error(result.error||"Şifre değiştirilemedi");
+ form.reset();await sb.auth.refreshSession();overlay.remove();await boot();
+ }catch(err){msg.textContent=err.message||"İşlem başarısız"}finally{button.disabled=false}
+ };
+ }
+ return false;
+}
 async function boot(){
  if(securityLocked||securityLoggingOut)return;
  if(recoveryMode){showRecoveryScreen();return}
  const expired=expiredSecuritySessionMessage();
  if(expired){await secureLogout(expired);return}
- const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}state.user=user;
+ const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
 state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
