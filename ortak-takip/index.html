@@ -1932,7 +1932,7 @@ async function boot(){
  if(recoveryMode){showRecoveryScreen();return}
  const expired=expiredSecuritySessionMessage();
  if(expired){recordSecurityActivity(true);storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0)}
- const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
+ const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}$("#authmsg").textContent="";if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
 state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=personInitials(user.user_metadata?.full_name||user.email||"OT");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
