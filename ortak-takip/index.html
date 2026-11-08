@@ -2068,8 +2068,8 @@ function setupAccountMenu(){
  const avatar=$("#avatar"),menu=$("#accountMenu");if(!avatar||!menu)return;
  const close=()=>{menu.hidden=true;avatar.setAttribute("aria-expanded","false")};
  const toggle=()=>{menu.hidden=!menu.hidden;avatar.setAttribute("aria-expanded",String(!menu.hidden));if(!menu.hidden){const profile=state.profiles.find(p=>p.id===state.user?.id);$("#accountMenuIdentity").textContent=(profile?.full_name||state.user?.user_metadata?.full_name||state.user?.email||"Kullanıcı")+" · "+(labels[state.role]||state.role)}};
- avatar.onclick=toggle;avatar.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle()}};
- menu.querySelectorAll("[data-account-go]").forEach(b=>b.onclick=()=>{const view=b.dataset.accountGo;if(view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=view;close();render();const section=b.dataset.profileSection;if(section)document.getElementById("profile-"+section)?.scrollIntoView({behavior:"smooth",block:"start"})});
+ avatar.onclick=()=>{if(state.view==="profile"){state.view=state.previousProfileView&&state.previousProfileView!=="profile"?state.previousProfileView:"overview";close();render();return}toggle()};avatar.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();avatar.click()}};
+ menu.querySelectorAll("[data-account-go]").forEach(b=>b.onclick=()=>{const view=b.dataset.accountGo;if(view==="profile"&&state.view!=="profile")state.previousProfileView=state.view;if(view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=view;close();render();const section=b.dataset.profileSection;if(section)document.getElementById("profile-"+section)?.scrollIntoView({behavior:"smooth",block:"start"})});
  $("#accountLogout").onclick=()=>{$("#logout").click();close()};
  document.addEventListener("click",e=>{if(!menu.contains(e.target)&&e.target!==avatar)close()});
  document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
