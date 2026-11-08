@@ -2774,6 +2774,7 @@ function membersView(){
     ' · '+esc(memberName(h.changed_by))+(h.note?' · '+esc(h.note):"")+'</div>').join("")+'</details>':"")+
   (editable?'<div class="actions member-lifecycle-actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
    (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+
+  (state.role==="owner"&&m.is_active&&!m.archived_at?'<div class="actions member-lifecycle-actions" style="margin-top:10px"><button type="button" class="btn sm" data-team-welcome-email="'+esc(m.user_id)+'">✉ E-posta Daveti</button><button type="button" class="btn sm" data-team-welcome-wa="'+esc(m.user_id)+'">WhatsApp Daveti</button></div>':"")+
   statusActions+'</div></div>';
  }).join("");
  const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
