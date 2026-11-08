@@ -3342,6 +3342,20 @@ if(modalKind==="memberEdit"||modalKind==="memberPassword"){
  const answer=await res.json();
  if(!res.ok)throw Error(answer.error||"İşlem başarısız");
  closeModal();toast(answer.message||"Bilgiler güncellendi.");await refresh();
+ if(modalKind==="memberPassword"){
+  const profile=state.profiles.find(p=>p.id===editing.user_id)||{};
+  const name=memberName(editing.user_id);
+  if(window.confirm("Yeni geçici şifre belirlendi. WhatsApp üzerinden personele göndermek ister misiniz?")){
+   let phone=String(profile.whatsapp_phone||"").replace(/\D/g,"");
+   if(!phone)phone=(prompt("WhatsApp numarasını girin:")||"").replace(/\D/g,"");
+   if(phone.startsWith("0"))phone="90"+phone.slice(1);else if(phone.length===10)phone="90"+phone;
+   if(/^\d{11,15}$/.test(phone)){
+    const email=state.teamEmails[editing.user_id]?.email||"";
+    const message="Merhaba "+name+", Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu. Giriş: https://ortak-takip.onrender.com\nE-posta: "+email+"\nGeçici şifre: "+data.password+"\nİlk girişte şifrenizi değiştirin. Bu mesajı kimseyle paylaşmayın ve girişten sonra silin.";
+    window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
+   }else toast("WhatsApp numarası geçersiz");
+  }
+ }
  return;
 }
 if(modalKind==="goalActual"){
