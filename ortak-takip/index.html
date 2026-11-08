@@ -3522,16 +3522,22 @@ document.addEventListener("click",async e=>{
   let password=Array.from(random,v=>alphabet[v%alphabet.length]).join("");
   password="A7!"+password.slice(0,3);
   const email=state.teamEmails[id]?.email||"";
-  const msg=["Merhaba "+name+",","Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.","","Giriş: https://ortak-takip.onrender.com",...(email?["E-posta: "+email]:[]),"","*Geçici şifreniz:*","\`"+password+"\`","","İlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin."].join("\n");
-  const popup=window.open("about:blank","_blank");
+  const msg=["Merhaba "+name+",","Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.","","Giriş: https://ortak-takip.onrender.com",...(email?["E-posta: "+email]:[]),"","Geçici şifreniz:",password,"","İlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin."].join("\n");
   waButton.disabled=true;
   try{
    await request({action:"set_password",user_id:id,password});
-   const url="https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
-   if(popup)popup.location.href=url;
-   else{toast("WhatsApp penceresi engellendi; mesaj bağlantısını açın");window.location.href=url}
-   toast("Geçici şifre yenilendi. WhatsApp mesajını gönderin.");
-  }catch(err){if(popup)popup.close();toast(err.message||"Şifre oluşturulamadı")}
+   const overlay=document.createElement("div");overlay.className="team-access-overlay";overlay.id="teamPasswordCopyOverlay";
+   overlay.innerHTML='<div class="team-access-dialog" style="max-width:440px"><h2>Geçici Şifre Hazır</h2><p>Şifreyi aşağıdaki alandan tek dokunuşla kopyalayabilirsiniz. WhatsApp mesajında da ayrı satırda bulunacak.</p><input type="text" readonly aria-label="Geçici şifre" style="width:100%;font-size:20px;font-weight:700;letter-spacing:2px;text-align:center" autocomplete="off"><div class="actions" style="margin-top:14px"><button type="button" class="btn" data-copy-password>Şifreyi Kopyala</button><button type="button" class="btn primary" data-open-whatsapp>WhatsApp\u2019ta Aç</button><button type="button" class="btn" data-close-password>Kapat</button></div><p class="small muted">Şifre değiştirildi. WhatsApp mesajını göndermeden kapatırsanız şifreyi personele başka güvenli bir yoldan iletmeniz gerekir.</p></div>';
+   const field=overlay.querySelector("input");field.value=password;
+   overlay.querySelector("[data-copy-password]").onclick=async()=>{
+    try{await navigator.clipboard.writeText(field.value);toast("Şifre kopyalandı")}
+    catch{field.focus();field.select();toast("Şifre seçildi; Kopyala komutunu kullanın")}
+   };
+   overlay.querySelector("[data-open-whatsapp]").onclick=()=>window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+   overlay.querySelector("[data-close-password]").onclick=()=>{field.value="";overlay.remove()};
+   document.body.append(overlay);
+   toast("Geçici şifre oluşturuldu; kopyalama ve WhatsApp seçenekleri hazır.");
+  }catch(err){toast(err.message||"Şifre oluşturulamadı")}
   finally{password="";waButton.disabled=false}
  }
 },true);
