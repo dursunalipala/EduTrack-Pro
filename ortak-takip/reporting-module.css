@@ -85,3 +85,28 @@
   body aside{height:auto;overflow:visible}
   body aside .nav{overflow-x:auto;overflow-y:hidden}
 }
+
+/* Ortak Takip — mobile-first visual refresh, phase 1 (non-destructive). */
+@media (max-width:780px){
+  body aside{padding:10px 12px 8px;background:#142c49}
+  body aside .brand{font-size:18px;margin:0 0 8px;gap:9px}
+  body aside .logo{width:34px;height:34px;border-radius:10px}
+  body aside .nav{display:flex;flex-flow:row nowrap;gap:7px;padding:3px 0 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+  body aside .nav button{flex:0 0 auto;min-height:42px;padding:10px 13px;border-radius:11px;border:1px solid #ffffff24;background:#ffffff0a;scroll-snap-align:start;line-height:1.25}
+  body aside .nav button.active{background:#25617b;border-color:#40bdc3;color:#fff}
+  body .top{padding:13px 16px;gap:10px}
+  body .top h1{font-size:18px;line-height:1.25}
+  body .top p{font-size:12px;line-height:1.35}
+  body .topright{gap:8px}
+  body .content{padding:14px 12px 26px}
+  body .card,body .panel{border-radius:14px}
+  body .titlebar{gap:10px;margin-bottom:14px}
+  body .titlebar h2{font-size:19px}
+  body .btn{border-radius:10px}
+  body .kpi{gap:9px;margin-bottom:16px}
+  body .card .num{font-size:24px}
+}
+@media (min-width:781px){
+  body aside .nav button{border-radius:11px;transition:background-color .15s ease}
+  body aside .nav button:focus-visible{outline:2px solid #48c6c7;outline-offset:2px}
+}
