@@ -810,7 +810,7 @@ $("#recoveryForm").onsubmit=async ev=>{
   ev.preventDefault();
   const pass=$("#newRecoveryPassword").value,repeat=$("#confirmRecoveryPassword").value;
   const btn=$("#recoveryForm button[type=submit]");
-  if(pass.length<8){$("#authmsg").textContent="Yeni şifre en az 6 karakter olmalıdır.";return}
+  if(pass.length<6){$("#authmsg").textContent="Yeni şifre en az 6 karakter olmalıdır.";return}
   if(pass!==repeat){$("#authmsg").textContent="Şifreler uyuşmuyor.";return}
   btn.disabled=true;
   try {
@@ -2530,7 +2530,7 @@ ev.preventDefault();if(state.role!=="owner")return;
 const f=ev.currentTarget,button=f.querySelector('button[type="submit"]'),message=$("#ownerPasswordMessage");
 const current=f.elements.currentPassword.value,next=f.elements.nextPassword.value,confirm=f.elements.confirmPassword.value;
 message.textContent="";
-if(next.length<8||next!==confirm){message.textContent="Yeni şifre en az 6 karakter olmalı ve iki giriş eşleşmelidir.";return}
+if(next.length<6||next!==confirm){message.textContent="Yeni şifre en az 6 karakter olmalı ve iki giriş eşleşmelidir.";return}
 if(current===next){message.textContent="Yeni şifre eski şifreden farklı olmalıdır.";return}
 button.disabled=true;
 try{
