@@ -3516,8 +3516,23 @@ document.addEventListener("click",async e=>{
   if(phone.startsWith("0"))phone="90"+phone.slice(1);else if(phone.length===10)phone="90"+phone;
   if(!/^\d{11,15}$/.test(phone)){toast("Geçerli WhatsApp numarası girin");return}
   const name=memberName(id);
-  const msg="Merhaba "+name+", Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız hazır. Giriş: https://ortak-takip.onrender.com . Başlangıç şifrenizi yöneticinizden güvenli şekilde alın. İlk girişte şifrenizi değiştirin. Şifrenizi mesajla paylaşmayın.";
-  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+  if(!window.confirm(name+" için yeni geçici şifre oluşturulacak. Mevcut şifre geçersiz olacak ve ilk girişte değiştirilmesi gerekecek. Devam edilsin mi?"))return;
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+  const random=new Uint32Array(18);crypto.getRandomValues(random);
+  let password=Array.from(random,v=>alphabet[v%alphabet.length]).join("");
+  password="Aa7!"+password;
+  const email=state.teamEmails[id]?.email||"";
+  const msg="Merhaba "+name+", Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.\\nGiriş: https://ortak-takip.onrender.com\\n"+(email?"E-posta: "+email+"\\n":"")+"Geçici şifre: "+password+"\\nİlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin.";
+  const popup=window.open("about:blank","_blank");
+  waButton.disabled=true;
+  try{
+   await request({action:"set_password",user_id:id,password});
+   const url="https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
+   if(popup)popup.location.href=url;
+   else{toast("WhatsApp penceresi engellendi; mesaj bağlantısını açın");window.location.href=url}
+   toast("Geçici şifre yenilendi. WhatsApp mesajını gönderin.");
+  }catch(err){if(popup)popup.close();toast(err.message||"Şifre oluşturulamadı")}
+  finally{password="";waButton.disabled=false}
  }
 },true);
 const observer=new MutationObserver(()=>{
