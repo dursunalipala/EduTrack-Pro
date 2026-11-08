@@ -1454,6 +1454,13 @@ if("serviceWorker" in navigator){
  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js",{scope:"./"})
    .catch(()=>console.warn("PWA çevrimdışı kabuğu kullanılamadı")));
 }
+function personInitials(value){
+ const name=String(value||"").trim().replace(/\\s+/g," ");
+ if(!name)return "OT";
+ const parts=name.split(" ").filter(Boolean);
+ if(parts.length===1){if(parts[0].includes("@"))return parts[0].slice(0,2).toLocaleUpperCase("tr-TR");return parts[0].slice(0,1).toLocaleUpperCase("tr-TR")}
+ return (parts[0].slice(0,1)+parts[parts.length-1].slice(0,1)).toLocaleUpperCase("tr-TR");
+}
 function showAuth(){$("#auth").classList.remove("hide");$("#shell").classList.add("hide")}
 
 /* Digital Center: links only. Passwords or access tokens must never be stored here. */
@@ -1919,7 +1926,7 @@ async function boot(){
  const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
-state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
+state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=personInitials(user.user_metadata?.full_name||user.email||"OT");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
 if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
@@ -2895,7 +2902,7 @@ function membersView(){
    (!m.archived_at?'<button type="button" class="btn sm" data-member-action="archive_member" data-member-id="'+esc(m.user_id)+'">Sistemden Kaldır</button>':"")+
    '</div>':"";
   const lifecycle=state.memberStatusHistory.filter(a=>a.user_id===m.user_id).slice(0,5);
-  return '<div class="member personnel-card"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
+  return '<div class="member personnel-card"><div class="miniavatar">'+esc(personInitials(memberName(m.user_id)))+'</div>'+
   '<div class="member-data"><details class="personnel-fold"><summary><strong>'+esc(memberName(m.user_id))+'</strong>'+
   '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+
   ' · '+esc(memberStatusLabel(m))+' · '+esc(labels[m.role]||m.role)+'</div><span class="personnel-fold-hint">Ayrıntılar ve İşlemler ▾</span></summary><div class="personnel-fold-body">'+
