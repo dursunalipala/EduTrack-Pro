@@ -3481,8 +3481,39 @@ document.addEventListener("click",e=>{
  const add=e.target.closest("#newMember");if(add&&state.role==="owner"){e.preventDefault();e.stopImmediatePropagation();openEditor(null);return}
  const btn=e.target.closest("[data-team-access]");if(btn&&state.role==="owner"){e.preventDefault();e.stopImmediatePropagation();const m=state.members.find(x=>x.user_id===btn.dataset.teamAccess);if(m)openEditor(m)}
 },true);
+document.addEventListener("click",async e=>{
+ const emailButton=e.target.closest("[data-team-welcome-email]");
+ if(emailButton&&state.role==="owner"){
+  e.preventDefault();emailButton.disabled=true;
+  try{const r=await request({action:"resend_welcome",user_id:emailButton.dataset.teamWelcomeEmail});toast(r.message||"E-posta gönderildi")}
+  catch(err){toast(err.message||"E-posta gönderilemedi")}finally{emailButton.disabled=false}
+  return;
+ }
+ const waButton=e.target.closest("[data-team-welcome-wa]");
+ if(waButton&&state.role==="owner"){
+  e.preventDefault();
+  const id=waButton.dataset.teamWelcomeWa;
+  const profile=state.profiles.find(p=>p.id===id)||{};
+  let phone=String(profile.whatsapp_phone||"").replace(/\D/g,"");
+  if(!phone)phone=(prompt("WhatsApp numarası (05XX...):")||"").replace(/\D/g,"");
+  if(phone.startsWith("0"))phone="90"+phone.slice(1);else if(phone.length===10)phone="90"+phone;
+  if(!/^\d{11,15}$/.test(phone)){toast("Geçerli WhatsApp numarası girin");return}
+  const name=memberName(id);
+  const msg="Merhaba "+name+", Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız hazır. Giriş: https://ortak-takip.onrender.com . Başlangıç şifrenizi yöneticinizden güvenli şekilde alın. İlk girişte şifrenizi değiştirin. Şifrenizi mesajla paylaşmayın.";
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+ }
+},true);
 const observer=new MutationObserver(()=>{
  if(state?.view!=="members"||state.role!=="owner")return;
+ document.querySelectorAll(".personnel-card").forEach(card=>{
+ const edit=card.querySelector("[data-edit-member]");
+ if(!edit||card.querySelector("[data-team-welcome-email]"))return;
+ const id=edit.dataset.editMember;
+ const actions=edit.parentElement;
+ const email=document.createElement("button");email.type="button";email.className="btn sm";email.dataset.teamWelcomeEmail=id;email.textContent="✉ E-posta Daveti";
+ const wa=document.createElement("button");wa.type="button";wa.className="btn sm";wa.dataset.teamWelcomeWa=id;wa.textContent="WhatsApp Daveti";
+ actions.append(email,wa);
+ });
  document.querySelectorAll("[data-edit-member]").forEach(btn=>{
  if(btn.parentElement?.querySelector("[data-team-access]"))return;
  const b=document.createElement("button");b.type="button";b.className="btn sm";b.textContent="Rol ve Yetkiler";b.dataset.teamAccess=btn.dataset.editMember;btn.parentElement.append(b);
