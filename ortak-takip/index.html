@@ -2061,7 +2061,7 @@ function profileView(){
  '<section class="profile-card"><h2>Görevlerim ve Performansım</h2><div class="profile-data"><div><dt>İlgili görev</dt><dd>'+own.length+'</dd></div><div><dt>Tamamlanan</dt><dd>'+completed+'</dd></div><div><dt>Geciken</dt><dd>'+late+'</dd></div></div><div class="actions"><button type="button" class="btn" data-profile-action="tasks">Görevlerimi Aç</button></div></section>'+
  '<section class="profile-card" id="profile-preferences"><h2>Bildirim Tercihlerim</h2><p class="small muted">Bildirim sesini ve cihaz bildirimlerini mevcut bildirim panelinden yönetebilirsiniz. Otomatik e-posta türlerinin yetkileri Admin tarafından belirlenir.</p><button type="button" class="btn" data-profile-action="notifications">Bildirim Panelini Aç</button></section>'+
  '<section class="profile-card" id="profile-security"><h2>Güvenlik ve Şifre</h2><p class="small muted">Şifre sıfırlama bağlantısı yalnızca hesabınıza kayıtlı e-posta adresine gönderilir. Şifrenizi kimseyle paylaşmayın.</p><button type="button" class="btn" data-profile-action="reset">Şifre Sıfırlama Bağlantısı Gönder</button></section>'+
- '<section class="profile-card" id="profile-settings"><h2>Kişisel Ayarlar</h2><p class="small muted">Kendi ekran görünümünüzü seçebilirsiniz. Bu tercih diğer kullanıcıların yetkilerini değiştirmez.</p><button type="button" class="btn" data-profile-action="mode">'+(state.simpleMode?"Ayrıntılı Görünüme Geç":"Sade Görünüme Geç")+'</button></section>'+
+ '<section class="profile-card" id="profile-settings"><h2>Kişisel Ayarlar</h2><p class="small muted">Tercihleriniz yalnızca bu cihazdaki uygulama görünümünü etkiler.</p><label style="display:flex;flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="profileSound" style="width:auto" '+(soundOn()?"checked":"")+'> Bildirim sesi açık</label>'+(isStaff()?'<p class="small muted">Personel görünümü görev ve yetki kurallarına göre sabittir.</p>':'<label style="display:flex;flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="profileDetailed" style="width:auto" '+(!state.simpleMode?"checked":"")+'> Ayrıntılı modül görünümü</label>')+'<p class="small muted" id="profileSettingsStatus" role="status">Değişiklikler otomatik kaydedilir.</p></section>'+
  '</div>';
 }
 function setupAccountMenu(){
@@ -2075,11 +2075,13 @@ function setupAccountMenu(){
  document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
 }
 function bindProfile(){
+ $("#profileSound")?.addEventListener("change",e=>{try{localStorage.setItem(PUSH_SOUND_KEY,e.target.checked?"yes":"no")}catch{}const bell=$("#notifySoundToggle");if(bell)bell.checked=e.target.checked;$("#profileSettingsStatus").textContent="Bildirim sesi tercihiniz kaydedildi.";toast("Bildirim sesi tercihi kaydedildi.")});
+ $("#profileDetailed")?.addEventListener("change",e=>{if(isStaff())return;state.simpleMode=!e.target.checked;try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}render();toast("Görünüm tercihi kaydedildi.")});
  document.querySelectorAll("[data-profile-action]").forEach(b=>b.onclick=async()=>{
   const a=b.dataset.profileAction;
   if(a==="tasks"){state.view="tasks";resetTaskFilters();render();return}
-  if(a==="notifications"){$("#notifyBell")?.click();return}
-  if(a==="mode"){state.simpleMode=!state.simpleMode;try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}render();return}
+  if(a==="notifications"){setInboxOpen(true);$("#notifyPanel")?.querySelector("#notifyClose")?.focus();return}
+  if(a==="mode"){if(isStaff())return;state.simpleMode=!state.simpleMode;try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}render();return}
   if(a==="reset"){if(!state.user?.email)return;const yes=confirm("Şifre sıfırlama bağlantısı kayıtlı e-posta adresinize gönderilsin mi?");if(!yes)return;b.disabled=true;try{const {error:e}=await sb.auth.resetPasswordForEmail(state.user.email,{redirectTo:location.origin+location.pathname});if(e)throw e;toast("Şifre sıfırlama bağlantısı gönderildi.")}catch(e){error(e)}finally{b.disabled=false}}
  });
 }
