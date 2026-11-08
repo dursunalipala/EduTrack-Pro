@@ -1829,7 +1829,7 @@ async function refreshEncouragementUnread(){
  if(!state.user)return;
  const b=document.getElementById("openEncouragementInbox");if(!b)return;
  const {count,error:e}=await sb.from("staff_encouragements").select("id",{count:"exact",head:true}).eq("workspace_id",WS).eq("recipient_id",state.user.id).is("read_at",null);
- if(!e)b.textContent=count?"💌 Mesajlarım ("+count+" yeni)":"💌 Mesajlarım";
+ if(!e)b.textContent=count?"💌 Teşviklerim ("+count+" yeni)":"💌 Teşviklerim";
 }
 async function showStaffEncouragements(){
  if(!state.user)return;
@@ -1844,11 +1844,14 @@ async function showStaffEncouragements(){
  void refreshEncouragementUnread();
 }
 function ensureEncouragementInboxButton(){
- if(document.getElementById("openEncouragementInbox"))return;
- const b=document.createElement("button");b.id="openEncouragementInbox";b.type="button";b.textContent="💌 Mesajlarım";b.className="btn";
- b.style.cssText="position:fixed;right:14px;bottom:16px;z-index:40;box-shadow:0 3px 12px #0003";
- b.onclick=()=>void showStaffEncouragements();document.body.append(b);void refreshEncouragementUnread();
+ const head=document.querySelector("#notifyPanel .notify-header-buttons");
+ if(!head||document.getElementById("openEncouragementInbox"))return;
+ const b=document.createElement("button");b.id="openEncouragementInbox";b.type="button";b.textContent="💌 Teşviklerim";
+ b.onclick=()=>void showStaffEncouragements();
+ head.insertBefore(b,document.getElementById("notifyClose"));
+ void refreshEncouragementUnread();
 }
+
 document.addEventListener("click",e=>{if(e.target.closest("#openEncouragementSend"))void sendStaffEncouragement();if(e.target.closest("#openSentEncouragements"))void showSentEncouragements()});
 async function usageReport(){
  if(state.role!=="owner")return;
