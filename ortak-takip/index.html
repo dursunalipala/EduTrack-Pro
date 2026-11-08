@@ -1756,7 +1756,7 @@ async function enforceInitialPassword(user){
  let overlay=document.getElementById("initialPasswordOverlay");
  if(!overlay){
  overlay=document.createElement("div");overlay.id="initialPasswordOverlay";overlay.className="team-access-overlay";
- overlay.innerHTML='<form class="team-access-dialog" style="max-width:460px"><h2>Başlangıç Şifresini Değiştir</h2><p>Hesabınızın güvenliği için devam etmeden önce yeni bir şifre belirleyin.</p><label>Yeni şifre<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Yeni şifre tekrar<input name="confirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><p class="small muted">En az 12 karakter; harf, rakam ve özel işaret içermelidir.</p><p id="initialPasswordError" role="alert"></p><button class="btn primary" type="submit">Şifreyi Değiştir ve Devam Et</button><button class="btn" type="button" id="initialPasswordLogout">Çıkış Yap</button></form>';
+ overlay.innerHTML='<form class="team-access-dialog" style="max-width:460px"><h2>Başlangıç Şifresini Değiştir</h2><p>Hesabınızın güvenliği için devam etmeden önce yeni bir şifre belirleyin.</p><label>Yeni şifre<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" required></label><label>Yeni şifre tekrar<input name="confirm" type="password" minlength="6" maxlength="128" autocomplete="new-password" required></label><p class="small muted">En az 6 karakter; harf, rakam ve özel işaret içermelidir.</p><p id="initialPasswordError" role="alert"></p><button class="btn primary" type="submit">Şifreyi Değiştir ve Devam Et</button><button class="btn" type="button" id="initialPasswordLogout">Çıkış Yap</button></form>';
  document.body.append(overlay);
  overlay.querySelector("#initialPasswordLogout").onclick=async()=>{overlay.remove();await sb.auth.signOut();showAuth()};
  overlay.querySelector("form").onsubmit=async e=>{
@@ -3109,10 +3109,10 @@ if(kind==="memberEdit"){
 if(kind==="memberPassword"){
  f.innerHTML='<p class="span2 small muted">Kullanıcı: '+esc(memberName(item.user_id))+
  '. Eski şifreler görüntülenemez. Yeni şifre belirlendiğinde eskisinin yerini alır.</p>'+
- '<div class="span2">'+field("password","Yeni şifre *","","password","required minlength=12 maxlength=128 autocomplete=new-password")+'</div>'+
- '<div class="span2">'+field("confirm_password","Yeni şifre (tekrar) *","","password","required minlength=12 maxlength=128 autocomplete=new-password")+'</div>'+
+ '<div class="span2">'+field("password","Yeni şifre *","","password","required minlength=6 maxlength=128 autocomplete=new-password")+'</div>'+
+ '<div class="span2">'+field("confirm_password","Yeni şifre (tekrar) *","","password","required minlength=6 maxlength=128 autocomplete=new-password")+'</div>'+
  '<label class="span2 password-toggle"><input type="checkbox" id="showMemberNewPassword"> Yeni yazdığım şifreyi göster</label>'+
- '<p class="span2 small muted">En az 12 karakter; harf, rakam ve özel işaret içermelidir.</p>';
+ '<p class="span2 small muted">En az 6 karakter; harf, rakam ve özel işaret içermelidir.</p>';
 }
 if(kind==="member")f.innerHTML='<div class="span2">'+field("email","E-posta adresi *","","email","required")+'</div><div class="span2">'+field("full_name","Ad soyad *","","text","required")+'</div>'+sel("role","Yetki",[["member","Personel"],["viewer","İzleyici"],...(state.role==="owner"?[["manager","Yönetici"]]:[])],"member")+'<p class="span2 muted small">Kişinin hesabı zaten varsa mevcut şifresi korunarak ekibe eklenir. Hesabı yoksa davet e-postası gönderilir. Personel yalnızca kendisine verilen görevleri görebilir.</p>';
 $("#modalscrim").classList.remove("hide");
@@ -3446,7 +3446,7 @@ function openEditor(member){
  const overlay=document.createElement("div");overlay.id="teamAccessOverlay";overlay.className="team-access-overlay";
  overlay.innerHTML='<form class="team-access-dialog"><div class="row"><h2>'+(edit?"Rol ve Yetki Düzenle":"Doğrudan Personel Oluştur")+'</h2><button class="btn sm" type="button" data-close>✕</button></div>'+
  (edit?'<p class="small muted">'+escTeam(profile.full_name||member.user_id)+'</p>':
- '<div class="team-access-fields"><label>Ad Soyad<input name="full_name" required minlength="2" maxlength="120"></label><label>E-posta<input name="email" type="email" required></label><label>Unvan<input name="position_title" maxlength="120"></label><label>WhatsApp telefonu<input name="whatsapp_phone" type="tel" placeholder="05XX XXX XX XX" inputmode="tel"></label><label>Başlangıç şifresi<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label></div>')+
+ '<div class="team-access-fields"><label>Ad Soyad<input name="full_name" required minlength="2" maxlength="120"></label><label>E-posta<input name="email" type="email" required></label><label>Unvan<input name="position_title" maxlength="120"></label><label>WhatsApp telefonu<input name="whatsapp_phone" type="tel" placeholder="05XX XXX XX XX" inputmode="tel"></label><label>Başlangıç şifresi<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label></div>')+
  (edit?'':'<div class="team-access-fields" style="margin:10px 0"><label><input type="checkbox" name="send_email" checked> Kayıt sonrası otomatik e-posta gönder</label><label><input type="checkbox" name="prepare_whatsapp" checked> WhatsApp davetini hazırla</label></div>')+
  '<div class="team-access-fields" style="margin:14px 0"><label>Personel rolü<select name="job_role">'+(role==="admin"?'<option value="admin">Admin</option>':roles.map(([k,v])=>'<option value="'+k+'"'+(k===role?" selected":"")+'>'+v+'</option>').join(""))+'</select></label></div>'+
  '<div class="tablewrap"><table class="team-access-permissions"><thead><tr><th>Modül</th>'+actions.map(x=>'<th>'+x[1]+'</th>').join("")+'</tr></thead><tbody>'+
@@ -3518,11 +3518,11 @@ document.addEventListener("click",async e=>{
   const name=memberName(id);
   if(!window.confirm(name+" için yeni geçici şifre oluşturulacak. Mevcut şifre geçersiz olacak ve ilk girişte değiştirilmesi gerekecek. Devam edilsin mi?"))return;
   const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-  const random=new Uint32Array(18);crypto.getRandomValues(random);
+  const random=new Uint32Array(6);crypto.getRandomValues(random);
   let password=Array.from(random,v=>alphabet[v%alphabet.length]).join("");
-  password="Aa7!"+password;
+  password="A7!"+password.slice(0,3);
   const email=state.teamEmails[id]?.email||"";
-  const msg="Merhaba "+name+", Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.\\nGiriş: https://ortak-takip.onrender.com\\n"+(email?"E-posta: "+email+"\\n":"")+"Geçici şifre: "+password+"\\nİlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin.";
+  const msg=["Merhaba "+name+",","Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.","","Giriş: https://ortak-takip.onrender.com",...(email?["E-posta: "+email]:[]),"","*Geçici şifreniz:*","\`"+password+"\`","","İlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin."].join("\\n");
   const popup=window.open("about:blank","_blank");
   waButton.disabled=true;
   try{
