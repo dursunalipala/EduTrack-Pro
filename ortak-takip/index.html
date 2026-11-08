@@ -1309,6 +1309,7 @@ function eraseSensitiveView(){
 async function secureLogout(message="Güvenli çıkış yapıldı. Yeniden giriş yapın."){
  if(securityLoggingOut||recoveryMode)return;
  securityLoggingOut=true;
+ document.getElementById("openEncouragementInbox")?.remove();
  await usageTick(true,true);
  usageSessionKey=null;try{sessionStorage.removeItem("ortak-usage-key")}catch{}
  securityLocked=true;
@@ -1800,6 +1801,39 @@ function usageStart(){
 ["pointerdown","keydown"].forEach(evt=>document.addEventListener(evt,usageTouch,{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(document.hidden)void usageTick(true);else{usageLastTick=Date.now();usageTouch()}});
 setInterval(()=>{if(state.user&&usageSessionKey&&!document.hidden)void usageTick()},60000);
+
+async function sendStaffEncouragement(){
+ if(state.role!=="owner")return;
+ const people=state.members.filter(m=>m.is_active&&!m.archived_at&&m.user_id!==state.user.id);
+ if(!people.length){toast("Aktif personel bulunamadı.");return}
+ const modal=document.createElement("div");modal.className="team-access-overlay";
+ modal.innerHTML='<div class="team-access-dialog" style="max-width:550px;width:95%"><h2>Personel Teşvik Mesajı</h2><p>Mesajlar yalnızca uygulama içinde iletilir.</p><label>Personel</label><select id="encPerson" style="width:100%">'+people.map(m=>'<option value="'+esc(m.user_id)+'">'+esc(memberName(m.user_id))+'</option>').join("")+'</select><label>Tür</label><select id="encType" style="width:100%"><option value="thanks">Teşekkür</option><option value="achievement">Başarı</option><option value="support">Destek ve gelişim</option></select><label>Mesaj</label><textarea id="encText" rows="4" maxlength="600" style="width:100%"></textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" id="encSubmit">Gönder</button><button class="btn" id="encCancel">Vazgeç</button></div></div>';
+ document.body.append(modal);modal.querySelector("#encCancel").onclick=()=>modal.remove();
+ modal.querySelector("#encSubmit").onclick=async()=>{
+  const message=modal.querySelector("#encText").value.trim();if(message.length<5){toast("En az 5 karakter yazın.");return}
+  const btn=modal.querySelector("#encSubmit");btn.disabled=true;
+  const {error:e}=await sb.from("staff_encouragements").insert({workspace_id:WS,recipient_id:modal.querySelector("#encPerson").value,sender_id:state.user.id,kind:modal.querySelector("#encType").value,message});
+  btn.disabled=false;if(e){toast(e.message);return}modal.remove();toast("Mesaj gönderildi.");
+ };
+}
+async function showStaffEncouragements(){
+ if(!state.user)return;
+ const {data,error:e}=await sb.from("staff_encouragements").select("id,kind,message,created_at,read_at").eq("workspace_id",WS).eq("recipient_id",state.user.id).order("created_at",{ascending:false}).limit(50);
+ if(e){toast(e.message);return}
+ const names={thanks:"Teşekkür",achievement:"Başarı",support:"Destek ve gelişim"};
+ const modal=document.createElement("div");modal.className="team-access-overlay";
+ modal.innerHTML='<div class="team-access-dialog" style="max-width:650px;width:95%;max-height:85vh;overflow:auto"><h2>Teşvik ve Destek Mesajlarım</h2>'+(data?.length?data.map(x=>'<div style="padding:12px 0;border-bottom:1px solid #aaa"><strong>'+esc(names[x.kind]||x.kind)+'</strong> · '+new Date(x.created_at).toLocaleString("tr-TR")+(x.read_at?"":" · Yeni")+'<p style="white-space:pre-wrap">'+esc(x.message)+'</p></div>').join(""):"<p>Henüz mesajınız yok.</p>")+'<button class="btn primary" id="encClose">Kapat</button></div>';
+ document.body.append(modal);modal.querySelector("#encClose").onclick=()=>modal.remove();
+ const ids=(data||[]).filter(x=>!x.read_at).map(x=>x.id);
+ if(ids.length)await sb.from("staff_encouragements").update({read_at:new Date().toISOString()}).in("id",ids).eq("recipient_id",state.user.id);
+}
+function ensureEncouragementInboxButton(){
+ if(document.getElementById("openEncouragementInbox"))return;
+ const b=document.createElement("button");b.id="openEncouragementInbox";b.type="button";b.textContent="💌 Mesajlarım";b.className="btn";
+ b.style.cssText="position:fixed;right:14px;bottom:16px;z-index:40;box-shadow:0 3px 12px #0003";
+ b.onclick=()=>void showStaffEncouragements();document.body.append(b);
+}
+document.addEventListener("click",e=>{if(e.target.closest("#openEncouragementSend"))void sendStaffEncouragement()});
 async function usageReport(){
  if(state.role!=="owner")return;
  const since=new Date(Date.now()-30*86400000).toISOString();
@@ -1824,7 +1858,7 @@ async function boot(){
  const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
-state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
+state.role=me.role;usageStart();ensureEncouragementInboxButton();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
 if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
@@ -2819,7 +2853,7 @@ function membersView(){
   statusActions+'</div></details></div></div>';
  }).join("");
  const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
- return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(state.role==="owner"?'<button class="btn" id="openUsageReport">📊 Aktif Kullanım</button>':"")+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
+ return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(state.role==="owner"?'<button class="btn" id="openUsageReport">📊 Aktif Kullanım</button><button class="btn" id="openEncouragementSend">💬 Teşvik Mesajı</button>':"")+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
  '<section class="panel"><p class="small muted">Personeli pasife alın veya sistemden kaldırarak arşivleyin. Erişimi kapanır; eski görevleri, işlem kayıtları ve raporlardaki adı korunur. Arşivdeki personel tekrar aktifleştirilebilir. Bu işlemler yalnızca Admin yetkisindedir.</p>'+
  '<div class="member-tabs">'+tabs+'</div>'+
  '<h2>'+({active:"Aktif Ekip",inactive:"Pasif Personeller",archive:"Personel Arşivi"})[state.memberStatusTab]+' ('+counts[state.memberStatusTab]+')</h2>'+
