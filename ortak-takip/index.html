@@ -1309,6 +1309,8 @@ function eraseSensitiveView(){
 async function secureLogout(message="Güvenli çıkış yapıldı. Yeniden giriş yapın."){
  if(securityLoggingOut||recoveryMode)return;
  securityLoggingOut=true;
+ await usageTick(true,true);
+ usageSessionKey=null;try{sessionStorage.removeItem("ortak-usage-key")}catch{}
  securityLocked=true;
  eraseSensitiveView();
  showAuth();
@@ -1775,6 +1777,40 @@ async function enforceInitialPassword(user){
  }
  return false;
 }
+let usageSessionKey=null,usageLastInteraction=0,usageLastTick=0,usageActiveSeconds=0,usageInteractions=0,usagePending=false;
+function usageTouch(){if(!state.user||document.hidden||$("#shell").classList.contains("hide"))return;const now=Date.now();if(now-usageLastInteraction>12000){usageInteractions++;usageLastInteraction=now}}
+async function usageTick(force=false,ending=false){
+ if(!state.user||!usageSessionKey||usagePending)return;
+ const now=Date.now();
+ if(!force&&document.hidden)return;
+ if(!document.hidden&&now-usageLastTick<=70000&&now-usageLastInteraction<=70000)usageActiveSeconds+=Math.max(0,Math.min(60,Math.round((now-usageLastTick)/1000)));
+ usageLastTick=now;usagePending=true;
+ try{
+  const record={workspace_id:WS,user_id:state.user.id,session_key:usageSessionKey,last_seen_at:new Date().toISOString(),active_seconds:usageActiveSeconds,interaction_count:usageInteractions};
+  if(ending)record.ended_at=new Date().toISOString();
+  const {error:e}=await sb.from("staff_usage_sessions").upsert(record,{onConflict:"user_id,session_key"});
+  if(e)console.warn("Kullanım kaydı:",e.message);
+ }catch(e){console.warn("Kullanım kaydı yapılamadı")}finally{usagePending=false}
+}
+function usageStart(){
+ if(!state.user||usageSessionKey)return;
+ try{const saved=sessionStorage.getItem("ortak-usage-key");usageSessionKey=saved||crypto.randomUUID();sessionStorage.setItem("ortak-usage-key",usageSessionKey)}catch{usageSessionKey=crypto.randomUUID()}
+ usageLastTick=Date.now();usageLastInteraction=Date.now();usageInteractions=1;void usageTick(true);
+}
+["pointerdown","keydown"].forEach(evt=>document.addEventListener(evt,usageTouch,{passive:true}));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)void usageTick(true);else{usageLastTick=Date.now();usageTouch()}});
+setInterval(()=>{if(state.user&&usageSessionKey&&!document.hidden)void usageTick()},60000);
+async function usageReport(){
+ if(state.role!=="owner")return;
+ const since=new Date(Date.now()-30*86400000).toISOString();
+ const {data,error:e}=await sb.from("staff_usage_sessions").select("user_id,started_at,last_seen_at,ended_at,active_seconds,interaction_count").eq("workspace_id",WS).gte("started_at",since).order("started_at",{ascending:false}).limit(3000);
+ if(e){toast("Kullanım raporu açılamadı: "+e.message);return}
+ const grouped={};(data||[]).forEach(x=>{const g=grouped[x.user_id]??={count:0,seconds:0,actions:0,last:"",days:new Set()};g.count++;g.seconds+=x.active_seconds||0;g.actions+=x.interaction_count||0;g.days.add(x.started_at.slice(0,10));if(x.last_seen_at>g.last)g.last=x.last_seen_at});
+ const rows=state.members.map(m=>{const g=grouped[m.user_id]||{count:0,seconds:0,actions:0,last:"",days:new Set()};return '<tr><td>'+esc(memberName(m.user_id))+'</td><td>'+g.count+'</td><td>'+g.days.size+'</td><td>'+Math.round(g.seconds/60)+' dk</td><td>'+g.actions+'</td><td>'+(g.last?new Date(g.last).toLocaleString("tr-TR"):"Kayıt yok")+'</td></tr>'}).join("");
+ const overlay=document.createElement("div");overlay.className="team-access-overlay";overlay.innerHTML='<div class="team-access-dialog" style="max-width:960px;width:96%;max-height:85vh;overflow:auto"><h2>Aktif Kullanım | Son 30 Gün</h2><p class="small muted">Süre yalnızca görünür ekranda yakın zamanda etkileşim olduğunda yaklaşık hesaplanır. Açık kalan sekmeler çalışma süresi sayılmaz. Kayıtlar modülün devreye alınmasından itibaren başlar.</p><div style="overflow-x:auto"><table style="width:100%"><thead><tr><th>Personel</th><th>Oturum</th><th>Aktif gün</th><th>Etkin süre</th><th>Etkileşim</th><th>Son görülme</th></tr></thead><tbody>'+rows+'</tbody></table></div><button type="button" class="btn primary" id="closeUsageReport">Kapat</button></div>';
+ document.body.append(overlay);overlay.querySelector("#closeUsageReport").onclick=()=>overlay.remove();
+}
+document.addEventListener("click",e=>{if(e.target.closest("#openUsageReport"))void usageReport()});
 async function boot(){
  if(securityLocked||securityLoggingOut)return;
  if(recoveryMode){showRecoveryScreen();return}
@@ -1783,7 +1819,7 @@ async function boot(){
  const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
-state.role=me.role;$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
+state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
 if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
@@ -2778,7 +2814,7 @@ function membersView(){
   statusActions+'</div></details></div></div>';
  }).join("");
  const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
- return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
+ return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(state.role==="owner"?'<button class="btn" id="openUsageReport">📊 Aktif Kullanım</button>':"")+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
  '<section class="panel"><p class="small muted">Personeli pasife alın veya sistemden kaldırarak arşivleyin. Erişimi kapanır; eski görevleri, işlem kayıtları ve raporlardaki adı korunur. Arşivdeki personel tekrar aktifleştirilebilir. Bu işlemler yalnızca Admin yetkisindedir.</p>'+
  '<div class="member-tabs">'+tabs+'</div>'+
  '<h2>'+({active:"Aktif Ekip",inactive:"Pasif Personeller",archive:"Personel Arşivi"})[state.memberStatusTab]+' ('+counts[state.memberStatusTab]+')</h2>'+
