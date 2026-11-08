@@ -2078,7 +2078,7 @@ function bindProfile(){
  document.querySelectorAll("[data-profile-action]").forEach(b=>b.onclick=async()=>{
   const a=b.dataset.profileAction;
   if(a==="tasks"){state.view="tasks";resetTaskFilters();render();return}
-  if(a==="notifications"){$("#notifyButton")?.click();return}
+  if(a==="notifications"){$("#notifyBell")?.click();return}
   if(a==="mode"){state.simpleMode=!state.simpleMode;try{localStorage.setItem("ortak-takip-ui-mode",state.simpleMode?"simple":"detailed")}catch{}render();return}
   if(a==="reset"){if(!state.user?.email)return;const yes=confirm("Şifre sıfırlama bağlantısı kayıtlı e-posta adresinize gönderilsin mi?");if(!yes)return;b.disabled=true;try{const {error:e}=await sb.auth.resetPasswordForEmail(state.user.email,{redirectTo:location.origin+location.pathname});if(e)throw e;toast("Şifre sıfırlama bağlantısı gönderildi.")}catch(e){error(e)}finally{b.disabled=false}}
  });
