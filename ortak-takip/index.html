@@ -694,7 +694,47 @@ body *{visibility:hidden!important}
  </div><div class="notify-panel-foot">Bildirimi sağa veya sola kaydırarak silebilirsiniz. Görev kayıtları korunur.</div>
  </div><div class="content" id="content"></div></main></div>
 <div id="modalscrim" class="modalscrim hide"><div class="modal"><div class="modalhead"><h2 id="modalTitle">Yeni kayıt</h2><button class="x" id="closeModal" aria-label="Kapat">×</button></div><form id="modalForm"><div id="modalFields" class="fields"></div><div class="modalbuttons"><button type="button" class="btn" id="cancelModal">Vazgeç</button><button class="btn primary" type="submit">Kaydet</button></div></form></div></div><div id="toast"></div>
-<script type="module">
+<style id="ot-navigation-v4">
+@media(max-width:1000px){
+#shell:not(.hide) aside{padding:10px 12px!important}
+#shell .mobile-menu-caption{display:none!important}
+#shell #nav.nav{display:block!important;max-height:none!important;overflow:visible!important}
+#shell #nav .ot-nav-group{margin:6px 0;border:1px solid #45627c;border-radius:12px;overflow:hidden;background:#ffffff08}
+#shell #nav .ot-nav-group summary{list-style:none;cursor:pointer;color:#e8f6fc;padding:12px 14px;font-weight:750;font-size:13px;display:flex;justify-content:space-between}
+#shell #nav .ot-nav-group summary::-webkit-details-marker{display:none}
+#shell #nav .ot-nav-group summary:after{content:"⌄";color:#6ed5d5}
+#shell #nav .ot-nav-group[open] summary:after{content:"⌃"}
+#shell #nav .ot-nav-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 8px 9px}
+#shell #nav .ot-nav-items>button{display:flex!important;width:100%!important;min-width:0!important;white-space:normal!important;min-height:48px!important;padding:10px!important;font-size:12px!important;align-items:center}
+#shell #nav .ot-nav-items>button .ic{flex:0 0 23px}
+#shell.simple-mode #nav .ot-nav-group:not(:first-child){display:none!important}
+#shell.staff-mode #nav .ot-nav-group{display:none!important}
+#shell.staff-mode #nav .ot-nav-group:first-child{display:block!important}
+#shell .ot-bottom-nav{position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#fff;border-top:1px solid #d9e5ee;z-index:15;padding:5px 4px max(5px,env(safe-area-inset-bottom));box-shadow:0 -4px 18px #102d4417}
+#shell .ot-bottom-nav button{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;background:transparent;border:0;color:#60778d;font-size:10px;font-weight:650;min-height:48px}
+#shell .ot-bottom-nav button .ot-ico{font-size:20px;line-height:1}
+#shell .ot-bottom-nav button.active{color:#087f87}
+#shell main{padding-bottom:76px}
+#shell #nav:not(.ot-open){display:none!important}
+#shell .ot-menu-toggle{border:1px solid #53758c;background:#254762;color:white;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin:0 0 6px;width:100%;text-align:left}
+#shell #viewModeSwitch{margin-top:7px}
+}
+@media(min-width:1001px){#shell .ot-bottom-nav,#shell .ot-menu-toggle{display:none!important}#shell #nav .ot-nav-group{display:contents}#shell #nav .ot-nav-group summary{display:none}#shell #nav .ot-nav-items{display:contents}}
+</style><script>
+(function(){
+ const nav=document.getElementById('nav');if(!nav||nav.dataset.otGrouped)return;nav.dataset.otGrouped='1';
+ const groups=[['Yönetim',['overview','digital','members']],['İşlemler',['tasks','catalog','streams','calendar','appointments']],['Analiz',['goals','reports','ai']],['Kurumsal',['inspection','documents','notifications']]];
+ const existing=[...nav.querySelectorAll(':scope > button[data-view]')];const byView=Object.fromEntries(existing.map(b=>[b.dataset.view,b]));
+ groups.forEach(([label,views],i)=>{const d=document.createElement('details');d.className='ot-nav-group';if(i===0)d.open=true;const summary=document.createElement('summary');summary.textContent=label;d.append(summary);const inner=document.createElement('div');inner.className='ot-nav-items';views.forEach(v=>{if(byView[v])inner.append(byView[v])});d.append(inner);nav.append(d)});
+ const toggle=document.createElement('button');toggle.type='button';toggle.className='ot-menu-toggle';toggle.textContent='☰  Tüm Menüler';toggle.setAttribute('aria-expanded','false');nav.before(toggle);
+ const bar=document.createElement('nav');bar.className='ot-bottom-nav';bar.setAttribute('aria-label','Mobil hızlı erişim');
+ [['overview','⌂','Ana Sayfa'],['tasks','☑','Görevler'],['calendar','▦','Takvim'],['notifications','♧','Bildirim'],['menu','☰','Menü']].forEach(([view,ico,label])=>{const b=document.createElement('button');b.type='button';b.innerHTML='<span class="ot-ico" aria-hidden="true">'+ico+'</span><span>'+label+'</span>';if(view==='menu'){b.onclick=()=>{const open=nav.classList.toggle('ot-open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕  Menüyü Kapat':'☰  Tüm Menüler';window.scrollTo({top:0,behavior:'smooth'})}}else{b.dataset.view=view;b.addEventListener('click',()=>{nav.classList.remove('ot-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰  Tüm Menüler'})}bar.append(b)});
+ document.getElementById('shell').append(bar);
+ toggle.onclick=()=>{const open=nav.classList.toggle('ot-open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕  Menüyü Kapat':'☰  Tüm Menüler'};
+ const sync=()=>{const active=nav.querySelector('button[data-view].active');if(active){const d=active.closest('details');if(d)d.open=true;bar.querySelectorAll('button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===active.dataset.view))}};
+ new MutationObserver(sync).observe(nav,{attributes:true,subtree:true,attributeFilter:['class']});sync();
+})();
+</script><script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import {createInspectionModule} from "./inspection-module.js";
 import {createReportingModule} from "./reporting-module.js";
