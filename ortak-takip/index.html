@@ -1818,12 +1818,22 @@ async function sendStaffEncouragement(){
 }
 async function showSentEncouragements(){
  if(state.role!=="owner")return;
- const {data,error:e}=await sb.from("staff_encouragements").select("recipient_id,kind,message,created_at,read_at").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100);
+ const {data,error:e}=await sb.from("staff_encouragements").select("id,recipient_id,kind,message,created_at,read_at").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100);
  if(e){toast("Gönderilen mesajlar açılamadı: "+e.message);return}
  const names={thanks:"Teşekkür",achievement:"Başarı",support:"Destek"};
  const modal=document.createElement("div");modal.className="team-access-overlay";
- modal.innerHTML='<div class="team-access-dialog" style="max-width:750px;width:95%;max-height:85vh;overflow:auto"><h2>Gönderilen Teşvik Mesajları</h2>'+(data?.length?data.map(x=>'<div style="padding:12px 0;border-bottom:1px solid #aaa"><strong>'+esc(memberName(x.recipient_id))+'</strong> · '+esc(names[x.kind]||x.kind)+' · '+new Date(x.created_at).toLocaleString("tr-TR")+' · '+(x.read_at?"Okundu":"Okunmadı")+'<p style="white-space:pre-wrap">'+esc(x.message)+'</p></div>').join(""):"<p>Henüz gönderilmiş mesaj bulunmuyor.</p>")+'<button class="btn primary" id="sentEncClose">Kapat</button></div>';
+ modal.innerHTML='<div class="team-access-dialog" style="max-width:750px;width:95%;max-height:85vh;overflow:auto"><h2>Gönderilen Teşvik Mesajları</h2><p class="small muted">Silinen mesaj personelin kutusundan da kaldırılır. Bu işlem geri alınamaz.</p>'+(data?.length?data.map(x=>'<div style="padding:12px 0;border-bottom:1px solid #aaa"><strong>'+esc(memberName(x.recipient_id))+'</strong> · '+esc(names[x.kind]||x.kind)+' · '+new Date(x.created_at).toLocaleString("tr-TR")+' · '+(x.read_at?"Okundu":"Okunmadı")+'<p style="white-space:pre-wrap">'+esc(x.message)+'</p><button type="button" class="btn sm" data-delete-enc="'+esc(x.id)+'">🗑 Sil</button></div>').join(""):"<p>Henüz gönderilmiş mesaj bulunmuyor.</p>")+'<button class="btn primary" id="sentEncClose">Kapat</button></div>';
  document.body.append(modal);modal.querySelector("#sentEncClose").onclick=()=>modal.remove();
+ modal.querySelectorAll("[data-delete-enc]").forEach(btn=>btn.onclick=async()=>{
+  if(!confirm("Bu mesajı personelin kutusundan da kalıcı olarak silmek istiyor musunuz?"))return;
+  btn.disabled=true;
+  const id=btn.getAttribute("data-delete-enc");
+  const {data:deleted,error:delError}=await sb.from("staff_encouragements").delete().eq("id",id).eq("workspace_id",WS).select("id");
+  if(delError||!deleted?.length){btn.disabled=false;toast(delError?.message||"Mesaj silinemedi.");return}
+  btn.parentElement?.remove();
+  toast("Mesaj silindi.");
+  void refreshEncouragementUnread();
+ });
 }
 async function refreshEncouragementUnread(){
  if(!state.user)return;
