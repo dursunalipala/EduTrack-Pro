@@ -1816,6 +1816,21 @@ async function sendStaffEncouragement(){
   btn.disabled=false;if(e){toast(e.message);return}modal.remove();toast("Mesaj gönderildi.");
  };
 }
+async function showSentEncouragements(){
+ if(state.role!=="owner")return;
+ const {data,error:e}=await sb.from("staff_encouragements").select("recipient_id,kind,message,created_at,read_at").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100);
+ if(e){toast("Gönderilen mesajlar açılamadı: "+e.message);return}
+ const names={thanks:"Teşekkür",achievement:"Başarı",support:"Destek"};
+ const modal=document.createElement("div");modal.className="team-access-overlay";
+ modal.innerHTML='<div class="team-access-dialog" style="max-width:750px;width:95%;max-height:85vh;overflow:auto"><h2>Gönderilen Teşvik Mesajları</h2>'+(data?.length?data.map(x=>'<div style="padding:12px 0;border-bottom:1px solid #aaa"><strong>'+esc(memberName(x.recipient_id))+'</strong> · '+esc(names[x.kind]||x.kind)+' · '+new Date(x.created_at).toLocaleString("tr-TR")+' · '+(x.read_at?"Okundu":"Okunmadı")+'<p style="white-space:pre-wrap">'+esc(x.message)+'</p></div>').join(""):"<p>Henüz gönderilmiş mesaj bulunmuyor.</p>")+'<button class="btn primary" id="sentEncClose">Kapat</button></div>';
+ document.body.append(modal);modal.querySelector("#sentEncClose").onclick=()=>modal.remove();
+}
+async function refreshEncouragementUnread(){
+ if(!state.user)return;
+ const b=document.getElementById("openEncouragementInbox");if(!b)return;
+ const {count,error:e}=await sb.from("staff_encouragements").select("id",{count:"exact",head:true}).eq("workspace_id",WS).eq("recipient_id",state.user.id).is("read_at",null);
+ if(!e)b.textContent=count?"💌 Mesajlarım ("+count+" yeni)":"💌 Mesajlarım";
+}
 async function showStaffEncouragements(){
  if(!state.user)return;
  const {data,error:e}=await sb.from("staff_encouragements").select("id,kind,message,created_at,read_at").eq("workspace_id",WS).eq("recipient_id",state.user.id).order("created_at",{ascending:false}).limit(50);
@@ -1826,14 +1841,15 @@ async function showStaffEncouragements(){
  document.body.append(modal);modal.querySelector("#encClose").onclick=()=>modal.remove();
  const ids=(data||[]).filter(x=>!x.read_at).map(x=>x.id);
  if(ids.length)await sb.from("staff_encouragements").update({read_at:new Date().toISOString()}).in("id",ids).eq("recipient_id",state.user.id);
+ void refreshEncouragementUnread();
 }
 function ensureEncouragementInboxButton(){
  if(document.getElementById("openEncouragementInbox"))return;
  const b=document.createElement("button");b.id="openEncouragementInbox";b.type="button";b.textContent="💌 Mesajlarım";b.className="btn";
  b.style.cssText="position:fixed;right:14px;bottom:16px;z-index:40;box-shadow:0 3px 12px #0003";
- b.onclick=()=>void showStaffEncouragements();document.body.append(b);
+ b.onclick=()=>void showStaffEncouragements();document.body.append(b);void refreshEncouragementUnread();
 }
-document.addEventListener("click",e=>{if(e.target.closest("#openEncouragementSend"))void sendStaffEncouragement()});
+document.addEventListener("click",e=>{if(e.target.closest("#openEncouragementSend"))void sendStaffEncouragement();if(e.target.closest("#openSentEncouragements"))void showSentEncouragements()});
 async function usageReport(){
  if(state.role!=="owner")return;
  const since=new Date(Date.now()-30*86400000).toISOString();
@@ -2853,7 +2869,7 @@ function membersView(){
   statusActions+'</div></details></div></div>';
  }).join("");
  const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
- return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(state.role==="owner"?'<button class="btn" id="openUsageReport">📊 Aktif Kullanım</button><button class="btn" id="openEncouragementSend">💬 Teşvik Mesajı</button>':"")+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
+ return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(state.role==="owner"?'<button class="btn" id="openUsageReport">📊 Aktif Kullanım</button><button class="btn" id="openEncouragementSend">💬 Teşvik Mesajı</button><button class="btn" id="openSentEncouragements">📨 Gönderilen Mesajlar</button>':"")+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
  '<section class="panel"><p class="small muted">Personeli pasife alın veya sistemden kaldırarak arşivleyin. Erişimi kapanır; eski görevleri, işlem kayıtları ve raporlardaki adı korunur. Arşivdeki personel tekrar aktifleştirilebilir. Bu işlemler yalnızca Admin yetkisindedir.</p>'+
  '<div class="member-tabs">'+tabs+'</div>'+
  '<h2>'+({active:"Aktif Ekip",inactive:"Pasif Personeller",archive:"Personel Arşivi"})[state.memberStatusTab]+' ('+counts[state.memberStatusTab]+')</h2>'+
