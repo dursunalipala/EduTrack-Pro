@@ -2758,9 +2758,9 @@ function membersView(){
    '</div>':"";
   const lifecycle=state.memberStatusHistory.filter(a=>a.user_id===m.user_id).slice(0,5);
   return '<div class="member personnel-card"><div class="miniavatar">'+esc(memberName(m.user_id).slice(0,2).toLocaleUpperCase("tr-TR"))+'</div>'+
-  '<div class="member-data"><strong>'+esc(memberName(m.user_id))+'</strong>'+
+  '<div class="member-data"><details class="personnel-fold"><summary><strong>'+esc(memberName(m.user_id))+'</strong>'+
   '<div class="small muted">'+esc(profile.position_title||"Pozisyon belirtilmedi")+
-  ' · '+esc(memberStatusLabel(m))+' · '+esc(labels[m.role]||m.role)+'</div>'+
+  ' · '+esc(memberStatusLabel(m))+' · '+esc(labels[m.role]||m.role)+'</div><span class="personnel-fold-hint">Ayrıntılar ve İşlemler ▾</span></summary><div class="personnel-fold-body">'+
   (state.role==="owner"&&email?'<div class="small muted">'+esc(email)+'</div>':"")+
   (phone?'<div class="small muted">WhatsApp: '+esc(phone)+'</div>':"")+
   '<div class="small muted">İlgili görev: '+stats.assigned+' · İşlem kaydı: '+stats.actions+
@@ -2775,7 +2775,7 @@ function membersView(){
   (editable?'<div class="actions member-lifecycle-actions"><button type="button" class="btn sm" data-edit-member="'+esc(m.user_id)+'">Bilgileri Düzenle</button>'+
    (m.user_id===state.user?.id?"":'<button type="button" class="btn sm" data-member-password="'+esc(m.user_id)+'">Yeni Şifre Belirle</button>')+'</div>':"")+
   (state.role==="owner"&&m.is_active&&!m.archived_at?'<div class="actions member-lifecycle-actions" style="margin-top:10px"><button type="button" class="btn sm" data-team-welcome-email="'+esc(m.user_id)+'">✉ E-posta Daveti</button><button type="button" class="btn sm" data-team-welcome-wa="'+esc(m.user_id)+'">WhatsApp Daveti</button></div>':"")+
-  statusActions+'</div></div>';
+  statusActions+'</div></details></div>';
  }).join("");
  const pending=canManage()?state.invites.filter(i=>i.status==="pending").map(i=>'<div class="member"><div class="miniavatar">✉</div><div style="flex:1"><strong>'+esc(i.email)+'</strong><div class="small muted">Hesap oluşturması ve e-posta doğrulaması bekleniyor</div></div><span class="tag">'+esc(labels[i.role]||i.role)+' · Davet Bekliyor</span></div>').join(""):"";
  return '<div class="titlebar"><h2>Ortaklar ve Ekip</h2>'+(canManage()?'<button class="btn primary" id="newMember">+ Personel Ekle</button>':"")+'</div>'+
@@ -3454,11 +3454,12 @@ function openEditor(member){
  const whatsappPhone=edit?"":String(new FormData(form).get("whatsapp_phone")||"").replace(/\D/g,"");
  const prepareWhatsapp=!edit&&new FormData(form).has("prepare_whatsapp");
  const newName=edit?"":String(new FormData(form).get("full_name")||"").trim();
+ const firstPassword=edit?"":String(new FormData(form).get("password")||"");
  const result=await request(payload);close();toast(result.message||"Kaydedildi");await refresh();await loadAccess();
  if(!edit){
   const notice=document.createElement("div");notice.className="team-access-overlay";notice.id="teamWelcomeOverlay";
   const emailLabel=result.email_status==="sent"?"E-posta gönderim servisi daveti kabul etti.":result.email_status==="skipped"?"E-posta gönderimi seçilmedi.":"Personel kaydedildi, ancak e-posta gönderimi doğrulanamadı.";
-  notice.innerHTML='<div class="team-access-dialog" style="max-width:470px"><h2>Personel Kaydedildi</h2><p>'+escTeam(newName)+' sisteme eklendi.</p><p>'+escTeam(emailLabel)+'</p><p>İlk girişte şifre değiştirme zorunludur. Başlangıç şifresini güvenli bir yöntemle iletin.</p><div class="actions" id="teamWelcomeActions"></div></div>';
+  notice.innerHTML='<div class="team-access-dialog" style="max-width:470px"><h2>Personel Kaydedildi</h2><p>'+escTeam(newName)+' sisteme eklendi.</p><p>'+escTeam(emailLabel)+'</p><p>İlk girişte şifre değiştirme zorunludur. WhatsApp ilk davetinde başlangıç şifresi yer alır. WhatsApp sohbet geçmişinde kalabileceği için yalnızca doğru kişiye gönderin ve girişten sonra mesajı silmesini isteyin.</p><div class="actions" id="teamWelcomeActions"></div></div>';
   document.body.append(notice);
   const actionsBox=notice.querySelector("#teamWelcomeActions");
   if(prepareWhatsapp){
@@ -3467,7 +3468,7 @@ function openEditor(member){
     let phone=whatsappPhone;if(!phone){phone=prompt("Personelin WhatsApp numarasını girin (05XX...):")?.replace(/\D/g,"")||""}
     if(phone.startsWith("0"))phone="90"+phone.slice(1);else if(phone.length===10)phone="90"+phone;
     if(!/^\d{11,15}$/.test(phone)){toast("Geçerli WhatsApp numarası girin");return}
-    const msg="Merhaba "+newName+", Elit Eğitim Kurumları Ortak Takip sistemine personel hesabınız oluşturuldu. Giriş: https://ortak-takip.onrender.com . Başlangıç şifrenizi yöneticinizden güvenli şekilde alın. İlk girişte şifrenizi değiştirmeniz gereklidir. Şifrenizi mesajla paylaşmayın.";
+    const msg="Merhaba "+newName+", Elit Eğitim Kurumları Ortak Takip sistemine personel hesabınız oluşturuldu. Giriş: https://ortak-takip.onrender.com\nKullanıcı e-postanız: "+String(payload.email)+"\nTek kullanımlık başlangıç şifreniz: "+firstPassword+"\nİlk girişte şifrenizi mutlaka değiştirin. Bu mesajı ve şifreyi kimseyle paylaşmayın; giriş yaptıktan sonra mesajı silin.";
     window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
    };actionsBox.append(waBtn);
   }
@@ -3526,6 +3527,7 @@ document.addEventListener("DOMContentLoaded",()=>{setTimeout(loadAccess,1500)});
 
 </script>
 <style>
+.personnel-fold{width:100%;min-width:0}.personnel-fold>summary{cursor:pointer;list-style:none;display:block;padding:2px 0 9px}.personnel-fold>summary::-webkit-details-marker{display:none}.personnel-fold-hint{display:inline-block;margin-top:8px;font-size:12px;color:#17698b;font-weight:650}.personnel-fold[open] .personnel-fold-hint{display:none}.personnel-fold-body{padding-top:10px;border-top:1px solid #e3eaf0}.personnel-card .member-data{min-width:0;flex:1}
 .team-access-overlay{position:fixed;inset:0;background:#10213bb8;z-index:80;display:grid;place-items:center;padding:15px}
 .team-access-dialog{background:#fff;color:#203750;border-radius:17px;padding:22px;width:min(820px,100%);max-height:92dvh;overflow:auto;box-shadow:0 18px 70px #0003}
 .team-access-dialog h2{margin:0 0 12px}.team-access-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
