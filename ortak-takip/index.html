@@ -987,13 +987,13 @@ let inboxUnreadTotal=0,swipeGesture=null,ignoreNotificationClickUntil=0,undoDism
 const notificationTitles={
  assignment:"Yeni görev atandı",transfer:"Görev ataması değişti",
  due_changed:"Görev tarihi değişti",due_soon:"Görev tarihi yaklaşıyor",
- overdue:"Görev gecikti",appointment_overdue:"Geciken randevu / veli takibi",admin_message:"Admin mesajı",submitted:"Görev kontrolünüzü bekliyor",
+ overdue:"Görev gecikti",appointment_overdue:"Geciken randevu / veli takibi",admin_message:"Admin mesajı",staff_encouragement:"Teşvik ve Destek Mesajı",submitted:"Görev kontrolünüzü bekliyor",
  approved:"Görev onaylandı",completed:"Görev tamamlandı",
  returned:"Görev düzeltme için geri gönderildi"
 };
 const notificationIcons={
  assignment:"✚",transfer:"⇄",due_changed:"▦",due_soon:"◷",
- overdue:"!",appointment_overdue:"◷",admin_message:"✉",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
+ overdue:"!",appointment_overdue:"◷",admin_message:"✉",staff_encouragement:"💌",submitted:"✓",approved:"✓",completed:"✓",returned:"↶"
 };
 const notificationDate=d=>{
  if(!d)return "";
@@ -1025,7 +1025,7 @@ function renderNotificationCenter(){
      '<span class="notify-item-icon notify-kind-'+esc(n.kind)+'" aria-hidden="true">'+esc(notificationIcons[n.kind]||"•")+'</span>'+
      '<span class="notify-item-info"><strong>'+esc(notificationTitles[n.kind]||"Görev bildirimi")+'</strong>'+
      '<span>'+esc(notifyTaskTitle(n))+'</span>'+
-     ((n.kind==="admin_message"||n.kind==="appointment_overdue")&&n.payload?.body?'<small class="notify-message-preview">'+esc(String(n.payload.body).slice(0,90))+'</small>':"")+
+     ((n.kind==="admin_message"||n.kind==="staff_encouragement"||n.kind==="appointment_overdue")&&n.payload?.body?'<small class="notify-message-preview">'+esc(String(n.payload.body).slice(0,90))+'</small>':"")+
      '<small>'+esc(notificationDate(n.created_at))+'</small></span>'+
      (!n.read_at?'<span class="notify-unread-dot" aria-label="Okunmadı"></span>':"")+
     '</button>'+
@@ -1158,12 +1158,12 @@ async function openInboxTask(id){
   render();
   return;
  }
- if(n.kind==="admin_message"){
+ if(n.kind==="admin_message"||n.kind==="staff_encouragement"){
   await markNotificationRead(id);
   const detail=$("#notifyMessageDetail");
-  $("#notifyMessageTitle").textContent=n.title||"Admin mesajı";
+  $("#notifyMessageTitle").textContent=n.title||(n.kind==="staff_encouragement"?"Teşvik Mesajı":"Admin mesajı");
   $("#notifyMessageBody").textContent=String(n.payload?.body||"");
-  $("#notifyMessageSender").textContent="Admin tarafından gönderildi · "+notificationDate(n.created_at);
+  $("#notifyMessageSender").textContent=(n.kind==="staff_encouragement"?"Teşvik ve destek bildirimi":"Admin tarafından gönderildi")+" · "+notificationDate(n.created_at);
   detail.hidden=false;
   $("#notifyMessageClose")?.focus();
   return;
@@ -1309,7 +1309,7 @@ function eraseSensitiveView(){
 async function secureLogout(message="Güvenli çıkış yapıldı. Yeniden giriş yapın."){
  if(securityLoggingOut||recoveryMode)return;
  securityLoggingOut=true;
- document.getElementById("openEncouragementInbox")?.remove();
+
  await usageTick(true,true);
  usageSessionKey=null;try{sessionStorage.removeItem("ortak-usage-key")}catch{}
  securityLocked=true;
@@ -1853,14 +1853,6 @@ async function showStaffEncouragements(){
  if(ids.length)await sb.from("staff_encouragements").update({read_at:new Date().toISOString()}).in("id",ids).eq("recipient_id",state.user.id);
  void refreshEncouragementUnread();
 }
-function ensureEncouragementInboxButton(){
- const head=document.querySelector("#notifyPanel .notify-header-buttons");
- if(!head||document.getElementById("openEncouragementInbox"))return;
- const b=document.createElement("button");b.id="openEncouragementInbox";b.type="button";b.textContent="💌 Teşviklerim";
- b.onclick=()=>void showStaffEncouragements();
- head.insertBefore(b,document.getElementById("notifyClose"));
- void refreshEncouragementUnread();
-}
 
 document.addEventListener("click",e=>{if(e.target.closest("#openEncouragementSend"))void sendStaffEncouragement();if(e.target.closest("#openSentEncouragements"))void showSentEncouragements()});
 async function usageReport(){
@@ -1887,7 +1879,7 @@ async function boot(){
  const {data:{user}}=await sb.auth.getUser();if(!user){showAuth();return}if(!(await enforceInitialPassword(user)))return;state.user=user;
 const {data:me,error:e}=await sb.from("workspace_members").select("role,is_active").eq("workspace_id",WS).eq("user_id",user.id).maybeSingle();if(e){error(e);return}
 if(!me?.is_active){showAuth();$("#password").value="";$("#authmsg").textContent="Bu hesap Ortak Takip ekibine henüz eklenmemiş. Admin hesabınızla giriş yapın veya yöneticinizden personel daveti isteyin. Hesap oluşturmak tek başına yetki vermez.";return}
-state.role=me.role;usageStart();ensureEncouragementInboxButton();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
+state.role=me.role;usageStart();$("#sideemail").textContent=user.email||"";$("#userrole").textContent=labels[state.role]||state.role;$("#avatar").textContent=(user.user_metadata?.full_name||user.email||"OT").slice(0,2).toLocaleUpperCase("tr-TR");await refresh();$("#auth").classList.add("hide");$("#shell").classList.remove("hide");
 if(!document.hidden){
  backgroundSince=null;storeSecurityTimestamp(BACKGROUND_STORAGE_KEY,0);
  recordSecurityActivity(true);
