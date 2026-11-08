@@ -3522,7 +3522,7 @@ document.addEventListener("click",async e=>{
   let password=Array.from(random,v=>alphabet[v%alphabet.length]).join("");
   password="A7!"+password.slice(0,3);
   const email=state.teamEmails[id]?.email||"";
-  const msg=["Merhaba "+name+",","Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.","","Giriş: https://ortak-takip.onrender.com",...(email?["E-posta: "+email]:[]),"","*Geçici şifreniz:*","\`"+password+"\`","","İlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin."].join("\\n");
+  const msg=["Merhaba "+name+",","Elit Eğitim Kurumları Ortak Takip sistemindeki hesabınız için yeni geçici şifre oluşturuldu.","","Giriş: https://ortak-takip.onrender.com",...(email?["E-posta: "+email]:[]),"","*Geçici şifreniz:*","\`"+password+"\`","","İlk girişte şifrenizi değiştirin. Mesajı başkalarıyla paylaşmayın ve girişten sonra silin."].join("\n");
   const popup=window.open("about:blank","_blank");
   waButton.disabled=true;
   try{
