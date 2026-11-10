@@ -2093,7 +2093,7 @@ function bindProfile(){
 }
 function render(){
  const shell=$("#shell");
- if(isStaff()&&!["overview","tasks","digital","appointments","profile"].includes(state.view))state.view="overview";
+ if(isStaff()&&!["overview","tasks","digital","appointments","profile","hr"].includes(state.view))state.view="overview";
  shell.classList.toggle("simple-mode",state.simpleMode||isStaff());
  shell.classList.toggle("staff-mode",isStaff());
  const switchButton=$("#viewModeSwitch");
@@ -2101,7 +2101,7 @@ function render(){
  const menuNames={overview:"Bugün",tasks:"İşlerim",calendar:"Takvim",ai:"Asistan",digital:"Dijital",appointments:"Randevular",inspection:"Teftiş",documents:"Evraklar",reports:"Raporlar"};
  const fullNames={overview:"Genel Bakış",appointments:"Randevu Merkezi",tasks:"Görev Takibi",catalog:"İş ve Görev Havuzu",calendar:"Takvim",goals:"Performans ve Hedefler",streams:"İş Grupları",reports:"Raporlama",notifications:"Bildirimler",digital:"Dijital Merkez",inspection:"Teftiş / Ön Denetim",documents:"Evrak Merkezi",ai:"Yapay Zekâ Asistanı",members:"Ortaklar ve Ekip",hr:"İnsan Kaynakları"};
  document.querySelectorAll("#nav button").forEach(b=>{
-   const simple=(isStaff()?["overview","tasks","digital","appointments"]:["overview","tasks","calendar","appointments","digital","inspection","documents","ai","reports"]).includes(b.dataset.view);
+   const simple=(isStaff()?["overview","tasks","digital","appointments","hr"]:["overview","tasks","calendar","appointments","digital","inspection","documents","ai","reports","hr"]).includes(b.dataset.view);
    b.dataset.simpleNav=simple?"1":"0";b.hidden=isStaff()&&!simple;
    const ic=b.querySelector(".ic")?.textContent||"•";
    b.innerHTML='<span class="ic">'+esc(ic)+'</span> '+esc((state.simpleMode||isStaff())?(menuNames[b.dataset.view]||fullNames[b.dataset.view]):fullNames[b.dataset.view]);
@@ -3085,7 +3085,7 @@ function bindView(){
  document.querySelectorAll("#simplePriorityPanel [data-edit-task]").forEach(b=>b.onclick=()=>{
   const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openTaskDetail(task);
  });
- document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks","digital","appointments","profile"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
+ document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks","digital","appointments","profile","hr"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
 if(state.view==="digital")bindDigitalCenter();
 if(state.view==="appointments")appointments.bind();
 if(state.view==="inspection"||state.view==="documents")inspection.bind();
