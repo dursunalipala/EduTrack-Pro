@@ -23,10 +23,10 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    (e.first_name+' '+e.last_name+' '+(e.work_email||'')).toLocaleLowerCase('tr').includes(s.query.toLocaleLowerCase('tr')));
   return `<div class="hr-module">
    <div class="titlebar"><div><h2>İnsan Kaynakları</h2><p class="muted small">Kurum bazlı personel yönetimi ve özlük kayıtları</p></div>
-    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
+    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
    <div class="hr-kpis"><div class="panel"><span class="muted">Personel</span><strong>${filtered.length}</strong></div><div class="panel"><span class="muted">Aktif</span><strong>${filtered.filter(x=>x.status==='active').length}</strong></div><div class="panel"><span class="muted">Kurum</span><strong>${orgs.length}</strong></div></div>
    <div class="panel"><div class="filters"><label>Kurum <select data-hr-org><option value="all">Tüm yetkili kurumlar</option>${orgs.map(o=>`<option value="${safe(o.id)}" ${s.selected===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label><label>Personel ara <input data-hr-search value="${safe(s.query)}" placeholder="Ad, soyad veya e-posta"></label></div>
-   ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th></tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td></tr>`).join('')}</tbody></table></div>`}
+   ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th>${owner()?'<th>İşlem</th>':''}</tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td>${owner()?`<td><button class="btn sm" data-hr-edit="${safe(e.id)}">Düzenle</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
    </div></div>`;
  }
  function bind(root){
@@ -34,6 +34,8 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-org]')?.addEventListener('change',e=>{S().selected=e.target.value;draw(root)});
   root.querySelector('[data-hr-search]')?.addEventListener('input',e=>{const s=S();s.query=e.target.value;const start=e.target.selectionStart;draw(root);const input=root.querySelector('[data-hr-search]');input?.focus();input?.setSelectionRange(start,start)});
   root.querySelector('[data-hr-add]')?.addEventListener('click',()=>add(root));
+  root.querySelector('[data-hr-add-org]')?.addEventListener('click',()=>addOrganization(root));
+  root.querySelectorAll('[data-hr-edit]').forEach(b=>b.addEventListener('click',()=>editEmployee(root,b.dataset.hrEdit)));
  }
  function draw(root){root.innerHTML=view();bind(root)}
  async function mount(root){if(!S().loaded)await load();draw(root)}
@@ -52,6 +54,38 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     const {error:employmentError}=await sb.from('hr_employments').insert({workspace_id:WS,employee_id:employee.id,organization_id:fd.get('org'),position_title:String(fd.get('title')).trim(),start_date:fd.get('start'),is_primary:true});
     if(employmentError){toast('Personel oluşturuldu ancak kurum ataması başarısız. İK yöneticisi kaydı kontrol etmelidir.');throw employmentError}
     overlay.remove();await load();draw(root);toast('Personel kaydedildi');
+   }catch(e){error(e)}finally{button.disabled=false}
+  };
+ }
+
+ function modal(html){
+  const overlay=document.createElement('div');overlay.className='hr-overlay';
+  overlay.innerHTML=html;document.body.append(overlay);
+  overlay.querySelector('[data-hr-cancel]')?.addEventListener('click',()=>overlay.remove());
+  return overlay;
+ }
+ function addOrganization(root){
+  if(!owner())return;
+  const overlay=modal('<form class="hr-dialog"><h2>İK Kurumu Ekle</h2><label>Kurum adı<input name="name" required minlength="2" maxlength="180"></label><label>Kurum kodu<input name="code" required pattern="[a-z0-9_-]+" placeholder="elit-ilkokul"></label><p class="small muted">Kurum kodu küçük harf, rakam, tire veya alt çizgi içermelidir.</p><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div></form>');
+  overlay.querySelector('form').onsubmit=async ev=>{
+   ev.preventDefault();const f=ev.currentTarget,fd=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const {error:err}=await sb.from('hr_organizations').insert({workspace_id:WS,name:String(fd.get('name')).trim(),code:String(fd.get('code')).trim()});
+    if(err)throw err;overlay.remove();await load();draw(root);toast('Kurum eklendi');
+   }catch(e){error(e)}finally{button.disabled=false}
+  };
+ }
+ function editEmployee(root,id){
+  if(!owner())return;
+  const person=S().employees.find(x=>x.id===id);if(!person)return;
+  const overlay=modal('<form class="hr-dialog"><h2>Personel Bilgilerini Düzenle</h2><label>Ad<input name="first" required maxlength="100"></label><label>Soyad<input name="last" required maxlength="100"></label><label>İş e-postası<input name="email" type="email"></label><label>Durum<select name="status"><option value="active">Aktif</option><option value="on_leave">İzinli</option><option value="inactive">Pasif</option></select></label><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div></form>');
+  const f=overlay.querySelector('form');
+  f.elements.first.value=person.first_name;f.elements.last.value=person.last_name;f.elements.email.value=person.work_email||'';f.elements.status.value=person.status;
+  f.onsubmit=async ev=>{
+   ev.preventDefault();const fd=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const {error:err}=await sb.from('hr_employees').update({first_name:String(fd.get('first')).trim(),last_name:String(fd.get('last')).trim(),work_email:String(fd.get('email')).trim()||null,status:fd.get('status')}).eq('workspace_id',WS).eq('id',id);
+    if(err)throw err;overlay.remove();await load();draw(root);toast('Personel bilgileri güncellendi');
    }catch(e){error(e)}finally{button.disabled=false}
   };
  }
