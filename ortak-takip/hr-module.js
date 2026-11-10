@@ -16,7 +16,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   Object.assign(s,{organizations:o.data||[],employees:e.data||[],employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
+   Object.assign(s,{organizations:o.data||[],employees:(e.data||[]).map(person=>({...person,id:person.employee_id})),employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
   }catch(e){error(e)}finally{s.loading=false}
  }
  function view(){
