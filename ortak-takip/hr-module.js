@@ -29,7 +29,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    (e.first_name+' '+e.last_name+' '+(e.work_email||'')).toLocaleLowerCase('tr').includes(s.query.toLocaleLowerCase('tr')));
   return `<div class="hr-module">
    <div class="titlebar"><div><h2>İnsan Kaynakları</h2><p class="muted small">Kurum bazlı personel yönetimi ve özlük kayıtları</p></div>
-    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
+    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn" data-hr-access>Yetki Yönetimi</button><button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
    <div class="hr-kpis"><div class="panel"><span class="muted">Personel</span><strong>${filtered.length}</strong></div><div class="panel"><span class="muted">Aktif</span><strong>${filtered.filter(x=>x.status==='active').length}</strong></div><div class="panel"><span class="muted">Kurum</span><strong>${orgs.length}</strong></div></div>
    <div class="panel"><div class="filters"><label>Kurum <select data-hr-org><option value="all">Tüm yetkili kurumlar</option>${orgs.map(o=>`<option value="${safe(o.id)}" ${s.selected===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label><label>Personel ara <input data-hr-search value="${safe(s.query)}" placeholder="Ad, soyad veya e-posta"></label></div>
    ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th>${owner()?'<th>İşlem</th>':''}</tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td>${owner()?`<td><button class="btn sm" data-hr-edit="${safe(e.id)}">Düzenle</button> <button class="btn sm" data-hr-assign="${safe(e.id)}">Kurum Ata</button> <button class="btn sm" data-hr-link="${safe(e.id)}">Hesap Bağla</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
@@ -41,6 +41,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-search]')?.addEventListener('input',e=>{const s=S();s.query=e.target.value;const start=e.target.selectionStart;draw(root);const input=root.querySelector('[data-hr-search]');input?.focus();input?.setSelectionRange(start,start)});
   root.querySelector('[data-hr-add]')?.addEventListener('click',()=>add(root));
   root.querySelector('[data-hr-add-org]')?.addEventListener('click',()=>addOrganization(root));
+  root.querySelector('[data-hr-access]')?.addEventListener('click',()=>manageAccess(root));
   root.querySelectorAll('[data-hr-edit]').forEach(b=>b.addEventListener('click',()=>editEmployee(root,b.dataset.hrEdit)));
   root.querySelectorAll('[data-hr-link]').forEach(b=>b.addEventListener('click',()=>linkAccount(root,b.dataset.hrLink)));
   root.querySelectorAll('[data-hr-assign]').forEach(b=>b.addEventListener('click',()=>assign(root,b.dataset.hrAssign)));
@@ -155,6 +156,23 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     if(!window.confirm('Seçilen kullanıcı hesabı bu personel kaydına bağlansın mı?'))return;
     const {error:err}=await sb.rpc('hr_link_employee_account',{p_employee_id:id,p_user_id:userId});
     if(err)throw err;overlay.remove();await load();draw(root);toast('Personel hesabı eşleştirildi');
+   }catch(e){error(e)}finally{button.disabled=false}
+  };
+ }
+
+ function manageAccess(root){
+  if(!owner())return;
+  const orgs=S().organizations, members=(state.members||[]).filter(m=>m.is_active!==false);
+  if(!orgs.length||!members.length){toast('Kurum ve aktif kullanıcı kaydı gerekli');return}
+  const overlay=modal(`<form class="hr-dialog"><h2>Kurum İK Yetkisi</h2><label>Kurum<select name="org" required>${orgs.map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Kullanıcı<select name="user" required>${members.map(m=>`<option value="${safe(m.user_id)}">${safe((state.profiles||[]).find(p=>p.id===m.user_id)?.full_name||m.user_id)}</option>`).join('')}</select></label><label>Yetki<select name="level"><option value="hr_manager">Kurum İK Yöneticisi</option><option value="hr_admin">Kurum İK Admini</option><option value="employee">Personel</option><option value="viewer">İzleyici</option></select></label><p class="small muted">Yetkiler yalnızca seçilen kurum için geçerlidir. Admin erişimi ayrıca korunur.</p><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Yetkiyi Kaydet</button></div></form>`);
+  const f=overlay.querySelector('form');
+  f.onsubmit=async ev=>{
+   ev.preventDefault();const fd=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const org=String(fd.get('org')),user=String(fd.get('user')),level=String(fd.get('level'));
+    if(!window.confirm('Bu kullanıcıya seçilen kurum için '+level+' yetkisi verilsin mi?'))return;
+    const {error:err}=await sb.from('hr_org_access').upsert({workspace_id:WS,organization_id:org,user_id:user,access_level:level},{onConflict:'organization_id,user_id'});
+    if(err)throw err;overlay.remove();await load();draw(root);toast('Kurum yetkisi kaydedildi');
    }catch(e){error(e)}finally{button.disabled=false}
   };
  }
