@@ -1,21 +1,22 @@
 /* Ortak Takip - İnsan Kaynakları, kurum bazlı personel yönetimi */
 export function createHrModule({sb,WS,state,esc,toast,error}) {
- const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],selected:'all',query:'',loading:false,loaded:false});
+ const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false});
  const safe=v=>esc(String(v??''));
  const owner=()=>state.role==='owner';
- const selfEmployee=()=>S().employees.find(e=>e.user_id===state.user?.id);
+ const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
  async function load(){
   const s=S();s.loading=true;
   try {
-   const [o,e,m,l,a]=await Promise.all([
+   const [o,e,m,l,a,me]=await Promise.all([
     sb.from('hr_organizations').select('id,name,code,is_active').eq('workspace_id',WS).order('name'),
-    sb.from('hr_employees').select('id,user_id,first_name,last_name,work_email,status').eq('workspace_id',WS).order('last_name'),
+    sb.rpc('hr_visible_employee_roster',{p_workspace_id:WS}),
     sb.from('hr_employments').select('id,employee_id,organization_id,position_title,start_date,end_date,is_primary').eq('workspace_id',WS),
     sb.from('hr_leave_requests').select('id,employee_id,organization_id,leave_type,starts_on,ends_on,status,note').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(100),
-    sb.from('hr_org_access').select('organization_id,access_level,user_id').eq('workspace_id',WS)
+    sb.from('hr_org_access').select('organization_id,access_level,user_id').eq('workspace_id',WS),
+    sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
-   for(const r of [o,e,m,l,a])if(r.error)throw r.error;
-   Object.assign(s,{organizations:o.data||[],employees:e.data||[],employments:m.data||[],leaves:l.data||[],access:a.data||[],loaded:true});
+   for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
+   Object.assign(s,{organizations:o.data||[],employees:e.data||[],employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
   }catch(e){error(e)}finally{s.loading=false}
  }
  function view(){
@@ -31,7 +32,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
    <div class="hr-kpis"><div class="panel"><span class="muted">Personel</span><strong>${filtered.length}</strong></div><div class="panel"><span class="muted">Aktif</span><strong>${filtered.filter(x=>x.status==='active').length}</strong></div><div class="panel"><span class="muted">Kurum</span><strong>${orgs.length}</strong></div></div>
    <div class="panel"><div class="filters"><label>Kurum <select data-hr-org><option value="all">Tüm yetkili kurumlar</option>${orgs.map(o=>`<option value="${safe(o.id)}" ${s.selected===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label><label>Personel ara <input data-hr-search value="${safe(s.query)}" placeholder="Ad, soyad veya e-posta"></label></div>
-   ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th>${owner()?'<th>İşlem</th>':''}</tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td>${owner()?`<td><button class="btn sm" data-hr-edit="${safe(e.id)}">Düzenle</button> <button class="btn sm" data-hr-assign="${safe(e.id)}">Kurum Ata</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
+   ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th>${owner()?'<th>İşlem</th>':''}</tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td>${owner()?`<td><button class="btn sm" data-hr-edit="${safe(e.id)}">Düzenle</button> <button class="btn sm" data-hr-assign="${safe(e.id)}">Kurum Ata</button> <button class="btn sm" data-hr-link="${safe(e.id)}">Hesap Bağla</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
    </div><div class="panel"><div class="row"><h2>İzin Talepleri</h2><button class="btn primary" data-hr-request>İzin Talebi Oluştur</button></div>${s.leaves.filter(l=>s.selected==="all"||l.organization_id===s.selected).length?`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum</th><th>Tür / Tarih</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${s.leaves.filter(l=>s.selected==="all"||l.organization_id===s.selected).map(l=>`<tr><td>${safe(s.employees.find(e=>e.id===l.employee_id)?.first_name||"")} ${safe(s.employees.find(e=>e.id===l.employee_id)?.last_name||"")}</td><td>${safe(orgs.find(o=>o.id===l.organization_id)?.name||"")}</td><td>${safe(l.leave_type)} · ${safe(l.starts_on)} – ${safe(l.ends_on)}</td><td>${safe(l.status)}</td><td>${l.status==="pending"&&canDecide(l)?`<button class="btn sm" data-hr-leave="${safe(l.id)}" data-decision="approved">Onayla</button> <button class="btn sm" data-hr-leave="${safe(l.id)}" data-decision="rejected">Reddet</button>`:"—"}</td></tr>`).join("")}</tbody></table></div>`:"<p class=\"muted\">İzin talebi bulunamadı.</p>"}</div></div>`;
  }
  function bind(root){
@@ -41,6 +42,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-add]')?.addEventListener('click',()=>add(root));
   root.querySelector('[data-hr-add-org]')?.addEventListener('click',()=>addOrganization(root));
   root.querySelectorAll('[data-hr-edit]').forEach(b=>b.addEventListener('click',()=>editEmployee(root,b.dataset.hrEdit)));
+  root.querySelectorAll('[data-hr-link]').forEach(b=>b.addEventListener('click',()=>linkAccount(root,b.dataset.hrLink)));
   root.querySelectorAll('[data-hr-assign]').forEach(b=>b.addEventListener('click',()=>assign(root,b.dataset.hrAssign)));
   root.querySelector('[data-hr-request]')?.addEventListener('click',()=>requestLeave(root));
   root.querySelectorAll('[data-hr-leave]').forEach(b=>b.addEventListener('click',()=>decideLeave(root,b.dataset.hrLeave,b.dataset.decision)));
@@ -136,6 +138,23 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     const start=String(fd.get('start')),end=String(fd.get('end'));if(end<start)throw Error('Bitiş tarihi başlangıçtan önce olamaz');
     const {error:err}=await sb.from('hr_leave_requests').insert({workspace_id:WS,employee_id:person.id,organization_id:fd.get('org'),leave_type:fd.get('type'),starts_on:start,ends_on:end,note:String(fd.get('note')).trim()});
     if(err)throw err;overlay.remove();await load();draw(root);toast('İzin talebi gönderildi');
+   }catch(e){error(e)}finally{button.disabled=false}
+  };
+ }
+
+ function linkAccount(root,id){
+  if(!owner())return;
+  const person=S().employees.find(e=>e.id===id);if(!person)return;
+  const members=state.members.filter(m=>m.is_active!==false);
+  if(!members.length){toast('Bağlanabilecek aktif kullanıcı bulunamadı');return}
+  const overlay=modal(`<form class="hr-dialog"><h2>Personel Hesabını Eşleştir</h2><p>${safe(person.first_name)} ${safe(person.last_name)}</p><label>Mevcut kullanıcı<select name="user" required>${members.map(m=>`<option value="${safe(m.user_id)}">${safe(state.profiles.find(p=>p.id===m.user_id)?.full_name||m.user_id)}</option>`).join('')}</select></label><p class="small muted">Bu işlem yeni hesap oluşturmaz. Seçilen aktif kullanıcıyı personel kaydıyla ilişkilendirir.</p><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Eşleştir</button></div></form>`);
+  overlay.querySelector('form').onsubmit=async ev=>{
+   ev.preventDefault();const f=ev.currentTarget,button=f.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const userId=String(new FormData(f).get('user'));
+    if(!window.confirm('Seçilen kullanıcı hesabı bu personel kaydına bağlansın mı?'))return;
+    const {error:err}=await sb.rpc('hr_link_employee_account',{p_employee_id:id,p_user_id:userId});
+    if(err)throw err;overlay.remove();await load();draw(root);toast('Personel hesabı eşleştirildi');
    }catch(e){error(e)}finally{button.disabled=false}
   };
  }
