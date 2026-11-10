@@ -60,10 +60,13 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   overlay.querySelector('form').onsubmit=async ev=>{
    ev.preventDefault();const form=ev.currentTarget,fd=new FormData(form),button=form.querySelector('[type=submit]');button.disabled=true;
    try{
-    const payload={workspace_id:WS,first_name:String(fd.get('first')).trim(),last_name:String(fd.get('last')).trim(),work_email:String(fd.get('email')).trim()||null};
-    const {data:employee,error:err}=await sb.from('hr_employees').insert(payload).select('id').single();if(err)throw err;
-    const {error:employmentError}=await sb.from('hr_employments').insert({workspace_id:WS,employee_id:employee.id,organization_id:fd.get('org'),position_title:String(fd.get('title')).trim(),start_date:fd.get('start'),is_primary:true});
-    if(employmentError){toast('Personel oluşturuldu ancak kurum ataması başarısız. İK yöneticisi kaydı kontrol etmelidir.');throw employmentError}
+    const {error:err}=await sb.rpc('hr_create_employee',{
+     p_workspace_id:WS,p_first_name:String(fd.get('first')).trim(),
+     p_last_name:String(fd.get('last')).trim(),p_work_email:String(fd.get('email')).trim(),
+     p_organization_id:String(fd.get('org')),p_position_title:String(fd.get('title')).trim(),
+     p_start_date:String(fd.get('start'))
+    });
+    if(err)throw err;
     overlay.remove();await load();draw(root);toast('Personel kaydedildi');
    }catch(e){error(e)}finally{button.disabled=false}
   };
