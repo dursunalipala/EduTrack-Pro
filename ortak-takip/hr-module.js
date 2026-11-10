@@ -164,8 +164,24 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   if(!owner())return;
   const orgs=S().organizations, members=(state.members||[]).filter(m=>m.is_active!==false);
   if(!orgs.length||!members.length){toast('Kurum ve aktif kullanıcı kaydı gerekli');return}
-  const overlay=modal(`<form class="hr-dialog"><h2>Kurum İK Yetkisi</h2><label>Kurum<select name="org" required>${orgs.map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Kullanıcı<select name="user" required>${members.map(m=>`<option value="${safe(m.user_id)}">${safe((state.profiles||[]).find(p=>p.id===m.user_id)?.full_name||m.user_id)}</option>`).join('')}</select></label><label>Yetki<select name="level"><option value="hr_manager">Kurum İK Yöneticisi</option><option value="hr_admin">Kurum İK Admini</option><option value="employee">Personel</option><option value="viewer">İzleyici</option></select></label><p class="small muted">Yetkiler yalnızca seçilen kurum için geçerlidir. Admin erişimi ayrıca korunur.</p><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Yetkiyi Kaydet</button></div></form>`);
+  const overlay=modal(`<form class="hr-dialog"><h2>Kurum İK Yetkisi</h2><label>Kurum<select name="org" required>${orgs.map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Kullanıcı<select name="user" required>${members.map(m=>`<option value="${safe(m.user_id)}">${safe((state.profiles||[]).find(p=>p.id===m.user_id)?.full_name||m.user_id)}</option>`).join('')}</select></label><label>Yetki<select name="level"><option value="hr_manager">Kurum İK Yöneticisi</option><option value="hr_admin">Kurum İK Admini</option><option value="employee">Personel</option><option value="viewer">İzleyici</option></select></label><p class="small muted">Yetkiler yalnızca seçilen kurum için geçerlidir. Admin erişimi ayrıca korunur.</p><div data-hr-existing></div><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Yetkiyi Kaydet</button></div></form>`);
   const f=overlay.querySelector('form');
+  const existing=overlay.querySelector('[data-hr-existing]');
+  const renderExisting=()=>{
+   const org=f.elements.org.value;
+   const grants=S().access.filter(a=>a.organization_id===org);
+   existing.innerHTML='<h3>Mevcut Yetkiler</h3>'+(grants.length?grants.map(a=>`<div class="row" style="justify-content:space-between;gap:8px;margin:8px 0"><span>${safe((state.profiles||[]).find(p=>p.id===a.user_id)?.full_name||a.user_id)} · ${safe(a.access_level)}</span><button type="button" class="btn sm" data-hr-revoke="${safe(a.user_id)}">Yetkiyi Kaldır</button></div>`).join(''):'<p class="muted small">Bu kurum için yetki kaydı yok.</p>');
+   existing.querySelectorAll('[data-hr-revoke]').forEach(b=>b.onclick=async()=>{
+    if(!window.confirm('Bu kullanıcının seçilen kurum İK yetkisi kaldırılsın mı?'))return;
+    b.disabled=true;
+    try{
+     const {error:err}=await sb.from('hr_org_access').delete().eq('workspace_id',WS).eq('organization_id',org).eq('user_id',b.dataset.hrRevoke);
+     if(err)throw err;await load();renderExisting();toast('Kurum yetkisi kaldırıldı');
+    }catch(e){error(e);b.disabled=false}
+   });
+  };
+  f.elements.org.addEventListener('change',renderExisting);
+  renderExisting();
   f.onsubmit=async ev=>{
    ev.preventDefault();const fd=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
    try{
