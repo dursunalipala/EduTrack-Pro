@@ -52,9 +52,9 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  async function mount(root){if(!S().loaded)await load();draw(root)}
  function add(root){
   if(!owner())return;
-  const s=S();if(!s.organizations.length){toast('Önce İK kurum kaydı oluşturulmalıdır.');return}
+  const s=S();if(!s.organizations.some(o=>o.is_active)){toast('Önce aktif İK kurum kaydı oluşturulmalıdır.');return}
   const overlay=document.createElement('div');overlay.className='hr-overlay';
-  overlay.innerHTML=`<form class="hr-dialog"><h2>Personel Ekle</h2><label>Ad<input name="first" maxlength="100" required></label><label>Soyad<input name="last" maxlength="100" required></label><label>İş e-postası<input name="email" type="email"></label><label>Kurum<select name="org" required>${s.organizations.map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Unvan<input name="title" maxlength="150"></label><label>İşe giriş<input name="start" type="date" required></label><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div><p class="muted small">Yeni personel uygulama hesabı açmaz. Hesap eşleştirmesi ayrıca yapılır.</p></form>`;
+  overlay.innerHTML=`<form class="hr-dialog"><h2>Personel Ekle</h2><label>Ad<input name="first" maxlength="100" required></label><label>Soyad<input name="last" maxlength="100" required></label><label>İş e-postası<input name="email" type="email"></label><label>Kurum<select name="org" required>${s.organizations.filter(o=>o.is_active).map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Unvan<input name="title" maxlength="150" required></label><label>İşe giriş<input name="start" type="date" required></label><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div><p class="muted small">Yeni personel uygulama hesabı açmaz. Hesap eşleştirmesi ayrıca yapılır.</p></form>`;
   document.body.append(overlay);
   overlay.querySelector('[data-hr-cancel]').onclick=()=>overlay.remove();
   overlay.querySelector('form').onsubmit=async ev=>{
