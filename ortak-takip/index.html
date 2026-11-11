@@ -714,7 +714,7 @@ body *{visibility:hidden!important}
 #shell #nav .ot-nav-group summary:after{content:"⌄";color:#6ed5d5}
 #shell #nav .ot-nav-group[open] summary:after{content:"⌃"}
 #shell #nav .ot-nav-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 8px 9px}
-#shell #nav .ot-nav-items>button{display:flex;width:100%!important;min-width:0!important;white-space:normal!important;min-height:48px!important;padding:10px!important;font-size:12px!important;align-items:center}
+#shell #nav .ot-nav-items>button{display:flex!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;min-height:58px!important;height:auto!important;padding:9px 6px!important;font-size:11px!important;line-height:1.3!important;align-items:center!important;justify-content:center!important;gap:4px!important;text-align:center!important;overflow:hidden!important}#shell #nav .ot-nav-items>button .ic{flex:0 0 18px!important;min-width:18px!important;font-size:16px!important}
 #shell #nav .ot-nav-items>button .ic{flex:0 0 23px}
 #shell.simple-mode #nav .ot-nav-items>button:not([data-simple-nav="1"]),#shell.staff-mode #nav .ot-nav-items>button:not([data-simple-nav="1"]){display:none!important}
 #shell.simple-mode #nav .ot-nav-group{display:block!important}
@@ -734,7 +734,7 @@ body *{visibility:hidden!important}
  const nav=document.getElementById('nav');if(!nav||nav.dataset.otGrouped)return;nav.dataset.otGrouped='1';
  const groups=[['Yönetim',['overview','digital','members']],['İşlemler',['tasks','catalog','streams','calendar','appointments']],['Analiz',['goals','reports','ai']],['Kurumsal',['inspection','documents','notifications','hr']]];
  const existing=[...nav.querySelectorAll(':scope > button[data-view]')];const byView=Object.fromEntries(existing.map(b=>[b.dataset.view,b]));
- groups.forEach(([label,views],i)=>{const d=document.createElement('details');d.className='ot-nav-group';if(i===0)d.open=true;const summary=document.createElement('summary');summary.textContent=label;d.append(summary);const inner=document.createElement('div');inner.className='ot-nav-items';views.forEach(v=>{if(byView[v])inner.append(byView[v])});d.append(inner);nav.append(d)});
+ groups.forEach(([label,views],i)=>{const d=document.createElement('details');d.className='ot-nav-group';const summary=document.createElement('summary');summary.textContent=label;d.append(summary);const inner=document.createElement('div');inner.className='ot-nav-items';views.forEach(v=>{if(byView[v])inner.append(byView[v])});d.append(inner);nav.append(d)});
  const toggle=document.createElement('button');toggle.type='button';toggle.className='ot-menu-toggle';toggle.textContent='☰  Tüm Menüler';toggle.setAttribute('aria-expanded','false');nav.before(toggle);
  const mobileIcons={
  overview:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
@@ -748,7 +748,7 @@ body *{visibility:hidden!important}
  [['overview','Ana Sayfa'],['tasks','Görevler'],['calendar','Takvim'],['appointments','Randevular'],['menu','Menü']].forEach(([view,label])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);b.innerHTML='<span class="ot-ico">'+mobileIcon(view)+'</span><span>'+label+'</span>';if(view==='menu'){b.onclick=()=>{const open=nav.classList.toggle('ot-open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕  Menüyü Kapat':'☰  Tüm Menüler';window.scrollTo({top:0,behavior:'smooth'})}}else{b.dataset.view=view;b.addEventListener('click',()=>{nav.classList.remove('ot-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰  Tüm Menüler'})}bar.append(b)});
  document.getElementById('shell').append(bar);
  toggle.onclick=()=>{const open=nav.classList.toggle('ot-open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕  Menüyü Kapat':'☰  Tüm Menüler'};
- const sync=()=>{const active=nav.querySelector('button[data-view].active');if(active){const d=active.closest('details');if(d)d.open=true;bar.querySelectorAll('button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===active.dataset.view))}};
+ const sync=()=>{const active=nav.querySelector('button[data-view].active');if(active){const d=active.closest('details');bar.querySelectorAll('button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===active.dataset.view))}};
  new MutationObserver(sync).observe(nav,{attributes:true,subtree:true,attributeFilter:['class']});sync();
 })();
 </script><script type="module">
