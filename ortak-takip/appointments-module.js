@@ -102,7 +102,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    '</div></div>';
  }
  function sheet(){
-  const allRows=filterRows(),pageSize=(typeof window!=='undefined'&&window.matchMedia?.('(max-width:760px)').matches?20:50),pages=Math.max(1,Math.ceil(allRows.length/pageSize));
+  const allRows=filterRows(),pageSize=(typeof window!=='undefined'&&window.matchMedia?.('(max-width:1180px)').matches?20:50),pages=Math.max(1,Math.ceil(allRows.length/pageSize));
   const page=Math.max(1,Math.min(Number(S().page||1),pages));S().page=page;
   const rows=allRows.slice((page-1)*pageSize,page*pageSize);
   const header=['ID','Veli / Öğrenci','İletişim','Kurum','Eğitim Durumu','Yaş','Sınıf','AÖL Kredi','Rakam','İl','İlçe','Görüşen Kişi','Görüşme Tarihi','İlk Görüşme','Randevu Tarihi','Randevu Saati','Randevu Şubesi','Randevu Sonucu','Notlar','Kimlik / Evrak','İşlem'];

@@ -232,3 +232,67 @@
  .appt-icmal-view .appt-table-wrap{display:block!important}
  .appt-filters{display:grid!important}
 }
+
+
+/* Tablet + desktop can now use card mode, with a visible Card/Table switch on every screen. */
+.appt-icmal-view{min-width:0;max-width:100%}
+.appt-icmal-displaybar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:3px 0 12px;font-size:12px;font-weight:800;color:#597488}
+.appt-mobile-layout-switch{display:flex;gap:4px;border:1px solid #d4e6eb;padding:4px;border-radius:11px;background:#eff6f8}
+.appt-mobile-layout-switch button{border:0;background:transparent;border-radius:8px;min-height:36px;padding:7px 13px;cursor:pointer;color:#476f81;font-weight:800;font-size:12px}
+.appt-mobile-layout-switch button.active{background:white;color:#0b6b80;box-shadow:0 1px 7px #17436220}
+.appt-icmal-view[data-mobile-mode="cards"]>.appt-table-wrap{display:none!important}
+.appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}
+.appt-icmal-view[data-mobile-mode="table"]>.appt-table-wrap{display:block!important}
+.appt-icmal-view[data-mobile-mode="table"]>.appt-mobile-cards{display:none!important}
+.appt-mobile-card{display:block;min-width:0;border:1px solid #dbe7ed;border-radius:13px;background:#fff;box-shadow:0 3px 12px #163f540a;padding:13px 14px}
+.appt-card-top{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.appt-card-id{border-radius:7px;background:#e5f4f8;color:#116c85;font-weight:900;padding:5px 9px;font-size:12px;font-variant-numeric:tabular-nums}
+.appt-card-school{max-width:65%;font-size:11px;color:#5b7586;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appt-card-name{display:block;border:0;background:transparent;padding:10px 0 4px;text-align:left;color:#144c69;font-size:15px;font-weight:850;line-height:1.36;white-space:normal;overflow-wrap:anywhere;cursor:pointer;width:100%}
+.appt-card-badges{padding:2px 0 9px}.appt-card-badges .appt-status{font-size:11px;padding:5px 8px}
+.appt-card-brief{display:grid;grid-template-columns:1.1fr .9fr;gap:10px;padding:9px 0 12px;border-top:1px solid #eff3f6}
+.appt-card-brief>span,.appt-card-detailgrid>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.appt-card-brief small,.appt-card-detailgrid small,.appt-card-phone small{font-size:10px;color:#7b90a0;font-weight:650}
+.appt-card-brief strong{font-size:12px;color:#3e5a6b;font-weight:750;overflow-wrap:anywhere}
+.appt-card-actionbar{display:flex;align-items:center;gap:7px;border-top:1px solid #edf2f5;padding:11px 0 0;min-width:0}
+.appt-card-phone{display:flex;flex:1 1 auto;min-width:0;flex-direction:column;gap:3px;overflow:hidden}
+.appt-card-phone strong{color:#1b465f;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.appt-card-quick{flex:none}.appt-card-quick .appt-quick{gap:5px}
+.appt-card-quick .appt-quick .appt-call-btn,.appt-card-quick .appt-quick .appt-wa-btn{width:44px;height:44px;min-width:44px;border-radius:11px}
+.appt-card-quick .appt-wa-btn svg{height:26px;width:26px}
+.appt-card-open{flex:none;min-height:44px;padding:0 10px;border:1px solid #d4e4ed;background:#f1f7f9;color:#176781;border-radius:10px;font-size:12px;font-weight:850;cursor:pointer}
+.appt-card-open span{font-size:19px;vertical-align:middle}
+.appt-card-details{margin-top:10px;border-top:1px solid #e9f0f3}
+.appt-card-details>summary{cursor:pointer;list-style:none;color:#607d90;font-size:12px;font-weight:750;padding:12px 2px 2px}
+.appt-card-details>summary::-webkit-details-marker{display:none}
+.appt-card-details>summary::after{content:"⌄";float:right;font-size:16px}
+.appt-card-details[open]>summary::after{content:"⌃"}
+.appt-card-detailbody{padding:12px 2px 2px}
+.appt-card-detailgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#f8fbfc;border-radius:10px;padding:12px}
+.appt-card-detailgrid strong{font-size:11px;color:#365269;overflow-wrap:anywhere}
+.appt-card-notes{font-size:12px;color:#475c70;overflow-wrap:anywhere;padding:9px 2px;line-height:1.5}
+.appt-card-result-label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#556f81;margin:10px 0;font-weight:750}
+.appt-card-result-label .appt-quick-result{width:100%;max-width:none;min-height:42px}
+.appt-card-moreactions{display:flex;flex-wrap:wrap;gap:7px;padding:7px 0 4px}
+.appt-card-empty{grid-column:1/-1;background:#fff;border:1px dashed #d2e2ea;border-radius:11px;padding:22px;text-align:center;color:#698296;font-size:13px}
+.appt-mobile-card button:focus-visible,.appt-mobile-layout-switch button:focus-visible{outline:2px solid #128a9f;outline-offset:2px}
+@media(min-width:761px) and (max-width:1180px){
+ .appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .appt-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .appt-filters select{max-width:none;width:100%}
+ .appt-tabs{flex-wrap:wrap;overflow:visible}
+ .appt-utility-row .btn{font-size:11px}
+}
+@media(max-width:760px){
+ .appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{grid-template-columns:1fr}
+ .appt-icmal-displaybar{display:flex}
+ .appt-mobile-card{padding:13px 14px}
+}
+@media(min-width:1181px){
+ .appt-card-brief{gap:7px}
+ .appt-card-brief strong{font-size:11px}
+}
+@media print{
+ .appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{display:none!important}
+ .appt-icmal-view .appt-table-wrap{display:block!important}
+}
