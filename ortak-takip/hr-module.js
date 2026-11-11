@@ -40,7 +40,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   if(s.section==='hiring')return hiringView();
   return `<div class="hr-module">
    <div class="titlebar"><div><h2>İnsan Kaynakları</h2><p class="muted small">Kurum bazlı personel yönetimi ve özlük kayıtları</p></div>
-    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn" data-hr-access>Yetki Yönetimi</button><button class="btn primary" data-hr-add>Personel Ekle</button>':''}</div></div>
+    <div class="actions"><button class="btn" data-hr-refresh>Yenile</button>${owner()?'<button class="btn" data-hr-add-org>Kurum Ekle</button><button class="btn" data-hr-access>Yetki Yönetimi</button><button class="btn primary" data-hr-add>Personel Ekle</button><button class="btn" data-hr-import-users>Ortaklar ve Ekipten Aktar</button>':''}</div></div>
    <div class="actions" style="margin-bottom:12px"><button class="btn primary" data-hr-tab="staff">Personel Yönetimi</button><button class="btn" data-hr-tab="hiring">İşe Alım</button></div><div class="hr-kpis"><div class="panel"><span class="muted">Personel</span><strong>${filtered.length}</strong></div><div class="panel"><span class="muted">Aktif</span><strong>${filtered.filter(x=>x.status==='active').length}</strong></div><div class="panel"><span class="muted">Kurum</span><strong>${orgs.length}</strong></div></div>
    <div class="panel"><div class="filters"><label>Kurum <select data-hr-org><option value="all">Tüm yetkili kurumlar</option>${orgs.map(o=>`<option value="${safe(o.id)}" ${s.selected===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label><label>Personel ara <input data-hr-search value="${safe(s.query)}" placeholder="Ad, soyad veya e-posta"></label></div>
    ${s.loading?'<p>Yükleniyor…</p>':!filtered.length?'<div class="empty">Bu filtrede personel bulunamadı.</div>':`<div class="tablewrap"><table><thead><tr><th>Personel</th><th>Kurum / Görev</th><th>Durum</th>${owner()?'<th>İşlem</th>':''}</tr></thead><tbody>${filtered.map(e=>`<tr><td><strong>${safe(e.first_name)} ${safe(e.last_name)}</strong><div class="muted small">${safe(e.work_email||'')}</div></td><td>${employments.filter(x=>x.employee_id===e.id).map(x=>`<div>${safe(orgs.find(o=>o.id===x.organization_id)?.name||'Kurum')} · ${safe(x.position_title)}</div>`).join('')||'—'}</td><td>${safe(e.status==='active'?'Aktif':e.status==='on_leave'?'İzinli':'Pasif')}</td>${owner()?`<td><button class="btn sm" data-hr-edit="${safe(e.id)}">Düzenle</button> <button class="btn sm" data-hr-assign="${safe(e.id)}">Kurum Ata</button> <button class="btn sm" data-hr-link="${safe(e.id)}">Hesap Bağla</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
@@ -67,6 +67,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-refresh]')?.addEventListener('click',async()=>{await load();draw(root)});
   root.querySelector('[data-hr-org]')?.addEventListener('change',e=>{S().selected=e.target.value;draw(root)});
   root.querySelector('[data-hr-search]')?.addEventListener('input',e=>{const s=S();s.query=e.target.value;const start=e.target.selectionStart;draw(root);const input=root.querySelector('[data-hr-search]');input?.focus();input?.setSelectionRange(start,start)});
+  root.querySelector('[data-hr-import-users]')?.addEventListener('click',()=>importWorkspaceUsers(root));
   root.querySelector('[data-hr-add]')?.addEventListener('click',()=>add(root));
   root.querySelector('[data-hr-add-org]')?.addEventListener('click',()=>addOrganization(root));
   root.querySelector('[data-hr-access]')?.addEventListener('click',()=>manageAccess(root));
@@ -157,6 +158,41 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     if(err)throw err;overlay.remove();await load();draw(root);toast('Kurum görevlendirmesi kaydedildi');
    }catch(e){error(e)}finally{button.disabled=false}
   };
+ }
+
+
+ async function importWorkspaceUsers(root){
+  if(!owner())return;
+  const {data:users,error:err}=await sb.rpc('hr_importable_workspace_users',{p_workspace_id:WS});
+  if(err){error(err);return}
+  const eligible=(users||[]).filter(u=>!u.already_linked);
+  const orgs=S().organizations.filter(o=>o.is_active!==false);
+  if(!orgs.length){toast('Önce aktif bir kurum tanımlayın');return}
+  const o=modal(`<div class="hr-dialog"><h2>Ortaklar ve Ekipten Personel Aktar</h2>
+   <p class="muted small">Hesap ve yetkiler değişmez. Yalnızca seçtiğiniz kişiler için personel kaydı açılır. Her kişi için kurum, görev ve işe başlama tarihini kontrol edin.</p>
+   <p>${eligible.length} aktarılabilir kullanıcı • ${(users||[]).length-eligible.length} zaten bağlı</p>
+   <div style="max-height:55vh;overflow:auto">
+   ${eligible.map(u=>`<div class="panel hr-import-user" data-import-user="${safe(u.user_id)}" style="margin:8px 0">
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-import-check> <strong>${safe(u.full_name)}</strong></label>
+    <p class="muted small">${safe(u.email)}</p>
+    <label>Kurum<select data-import-org>${orgs.map(x=>`<option value="${safe(x.id)}">${safe(x.name)}</option>`).join('')}</select></label>
+    <label>Görev / Ünvan<input data-import-title value="${safe(u.position_title||'')}" placeholder="Görev / Ünvan" maxlength="120"></label>
+    <label>İşe Başlama Tarihi<input data-import-start type="date"></label>
+   </div>`).join('')||'<p>Aktarılabilecek yeni kullanıcı yok.</p>'}</div>
+   <div class="actions"><button class="btn" data-hr-cancel>Kapat</button><button class="btn primary" data-import-submit ${eligible.length?'':'disabled'}>Seçilenleri Aktar</button></div></div>`);
+  o.querySelector('[data-import-submit]')?.addEventListener('click',async()=>{
+   const rows=[...o.querySelectorAll('.hr-import-user')].filter(x=>x.querySelector('[data-import-check]').checked);
+   if(!rows.length){toast('En az bir kullanıcı seçin');return}
+   for(const row of rows)if(!row.querySelector('[data-import-title]').value.trim()||!row.querySelector('[data-import-start]').value){toast('Seçilen herkes için görev ve işe başlama tarihi gerekli');return}
+   if(!window.confirm(rows.length+' kişi için personel kaydı oluşturulsun mu?'))return;
+   const btn=o.querySelector('[data-import-submit]');btn.disabled=true;let done=0,failed=[];
+   for(const row of rows){const u=eligible.find(x=>x.user_id===row.dataset.importUser);
+    const {error:failure}=await sb.rpc('hr_import_workspace_user',{p_workspace_id:WS,p_user_id:u.user_id,p_organization_id:row.querySelector('[data-import-org]').value,p_position_title:row.querySelector('[data-import-title]').value.trim(),p_start_date:row.querySelector('[data-import-start]').value});
+    if(failure)failed.push(u.full_name+': '+failure.message);else done++;
+   }
+   o.remove();await load();draw(root);toast(done+' personel kaydı oluşturuldu');
+   if(failed.length)window.alert('Aktarılamayanlar:\n'+failed.join('\n'));
+  });
  }
 
  function requestLeave(root){
