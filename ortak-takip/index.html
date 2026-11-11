@@ -3435,6 +3435,7 @@ function openTaskDetail(t,editingNoteId=null){
  if(active&&(executor||canManage())&&t.status!=="devam_ediyor")actions.push(["start","İşe Başla"]);
  if(active&&executor)actions.push(["submit","Kontrole Gönder"]);
  if(t.status==="kontrol_bekliyor"&&reviewer){actions.push(["approve","Onayla"]);actions.push(["return","Düzeltme İste"])}
+ if(state.role==="owner"&&t.status!=="tamamlandi"&&t.status!=="iptal"&&!t.deleted_at)actions.push(["admin_complete","Admin: Tamamla"]);
  if(executor||helper||canManage())actions.push(["comment","Not Ekle"]);
  const fields=[["Üst Sorumlu",memberName(t.assigned_to)],["Ana Uygulayıcı",memberName(t.executor_id)],["Yardımcı Personeller",(t.helper_user_ids||[]).map(memberName).join(", ")||"Yok"],["Kontrol Eden",memberName(t.reviewer_id)],["Görevi Veren",memberName(t.created_by)],["Son Tarih",date(t.due_date)],["Durum",statusName(t.status)],["Kontrole Gönderildi",date(t.submitted_at)],["Kontrol Tarihi",date(t.reviewed_at)],["Tamamlandı",date(t.completed_at)]];
  const log=state.taskActivities.filter(a=>a.task_id===t.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
@@ -3525,12 +3526,12 @@ async function performTaskAction(id,action){
  const note=$("#taskActionNote")?.value.trim()||"",evidence=$("#taskActionEvidence")?.value.trim()||"";
  if(action==="return"&&!note){toast("Düzeltme açıklaması yazın.");return}
  if(action==="comment"&&!note&&!evidence){toast("Not veya belge bağlantısı girin.");return}
- if(["approve","return"].includes(action)&&!window.confirm("Bu kontrol işlemi kaydedilsin mi?"))return;
+ if(["approve","return","admin_complete"].includes(action)&&!window.confirm(action==="admin_complete"?"Admin yetkisiyle görev doğrudan tamamlansın mı?":"Bu kontrol işlemi kaydedilsin mi?"))return;
  const btn=document.querySelector('[data-task-action="'+action+'"]');if(btn)btn.disabled=true;
  try{await requireActiveSession();
-  const {error:e}=await sb.rpc("task_action",{p_task_id:id,p_action:action,p_note:note,p_evidence_url:evidence});
+  const {error:e}=action==="admin_complete"?await sb.rpc("admin_complete_task",{p_task_id:id,p_note:note}):await sb.rpc("task_action",{p_task_id:id,p_action:action,p_note:note,p_evidence_url:evidence});
   if(e)throw e;
-  closeModal();toast(action==="submit"?"Yönetici kontrolüne gönderildi.":action==="approve"?"Yönetici onayıyla tamamlandı.":"Görev güncellendi.");
+  closeModal();toast(action==="submit"?"Yönetici kontrolüne gönderildi.":action==="approve"?"Yönetici onayıyla tamamlandı.":action==="admin_complete"?"Admin tarafından tamamlandı.":"Görev güncellendi.");
   await refresh();
  }catch(e){error(e)}finally{if(btn)btn.disabled=false}
 }
