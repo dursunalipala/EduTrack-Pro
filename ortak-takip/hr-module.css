@@ -35,3 +35,6 @@
  .hr-hiring-view.hr-display-cards .hr-expand-btn{display:none}
  .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]>td{display:block}
 }
+
+/* Compact candidate rows always show branch and priority, even while collapsed. */
+@media(max-width:650px){.hr-hiring-view.hr-display-list .tablewrap tr[data-hr-candidate-row]>td:first-child>.hr-candidate-branch{display:block!important;font-size:12px;line-height:1.35;margin-top:4px;color:#49627b}.hr-hiring-view.hr-display-list .tablewrap tr[data-hr-candidate-row]>td:first-child>.hr-candidate-branch+.muted.small{display:block!important;font-size:11px;margin-top:3px}}
