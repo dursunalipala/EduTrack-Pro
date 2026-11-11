@@ -2398,7 +2398,8 @@ function matchesTaskQuickFilter(task,filter=state.quickFilter){
  if(filter==="completed")return task.status==="tamamlandi";
  if(filter==="overdue")return !!(task.due_date&&task.due_date<iso(new Date())&&!["tamamlandi","iptal"].includes(task.status));
  if(filter==="critical")return task.priority==="kritik"&&task.status!=="tamamlandi";
- return true;
+ // Tamamlanan görevler yalnızca açıkça Tamamlananlar filtresi seçildiğinde gösterilir.
+ return task.status!=="tamamlandi";
 }
 function filteredTaskRows(){
  return state.tasks.filter(t=>matchesTaskQuickFilter(t)&&
