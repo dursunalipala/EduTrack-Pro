@@ -1,6 +1,6 @@
 /* Ortak Takip - İnsan Kaynakları, kurum bazlı personel yönetimi */
 export function createHrModule({sb,WS,state,esc,toast,error}) {
- const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],hiringInterviews:[],hiringActivity:[],hiringPromotions:[],section:'staff',hiringFilters:{search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'}});
+ const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],hiringInterviews:[],hiringActivity:[],hiringPromotions:[],hiringDocuments:[],hiringMessages:[],section:'staff',hiringFilters:{search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'}});
  const safe=v=>esc(String(v??''));
  const owner=()=>state.role==='owner';
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
@@ -16,15 +16,17 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   const [jobs,candidates,interviews,activity,promotions]=owner()?await Promise.all([
+   const [jobs,candidates,interviews,activity,promotions,documents,messages]=owner()?await Promise.all([
     sb.from('hr_job_openings').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidates').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidate_interviews').select('*').eq('workspace_id',WS).order('interviewed_at',{ascending:false}).limit(500),
     sb.from('hr_candidate_activity').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(1000),
-    sb.from('hr_candidate_promotions').select('*').eq('workspace_id',WS)
-   ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
-   for(const r of [jobs,candidates,interviews,activity,promotions])if(r.error)throw r.error;
-   Object.assign(s,{hiringOpenings:jobs.data||[],hiringCandidates:candidates.data||[],hiringInterviews:interviews.data||[],hiringActivity:activity.data||[],hiringPromotions:promotions.data||[],organizations:o.data||[],employees:(e.data||[]).map(person=>({...person,id:person.employee_id})),employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
+    sb.from('hr_candidate_promotions').select('*').eq('workspace_id',WS),
+    sb.from('hr_candidate_documents').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
+    sb.from('hr_candidate_messages').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(500)
+   ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
+   for(const r of [jobs,candidates,interviews,activity,promotions,documents,messages])if(r.error)throw r.error;
+   Object.assign(s,{hiringOpenings:jobs.data||[],hiringCandidates:candidates.data||[],hiringInterviews:interviews.data||[],hiringActivity:activity.data||[],hiringPromotions:promotions.data||[],hiringDocuments:documents.data||[],hiringMessages:messages.data||[],organizations:o.data||[],employees:(e.data||[]).map(person=>({...person,id:person.employee_id})),employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
   }catch(e){error(e)}finally{s.loading=false}
  }
  function view(){
@@ -50,6 +52,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-clear-filters]')?.addEventListener('click',()=>{S().hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};draw(root)});
   root.querySelector('[data-hr-new-job]')?.addEventListener('click',()=>addJob(root));
   root.querySelectorAll('[data-hr-new-candidate]').forEach(b=>b.addEventListener('click',()=>addCandidate(root,b.dataset.hrNewCandidate)));
+  root.querySelectorAll('[data-hr-documents]').forEach(b=>b.addEventListener('click',()=>candidateDocuments(root,b.dataset.hrDocuments)));
   root.querySelectorAll('[data-hr-review]').forEach(b=>b.addEventListener('click',()=>candidateReview(root,b.dataset.hrReview)));
   root.querySelectorAll('[data-hr-history]').forEach(b=>b.addEventListener('click',()=>candidateHistory(b.dataset.hrHistory)));
   root.querySelectorAll('[data-hr-promote]').forEach(b=>b.addEventListener('click',()=>candidatePromote(root,b.dataset.hrPromote)));
@@ -270,7 +273,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    <label>Sıralama<select data-hr-filter="sort">${[['priority','Öncelik'],['interview','Görüşme Tarihi'],['newest','En Yeni Başvuru'],['name','Aday Adı'],['stage','Başvuru Durumu']].map(([v,n])=>`<option value="${v}" ${f.sort===v?'selected':''}>${n}</option>`).join('')}</select></label>
    </div><div class="actions"><span class="muted" data-hr-filter-count></span><button class="btn" data-hr-clear-filters>Filtreleri Temizle</button></div></div>
    ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel" data-hr-opening-panel="${safe(j.id)}"<div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><span class="muted small" data-hr-opening-count></span><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
-    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort(hiringSort).map(c=>`<tr data-hr-candidate-row="${safe(c.id)}" class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-review="${safe(c.id)}">Değerlendir</button> <button class="btn sm" data-hr-history="${safe(c.id)}">Geçmiş</button> ${c.stage!=='rejected'&&!s.hiringPromotions.some(p=>p.candidate_id===c.id)?`<button class="btn sm" data-hr-promote="${safe(c.id)}">Personel Yap</button>`:''} ${s.hiringPromotions.some(p=>p.candidate_id===c.id)?'<span class="muted small">Personel kaydına aktarıldı</span>':`<button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button>`}</td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
+    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort(hiringSort).map(c=>`<tr data-hr-candidate-row="${safe(c.id)}" class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-documents="${safe(c.id)}">Belgeler</button> <button class="btn sm" data-hr-review="${safe(c.id)}">Değerlendir</button> <button class="btn sm" data-hr-history="${safe(c.id)}">Geçmiş</button> ${c.stage!=='rejected'&&!s.hiringPromotions.some(p=>p.candidate_id===c.id)?`<button class="btn sm" data-hr-promote="${safe(c.id)}">Personel Yap</button>`:''} ${s.hiringPromotions.some(p=>p.candidate_id===c.id)?'<span class="muted small">Personel kaydına aktarıldı</span>':`<button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button>`}</td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
  }
 
 
@@ -301,13 +304,15 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   const fill=()=>{const t=candidateTemplates[f.elements.template.value];if(!t)return;f.elements.message.value=candidateText(c,t.body);if(f.elements.subject)f.elements.subject.value=t.subject};
   f.elements.template.addEventListener('change',fill);fill();
   f.elements.recipient?.addEventListener('change',()=>{if(f.elements.recipient.value)f.elements.email.value=f.elements.recipient.value});
-  f.onsubmit=e=>{e.preventDefault();const d=new FormData(f),msg=String(d.get('message')||'').trim();if(!msg)return;
-   if(channel==='email'){const to=String(d.get('email')||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){toast('Geçerli alıcı e-posta adresi girin');return}
-    window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(String(d.get('subject')||''))+'&body='+encodeURIComponent(msg);
+  f.onsubmit=async e=>{e.preventDefault();const d=new FormData(f),msg=String(d.get('message')||'').trim();if(!msg)return;
+   let recipient='';if(channel==='email'){const to=String(d.get('email')||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){toast('Geçerli alıcı e-posta adresi girin');return}
+    recipient=to;window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(String(d.get('subject')||''))+'&body='+encodeURIComponent(msg);
    }else{let tel=String(c.phone||'').replace(/\D/g,'');if(/^05\d{9}$/.test(tel))tel='90'+tel.slice(1);else if(/^5\d{9}$/.test(tel))tel='90'+tel;
     if(!/^\d{10,15}$/.test(tel)){toast('WhatsApp için geçerli aday telefonu gerekli');return}
-    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
-   }o.remove();
+    recipient=tel;window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
+   }
+   const {error:logError}=await sb.from('hr_candidate_messages').insert({workspace_id:WS,candidate_id:id,channel,recipient,subject:channel==='email'?String(d.get('subject')||''):null,message:msg,status:'prepared',created_by:state.user.id});
+   if(logError)error(logError);else toast('Mesaj taslağı geçmişe kaydedildi (gönderim doğrulanmadı)');o.remove();
   };
  }
  function exportCandidateCv(id){
@@ -318,6 +323,40 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   const w=window.open('','_blank');if(!w){toast('CV için açılır pencereye izin verin');return}w.document.open();w.document.write(html);w.document.close();
  }
 
+
+
+ async function candidateDocuments(root,id){
+  if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
+  const docs=S().hiringDocuments.filter(x=>x.candidate_id===id);
+  const o=modal(`<div class="hr-dialog"><h2>Belgeler • ${safe(c.full_name)}</h2>
+   <p class="muted small">Özel depolama: PDF, JPG, PNG veya DOCX • En fazla 10 MB. Yalnızca yetkili yönetici erişebilir.</p>
+   <label>Belge Yükle<input type="file" data-hr-file accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+   <button class="btn primary" data-hr-upload>Yükle</button>
+   <h3>Yüklenen Belgeler</h3>
+   ${docs.length?docs.map(x=>`<div class="row" style="margin:8px 0"><span>${safe(x.filename)}</span><button class="btn sm" data-hr-open-doc="${safe(x.id)}">Aç</button><button class="btn sm" data-hr-delete-doc="${safe(x.id)}">Sil</button></div>`).join(''):'<p>Henüz belge yüklenmedi.</p>'}
+   <div class="actions"><button class="btn" data-hr-cancel>Kapat</button></div></div>`);
+  o.querySelector('[data-hr-upload]').onclick=async()=>{
+   const file=o.querySelector('[data-hr-file]').files?.[0];if(!file){toast('Belge seçin');return}
+   const allowed=['application/pdf','image/jpeg','image/png','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+   if(file.size>10485760||!allowed.includes(file.type)){toast('Dosya türü veya boyutu uygun değil');return}
+   const path=WS+'/'+id+'/'+crypto.randomUUID()+'/'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+   const button=o.querySelector('[data-hr-upload]');button.disabled=true;
+   try{const {error:up}=await sb.storage.from('hr-candidate-documents').upload(path,file,{contentType:file.type,upsert:false});if(up)throw up;
+    const {error:db}=await sb.from('hr_candidate_documents').insert({workspace_id:WS,candidate_id:id,storage_path:path,filename:file.name,content_type:file.type,uploaded_by:state.user.id});
+    if(db){await sb.storage.from('hr-candidate-documents').remove([path]);throw db}
+    o.remove();await load();draw(root);candidateDocuments(root,id);toast('Belge güvenli alana yüklendi');
+   }catch(e){error(e)}finally{button.disabled=false}
+  };
+  o.querySelectorAll('[data-hr-open-doc]').forEach(b=>b.onclick=async()=>{const x=docs.find(x=>x.id===b.dataset.hrOpenDoc);if(!x)return;
+   const {data,error:err}=await sb.storage.from('hr-candidate-documents').createSignedUrl(x.storage_path,60);
+   if(err){error(err);return}window.open(data.signedUrl,'_blank','noopener,noreferrer');
+  });
+  o.querySelectorAll('[data-hr-delete-doc]').forEach(b=>b.onclick=async()=>{const x=docs.find(x=>x.id===b.dataset.hrDeleteDoc);if(!x||!window.confirm('Belge kalıcı silinsin mi?'))return;
+   const {error:del}=await sb.storage.from('hr-candidate-documents').remove([x.storage_path]);if(del){error(del);return}
+   const {error:db}=await sb.from('hr_candidate_documents').delete().eq('id',x.id).eq('workspace_id',WS);
+   if(db){error(db);return}o.remove();await load();draw(root);candidateDocuments(root,id);toast('Belge silindi');
+  });
+ }
 
  function candidateReview(root,id){
   if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
@@ -343,6 +382,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  function candidateHistory(id){
   if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
   const records=[...S().hiringActivity.filter(x=>x.candidate_id===id).map(x=>({date:x.created_at,title:({created:'Aday eklendi',updated:'Aday güncellendi',stage:'Başvuru aşaması',schedule:'Görüşme planı',interview:'Değerlendirme'})[x.action]||x.action,detail:x.detail||'',actor:x.actor_id})),
+  ...S().hiringMessages.filter(x=>x.candidate_id===id).map(x=>({date:x.created_at,title:(x.channel==='email'?'E-posta':'WhatsApp')+' taslağı açıldı',detail:'Alıcı: '+x.recipient+' • '+(x.subject||'')+'\n'+x.message+'\nGönderim doğrulanmadı',actor:x.created_by})),
   ...S().hiringInterviews.filter(x=>x.candidate_id===id).map(x=>({date:x.interviewed_at,title:'Görüşme puanları: '+[x.professional_score,x.communication_score,x.suitability_score].join(' / '),detail:x.notes||'',actor:x.interviewer_id}))].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   modal(`<div class="hr-dialog"><h2>${safe(c.full_name)} • İşlem ve Görüşme Geçmişi</h2>
   <div style="max-height:60vh;overflow:auto">${records.length?records.map(x=>`<div class="panel" style="margin:8px 0"><strong>${safe(x.title)}</strong><p class="muted small">${safe(new Date(x.date).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'}))} • ${safe((state.profiles||[]).find(p=>p.id===x.actor)?.full_name||'Sistem / Yetkili')}</p><p style="white-space:pre-wrap">${safe(x.detail)}</p></div>`).join(''):'<p>Henüz işlem geçmişi bulunmuyor.</p>'}</div>
@@ -383,17 +423,24 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   <label>Yetenekler / Sertifikalar<textarea name="skills" rows="2"></textarea></label>
   <label>Başvuru Notları<textarea name="note" rows="3"></textarea></label>
   <label>Görüşme Notları<textarea name="interview_notes" rows="3"></textarea></label>
+  <div class="hr-cv-grid"><label>KVKK Aydınlatma Tarihi<input type="date" name="privacy_notice_at"></label><label>Saklama Son Tarihi<input type="date" name="retain_until"></label></div>
+  <label>KVKK / Saklama Açıklaması<textarea name="privacy_note" rows="2"></textarea></label>
   <p class="muted small">Görüşme tarihi kaydedilince Ortak Takip takviminde etkinlik oluşur; görüşmeciye uygulama içi bildirim gönderilir. Harici SMS ve WhatsApp otomatik gönderilmez.</p>
   <div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Değişiklikleri Kaydet</button></div></form>`);
   const f=o.querySelector('form');
   for(const k of ['full_name','email','phone','previous_employers','education','experience_years','salary_expectation','priority','stage','interviewer_id','skills','note','interview_notes'])if(f.elements[k])f.elements[k].value=c[k]??'';
   if(presetStage&&f.elements.stage)f.elements.stage.value=presetStage;
+  if(c.privacy_notice_at)f.elements.privacy_notice_at.value=String(c.privacy_notice_at).slice(0,10);
+  if(c.retain_until)f.elements.retain_until.value=String(c.retain_until).slice(0,10);
+  if(f.elements.privacy_note)f.elements.privacy_note.value=c.privacy_note||'';
   if(c.interview_at){const dt=new Date(c.interview_at);f.elements.interview_at.value=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(dt).replace(' ','T')}
   f.onsubmit=async ev=>{ev.preventDefault();const d=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
    try{
     const data={};for(const k of ['full_name','email','phone','previous_employers','education','skills','note','interview_notes','stage','interviewer_id'])data[k]=String(d.get(k)||'').trim()||null;
     for(const k of ['experience_years','salary_expectation'])data[k]=d.get(k)===''?null:Number(d.get(k));
     data.priority=Number(d.get('priority'));
+    data.privacy_notice_at=d.get('privacy_notice_at')?String(d.get('privacy_notice_at'))+'T00:00:00+03:00':null;
+    data.retain_until=d.get('retain_until')||null;data.privacy_note=String(d.get('privacy_note')||'').trim()||null;
     const local=String(d.get('interview_at')||'');data.interview_at=local?new Date(local+':00+03:00').toISOString():null;
     if(data.stage==='call'&&!data.interview_at)throw Error('Kesinlikle çağrılacak aday için görüşme tarihi belirleyin.');
     if(data.interview_at&&!data.interviewer_id)throw Error('Görüşme için sorumlu kişiyi seçin.');
