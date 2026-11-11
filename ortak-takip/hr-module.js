@@ -1,6 +1,6 @@
 /* Ortak Takip - İnsan Kaynakları, kurum bazlı personel yönetimi */
 export function createHrModule({sb,WS,state,esc,toast,error}) {
- const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],hiringInterviews:[],hiringActivity:[],hiringPromotions:[],hiringDocuments:[],hiringMessages:[],section:'staff',hiringDisplay:'list',hiringFilters:{search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'}});
+ const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],hiringInterviews:[],hiringActivity:[],hiringPromotions:[],hiringDocuments:[],hiringMessages:[],hiringLinks:[],section:'staff',hiringDisplay:'list',hiringFilters:{search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'}});
  const safe=v=>esc(String(v??''));
  const owner=()=>state.role==='owner';
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
@@ -16,17 +16,18 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   const [jobs,candidates,interviews,activity,promotions,documents,messages]=owner()?await Promise.all([
+   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=owner()?await Promise.all([
     sb.from('hr_job_openings').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidates').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidate_interviews').select('*').eq('workspace_id',WS).order('interviewed_at',{ascending:false}).limit(500),
     sb.from('hr_candidate_activity').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(1000),
     sb.from('hr_candidate_promotions').select('*').eq('workspace_id',WS),
     sb.from('hr_candidate_documents').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
-    sb.from('hr_candidate_messages').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(500)
-   ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
-   for(const r of [jobs,candidates,interviews,activity,promotions,documents,messages])if(r.error)throw r.error;
-   Object.assign(s,{hiringOpenings:jobs.data||[],hiringCandidates:candidates.data||[],hiringInterviews:interviews.data||[],hiringActivity:activity.data||[],hiringPromotions:promotions.data||[],hiringDocuments:documents.data||[],hiringMessages:messages.data||[],organizations:o.data||[],employees:(e.data||[]).map(person=>({...person,id:person.employee_id})),employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
+    sb.from('hr_candidate_messages').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}).limit(500),
+    sb.from('hr_application_links').select('opening_id,token,enabled').eq('workspace_id',WS)
+   ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
+   for(const r of [jobs,candidates,interviews,activity,promotions,documents,messages,links])if(r.error)throw r.error;
+   Object.assign(s,{hiringOpenings:jobs.data||[],hiringCandidates:candidates.data||[],hiringInterviews:interviews.data||[],hiringActivity:activity.data||[],hiringPromotions:promotions.data||[],hiringDocuments:documents.data||[],hiringMessages:messages.data||[],hiringLinks:links.data||[],organizations:o.data||[],employees:(e.data||[]).map(person=>({...person,id:person.employee_id})),employments:m.data||[],leaves:l.data||[],access:a.data||[],myEmployeeId:me.data?.id||null,loaded:true});
   }catch(e){error(e)}finally{s.loading=false}
  }
  function view(){
@@ -51,6 +52,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelectorAll('[data-hr-filter]').forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{const f=S().hiringFilters||(S().hiringFilters={});f[el.dataset.hrFilter]=el.value;if(el.dataset.hrFilter==='sort')draw(root);else applyHiringFilters(root)}));
   root.querySelector('[data-hr-clear-filters]')?.addEventListener('click',()=>{S().hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};draw(root)});
   root.querySelector('[data-hr-new-job]')?.addEventListener('click',()=>addJob(root));
+  root.querySelectorAll('[data-hr-application-link]').forEach(b=>b.addEventListener('click',()=>applicationLink(root,b.dataset.hrApplicationLink)));
   root.querySelectorAll('[data-hr-new-candidate]').forEach(b=>b.addEventListener('click',()=>addCandidate(root,b.dataset.hrNewCandidate)));
   root.querySelectorAll('[data-hr-display]').forEach(b=>b.addEventListener('click',()=>{S().hiringDisplay=b.dataset.hrDisplay;draw(root)}));
   root.querySelectorAll('[data-hr-expand]').forEach(b=>b.addEventListener('click',()=>{const tr=b.closest('[data-hr-candidate-row]');const expanded=tr.classList.toggle('hr-expanded');b.setAttribute('aria-expanded',String(expanded));b.textContent=expanded?'Kapat':'Detay'}));
@@ -310,7 +312,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    <label>Görüşme<select data-hr-filter="interview"><option value="all">Tüm görüşmeler</option>${[['scheduled','Planlanan'],['unscheduled','Planlanmayan'],['upcoming','Yaklaşan'],['past','Geçmiş']].map(([v,n])=>`<option value="${v}" ${f.interview===v?'selected':''}>${n}</option>`).join('')}</select></label>
    <label>Sıralama<select data-hr-filter="sort">${[['priority','Öncelik'],['interview','Görüşme Tarihi'],['newest','En Yeni Başvuru'],['name','Aday Adı'],['stage','Başvuru Durumu']].map(([v,n])=>`<option value="${v}" ${f.sort===v?'selected':''}>${n}</option>`).join('')}</select></label>
    </div><div class="actions"><span class="muted" data-hr-filter-count></span><button class="btn" data-hr-clear-filters>Filtreleri Temizle</button></div><div class="actions hr-view-switch"><span class="muted small">Görünüm:</span><button class="btn sm" data-hr-display="list" aria-pressed="${s.hiringDisplay!=='cards'}">☷ Liste</button><button class="btn sm" data-hr-display="cards" aria-pressed="${s.hiringDisplay==='cards'}">▦ Kart</button></div></div>
-   ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel" data-hr-opening-panel="${safe(j.id)}"><div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><span class="muted small" data-hr-opening-count></span><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
+   ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel" data-hr-opening-panel="${safe(j.id)}"><div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><span class="muted small" data-hr-opening-count></span><button class="btn" data-hr-application-link="${safe(j.id)}">Başvuru Linki</button><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
     <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort(hiringSort).map(c=>`<tr data-hr-candidate-row="${safe(c.id)}" class="hr-candidate-stage-${safe(c.stage)}"><td data-label="Aday"><div class="hr-candidate-identity"><strong>${safe(c.full_name)}</strong><button type="button" class="btn sm hr-expand-btn" data-hr-expand="${safe(c.id)}" aria-expanded="false">Detay</button></div><div class="muted small hr-candidate-branch">Branş: ${safe(c.branch||j.department||j.title||'Belirtilmedi')}</div><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div>${c.retain_until&&c.retain_until<new Date().toISOString().slice(0,10)?'<div class="muted small" style="color:#d97706">⚠ Saklama süresi doldu – inceleyin</div>':''}</td><td data-label="İletişim">${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td data-label="Başvuru Durumu"><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td data-label="Görüşme ve İşlemler"><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><div class="hr-candidate-actions"><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-documents="${safe(c.id)}">Belgeler</button> <button class="btn sm" data-hr-review="${safe(c.id)}">Değerlendir</button> <button class="btn sm" data-hr-history="${safe(c.id)}">Geçmiş</button> ${c.stage!=='rejected'&&!s.hiringPromotions.some(p=>p.candidate_id===c.id)?`<button class="btn sm" data-hr-promote="${safe(c.id)}">Personel Yap</button>`:''} ${s.hiringPromotions.some(p=>p.candidate_id===c.id)?'<span class="muted small">Personel kaydına aktarıldı</span>':`<button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button>`}</div></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
  }
 
@@ -394,6 +396,27 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    const {error:db}=await sb.from('hr_candidate_documents').delete().eq('id',x.id).eq('workspace_id',WS);
    if(db){error(db);return}o.remove();await load();draw(root);candidateDocuments(root,id);toast('Belge silindi');
   });
+ }
+
+
+ async function applicationLink(root,openingId){
+  if(!owner())return;
+  let l=S().hiringLinks.find(x=>x.opening_id===openingId);
+  if(!l){const {data,error:err}=await sb.from('hr_application_links').insert({opening_id:openingId,workspace_id:WS}).select('opening_id,token,enabled').single();
+   if(err){error(err);return}l=data;S().hiringLinks.push(l);
+  }
+  const url=new URL('./basvuru.html',location.href);url.searchParams.set('k',l.token);
+  const o=modal(`<div class="hr-dialog"><h2>Online CV Başvuru Bağlantısı</h2>
+   <p class="muted small">Adaylar bu bağlantı üzerinden giriş yapmadan CV formu doldurabilir. Başvurular ilgili ilan altında listelenir.</p>
+   <label>Başvuru Adresi<input data-hr-link-url readonly value="${safe(url.href)}"></label>
+   <label class="check" style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-hr-link-enabled ${l.enabled?'checked':''}> Başvuru bağlantısı açık</label>
+   <div class="actions"><button class="btn" data-hr-copy-link>Bağlantıyı Kopyala</button><button class="btn" data-hr-share-link>Paylaş</button><button class="btn" data-hr-cancel>Kapat</button></div>
+   <p class="muted small">Bağlantı açık olduğu sürece herkes formu doldurabilir. Başvuru bitince bağlantıyı kapatın. Aday bilgileri yalnızca yetkili kullanıcılar tarafından görüntülenir.</p></div>`);
+  o.querySelector('[data-hr-copy-link]').onclick=async()=>{try{await navigator.clipboard.writeText(url.href);toast('Başvuru bağlantısı kopyalandı')}catch(e){window.prompt('Bağlantıyı kopyalayın',url.href)}};
+  o.querySelector('[data-hr-share-link]').onclick=async()=>{if(navigator.share){try{await navigator.share({title:'İş Başvurusu',url:url.href})}catch(e){}}else{window.open('https://wa.me/?text='+encodeURIComponent('İş başvuru formu: '+url.href),'_blank','noopener,noreferrer')}};
+  o.querySelector('[data-hr-link-enabled]').onchange=async e=>{const enabled=e.target.checked;const {error:err}=await sb.from('hr_application_links').update({enabled}).eq('opening_id',openingId).eq('workspace_id',WS);
+   if(err){e.target.checked=!enabled;error(err)}else{l.enabled=enabled;toast(enabled?'Başvuru bağlantısı açıldı':'Başvuru bağlantısı kapatıldı')}
+  };
  }
 
  function candidateReview(root,id){
