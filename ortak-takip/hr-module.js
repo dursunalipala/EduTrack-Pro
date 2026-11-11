@@ -224,22 +224,22 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
 
 
  const candidateTemplates={
-  interview:{name:'Görüşme Daveti',subject:'İş Görüşmesi Daveti',body:'Sayın {ad},\\n{pozisyon} pozisyonu için başvurunuz değerlendirilmiştir. Sizi {tarih} tarihinde görüşmeye davet ediyoruz. Uygunluğunuzu teyit etmenizi rica ederiz.\\nSaygılarımızla,\\n{kurum}'},
-  confirm:{name:'Görüşme Hatırlatması',subject:'İş Görüşmesi Hatırlatması',body:'Sayın {ad},\\n{pozisyon} pozisyonu için {tarih} tarihinde planlanan görüşmenizi hatırlatırız.\\n{kurum}'},
-  documents:{name:'Evrak Talebi',subject:'Başvuru Evrakları',body:'Sayın {ad},\\n{pozisyon} başvurunuzun değerlendirilmesi için gerekli belgeler konusunda bizimle iletişime geçmenizi rica ederiz. Lütfen hassas belgeleri güvenli bir kanaldan paylaşınız.\\n{kurum}'},
-  offer:{name:'İş Teklifi İçin İletişim',subject:'Başvurunuz Hakkında',body:'Sayın {ad},\\n{pozisyon} başvurunuzla ilgili teklif görüşmesi yapmak istiyoruz. Uygun olduğunuz zamanı bildirmenizi rica ederiz.\\n{kurum}'},
-  result:{name:'Başvuru Sonucu',subject:'İş Başvurunuz Hakkında',body:'Sayın {ad},\\n{pozisyon} başvurunuz için teşekkür ederiz. Değerlendirme sonucunda bu aşamada olumlu ilerleyemediğimizi bildirmek isteriz.\\n{kurum}'}
+  interview:{name:'Görüşme Daveti',subject:'İş Görüşmesi Daveti',body:'Sayın {ad},\n{pozisyon} pozisyonu için başvurunuz değerlendirilmiştir. Sizi {tarih} tarihinde görüşmeye davet ediyoruz. Uygunluğunuzu teyit etmenizi rica ederiz.\nSaygılarımızla,\n{kurum}'},
+  confirm:{name:'Görüşme Hatırlatması',subject:'İş Görüşmesi Hatırlatması',body:'Sayın {ad},\n{pozisyon} pozisyonu için {tarih} tarihinde planlanan görüşmenizi hatırlatırız.\n{kurum}'},
+  documents:{name:'Evrak Talebi',subject:'Başvuru Evrakları',body:'Sayın {ad},\n{pozisyon} başvurunuzun değerlendirilmesi için gerekli belgeler konusunda bizimle iletişime geçmenizi rica ederiz. Lütfen hassas belgeleri güvenli bir kanaldan paylaşınız.\n{kurum}'},
+  offer:{name:'İş Teklifi İçin İletişim',subject:'Başvurunuz Hakkında',body:'Sayın {ad},\n{pozisyon} başvurunuzla ilgili teklif görüşmesi yapmak istiyoruz. Uygun olduğunuz zamanı bildirmenizi rica ederiz.\n{kurum}'},
+  result:{name:'Başvuru Sonucu',subject:'İş Başvurunuz Hakkında',body:'Sayın {ad},\n{pozisyon} başvurunuz için teşekkür ederiz. Değerlendirme sonucunda bu aşamada olumlu ilerleyemediğimizi bildirmek isteriz.\n{kurum}'}
  };
  function candidateText(c,template){
   const j=S().hiringOpenings.find(x=>x.id===c.opening_id),org=S().organizations.find(x=>x.id===j?.organization_id);
   const dt=c.interview_at?new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'}):'[tarih ve saat belirlenecek]';
-  return template.replace(/\\n/g,'\n').replace(/\\{(ad|pozisyon|tarih|kurum)\\}/g,(_,k)=>({ad:c.full_name,pozisyon:j?.title||'ilgili',tarih:dt,kurum:org?.name||'İnsan Kaynakları'})[k]);
+  return template.replace(/\n/g,'\n').replace(/\{(ad|pozisyon|tarih|kurum)\}/g,(_,k)=>({ad:c.full_name,pozisyon:j?.title||'ilgili',tarih:dt,kurum:org?.name||'İnsan Kaynakları'})[k]);
  }
  function candidateMessage(id,channel){
   if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
   const mailOptions=[...(c.email?[{email:c.email,label:'Aday • '+c.email}]:[]),...(state.members||[]).filter(m=>m.is_active!==false).map(m=>{
    const p=(state.profiles||[]).find(p=>p.id===m.user_id);return {email:p?.email||m.email||'',label:(p?.full_name||'Ekip')+' • '+(p?.email||m.email||'')};
-  }).filter(x=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(x.email))];
+  }).filter(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.email))];
   const o=modal(`<form class="hr-dialog"><h2>${channel==='whatsapp'?'WhatsApp':'E-posta'} Mesajı</h2>
   <label>Hazır Mesaj<select name="template">${Object.entries(candidateTemplates).map(([k,v])=>`<option value="${k}">${safe(v.name)}</option>`).join('')}</select></label>
   ${channel==='email'?`<label>Gönderilecek E-posta Listesi<select name="recipient"><option value="">Alıcı seçin veya aşağıya yazın</option>${mailOptions.map(x=>`<option value="${safe(x.email)}">${safe(x.label)}</option>`).join('')}</select></label><label>Alıcı E-posta<input name="email" type="email" value="${safe(c.email||'')}" required></label><label>Konu<input name="subject" required></label>`:`<p class="muted">Adayın kayıtlı telefonu: ${safe(c.phone||'Bulunmuyor')}</p>`}
@@ -251,10 +251,10 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   f.elements.template.addEventListener('change',fill);fill();
   f.elements.recipient?.addEventListener('change',()=>{if(f.elements.recipient.value)f.elements.email.value=f.elements.recipient.value});
   f.onsubmit=e=>{e.preventDefault();const d=new FormData(f),msg=String(d.get('message')||'').trim();if(!msg)return;
-   if(channel==='email'){const to=String(d.get('email')||'').trim();if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to)){toast('Geçerli alıcı e-posta adresi girin');return}
+   if(channel==='email'){const to=String(d.get('email')||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){toast('Geçerli alıcı e-posta adresi girin');return}
     window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(String(d.get('subject')||''))+'&body='+encodeURIComponent(msg);
-   }else{let tel=String(c.phone||'').replace(/\\D/g,'');if(/^05\\d{9}$/.test(tel))tel='90'+tel.slice(1);else if(/^5\\d{9}$/.test(tel))tel='90'+tel;
-    if(!/^\\d{10,15}$/.test(tel)){toast('WhatsApp için geçerli aday telefonu gerekli');return}
+   }else{let tel=String(c.phone||'').replace(/\D/g,'');if(/^05\d{9}$/.test(tel))tel='90'+tel.slice(1);else if(/^5\d{9}$/.test(tel))tel='90'+tel;
+    if(!/^\d{10,15}$/.test(tel)){toast('WhatsApp için geçerli aday telefonu gerekli');return}
     window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
    }o.remove();
   };
