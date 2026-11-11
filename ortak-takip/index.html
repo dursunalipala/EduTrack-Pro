@@ -728,7 +728,23 @@ body *{visibility:hidden!important}
 #shell .ot-menu-toggle{border:1px solid #53758c;background:#254762;color:white;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin:0 0 6px;width:100%;text-align:left}
 #shell .ot-menu-toggle{display:none!important}#shell #viewModeSwitch,#shell #menuModeSwitch{margin-top:7px}#shell #viewModeSwitch{background:#dff4f2!important;color:#125e67!important;border-color:#7dc6c7!important}
 }
-@media(min-width:1001px){#shell .ot-bottom-nav,#shell .ot-menu-toggle{display:none!important}#shell #nav .ot-nav-group{display:contents}#shell #nav .ot-nav-group summary{display:none}#shell #nav .ot-nav-items{display:contents}}
+@media(min-width:1001px){
+#shell .ot-bottom-nav{position:fixed;bottom:14px;left:50%;right:auto;transform:translateX(-50%);width:min(660px,calc(100vw - 48px));display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:3px;box-sizing:border-box;padding:7px 9px;border:1px solid #d1e3ea;border-radius:17px;background:#fffffffa;box-shadow:0 12px 35px #132d4b33;z-index:35}
+#shell .ot-bottom-nav button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;min-height:49px;padding:4px;background:transparent;border:0;border-radius:11px;color:#5d7389;font-size:11px;font-weight:750;cursor:pointer}
+#shell .ot-bottom-nav button:hover{background:#edf7f9;color:#126c82}
+#shell .ot-bottom-nav button .ot-ico{display:grid;place-items:center;width:39px;height:32px;border-radius:10px}
+#shell .ot-bottom-nav button .ot-ico svg{display:block;width:23px;height:23px}
+#shell .ot-bottom-nav button.active{color:#087f87}
+#shell .ot-bottom-nav button.active .ot-ico{background:#d9f2f0;color:#087f87}
+#shell .ot-bottom-nav button:focus-visible{outline:2px solid #008d9e;outline-offset:2px}
+#shell main{padding-bottom:max(105px,calc(env(safe-area-inset-bottom) + 95px))!important}
+#shell .ot-menu-toggle{display:none!important}
+#shell #nav .ot-nav-group{display:contents}
+#shell #nav .ot-nav-group summary{display:none}
+#shell #nav .ot-nav-items{display:contents}
+}
+@media(min-width:1001px) and (max-height:530px){#shell .ot-bottom-nav{bottom:6px;padding:3px 7px}#shell .ot-bottom-nav button{min-height:41px}}
+
 </style><script>
 (function(){
  const nav=document.getElementById('nav');if(!nav||nav.dataset.otGrouped)return;nav.dataset.otGrouped='1';
@@ -744,8 +760,8 @@ body *{visibility:hidden!important}
  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'
  };
  const mobileIcon=view=>'<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+mobileIcons[view]+'</svg>';
- const bar=document.createElement('nav');bar.className='ot-bottom-nav';bar.setAttribute('aria-label','Mobil hızlı erişim');
- [['overview','Ana Sayfa'],['tasks','Görevler'],['calendar','Takvim'],['appointments','Randevular'],['menu','Menü']].forEach(([view,label])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);b.innerHTML='<span class="ot-ico">'+mobileIcon(view)+'</span><span>'+label+'</span>';if(view==='menu'){b.onclick=()=>{const open=nav.classList.toggle('ot-open');b.setAttribute('aria-expanded',String(open));b.classList.toggle('active',open);if(open){nav.querySelectorAll('.ot-nav-group').forEach(d=>d.open=false);window.scrollTo({top:0,behavior:'smooth'})}}}else{b.dataset.view=view;b.addEventListener('click',()=>{nav.classList.remove('ot-open');bar.querySelector('button[aria-label="Menü"]')?.classList.remove('active')})}bar.append(b)});
+ const bar=document.createElement('nav');bar.className='ot-bottom-nav';bar.setAttribute('aria-label','Hızlı erişim alt menüsü');
+ [['overview','Ana Sayfa'],['tasks','Görevler'],['calendar','Takvim'],['appointments','Randevular'],['menu','Menü']].forEach(([view,label])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);b.innerHTML='<span class="ot-ico">'+mobileIcon(view)+'</span><span>'+label+'</span>';if(view==='menu'){b.onclick=()=>{if(window.matchMedia('(min-width:1001px)').matches){nav.classList.remove('ot-open');nav.scrollIntoView({behavior:'smooth',block:'start'});nav.querySelector('button[data-view]')?.focus({preventScroll:true});b.setAttribute('aria-expanded','false');b.classList.remove('active');return;}const open=nav.classList.toggle('ot-open');b.setAttribute('aria-expanded',String(open));b.classList.toggle('active',open);if(open){nav.querySelectorAll('.ot-nav-group').forEach(d=>d.open=false);window.scrollTo({top:0,behavior:'smooth'})}}}else{b.dataset.view=view;b.addEventListener('click',()=>{nav.classList.remove('ot-open');bar.querySelector('button[aria-label="Menü"]')?.classList.remove('active')})}bar.append(b)});
  document.getElementById('shell').append(bar);
  toggle.onclick=()=>{const open=nav.classList.toggle('ot-open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕  Menüyü Kapat':'☰  Tüm Menüler'};
  const sync=()=>{const active=nav.querySelector('button[data-view].active');if(active){const d=active.closest('details');bar.querySelectorAll('button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===active.dataset.view))}};
