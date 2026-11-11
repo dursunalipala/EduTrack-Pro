@@ -1,6 +1,6 @@
 /* Ortak Takip - İnsan Kaynakları, kurum bazlı personel yönetimi */
 export function createHrModule({sb,WS,state,esc,toast,error}) {
- const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],section:'staff'});
+ const S=()=>state.hr||(state.hr={organizations:[],employees:[],employments:[],leaves:[],access:[],myEmployeeId:null,selected:'all',query:'',loading:false,loaded:false,hiringOpenings:[],hiringCandidates:[],section:'staff',hiringFilters:{search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'}});
  const safe=v=>esc(String(v??''));
  const owner=()=>state.role==='owner';
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
@@ -43,6 +43,8 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  }
  function bind(root){
   root.querySelectorAll('[data-hr-tab]').forEach(b=>b.addEventListener('click',()=>{S().section=b.dataset.hrTab;draw(root)}));
+  root.querySelectorAll('[data-hr-filter]').forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{const f=S().hiringFilters||(S().hiringFilters={});f[el.dataset.hrFilter]=el.value;applyHiringFilters(root)}));
+  root.querySelector('[data-hr-clear-filters]')?.addEventListener('click',()=>{S().hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};draw(root)});
   root.querySelector('[data-hr-new-job]')?.addEventListener('click',()=>addJob(root));
   root.querySelectorAll('[data-hr-new-candidate]').forEach(b=>b.addEventListener('click',()=>addCandidate(root,b.dataset.hrNewCandidate)));
   root.querySelectorAll('[data-hr-candidate-edit]').forEach(b=>b.addEventListener('click',()=>candidateForm(root,b.dataset.hrCandidateEdit)));
@@ -213,13 +215,56 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
 
  const hiringStages={applied:'Başvuru',screening:'Ön Değerlendirme',call:'Kesinlikle Çağrılacak',interview:'Görüşme',offer:'Teklif',hired:'İşe Alındı',rejected:'Olumsuz'};
  const hiringStatus={open:'Açık',paused:'Beklemede',closed:'Kapalı'};
+ function applyHiringFilters(root){
+  const f=S().hiringFilters||{},now=Date.now();let shown=0;
+  root.querySelectorAll('[data-hr-candidate-row]').forEach(tr=>{
+   const c=S().hiringCandidates.find(x=>x.id===tr.dataset.hrCandidateRow);if(!c)return;
+   const j=S().hiringOpenings.find(x=>x.id===c.opening_id);
+   const term=String(f.search||'').toLocaleLowerCase('tr-TR').trim();
+   const searchable=[c.full_name,c.email,c.phone,c.previous_employers,c.education,c.skills,j?.title].join(' ').toLocaleLowerCase('tr-TR');
+   const when=c.interview_at?new Date(c.interview_at).getTime():null;
+   const ok=(!term||searchable.includes(term))&&(!f.organization||f.organization==='all'||j?.organization_id===f.organization)
+    &&(!f.opening||f.opening==='all'||c.opening_id===f.opening)
+    &&(!f.stage||f.stage==='all'||c.stage===f.stage)
+    &&(!f.priority||f.priority==='all'||String(c.priority||2)===f.priority)
+    &&(!f.interview||f.interview==='all'||(f.interview==='scheduled'&&when!==null)||(false));
+   const matchInterview=!f.interview||f.interview==='all'||(f.interview==='scheduled'&&when!==null)
+    ||(f.interview==='unscheduled'&&when===null)
+    ||(f.interview==='upcoming'&&when!==null&&when>=now)
+    ||(f.interview==='past'&&when!==null&&when<now);
+   tr.hidden=!(ok&&matchInterview);if(!tr.hidden)shown++;
+  });
+  root.querySelectorAll('[data-hr-opening-panel]').forEach(p=>{const f=S().hiringFilters||{};const j=S().hiringOpenings.find(x=>x.id===p.dataset.hrOpeningPanel);
+   p.hidden=!!((f.organization&&f.organization!=='all'&&j?.organization_id!==f.organization)||(f.opening&&f.opening!=='all'&&j?.id!==f.opening));
+   const count=p.querySelector('[data-hr-opening-count]');if(count)count.textContent=p.querySelectorAll('[data-hr-candidate-row]:not([hidden])').length+' aday';
+  });
+  const counter=root.querySelector('[data-hr-filter-count]');if(counter)counter.textContent=shown+' aday gösteriliyor';
+ }
+ function hiringSort(a,b){
+  const sort=S().hiringFilters?.sort||'priority';
+  if(sort==='newest')return String(b.created_at||'').localeCompare(String(a.created_at||''));
+  if(sort==='name')return String(a.full_name).localeCompare(String(b.full_name),'tr');
+  if(sort==='interview')return String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'));
+  if(sort==='stage')return String(a.stage).localeCompare(String(b.stage));
+  return (a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'));
+ }
  function hiringView(){
   const s=S();if(!owner())return '<div class="hr-module"><h2>İşe Alım</h2><p>Bu alan yalnızca yönetici yetkisine açıktır.</p><button class="btn" data-hr-tab="staff">Personel Yönetimine Dön</button></div>';
+  const f=s.hiringFilters||(s.hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'});
   return `<div class="hr-module"><div class="titlebar"><div><h2>İşe Alım</h2><p class="muted">İlanlar, aday başvuruları ve görüşme aşamaları</p></div><button class="btn primary" data-hr-new-job>Yeni İlan</button></div>
    <div class="actions" style="margin-bottom:12px"><button class="btn" data-hr-tab="staff">Personel Yönetimi</button><button class="btn primary" data-hr-tab="hiring">İşe Alım</button></div>
    <div class="hr-kpis"><div class="panel">İlanlar<strong>${s.hiringOpenings.length}</strong></div><div class="panel">Açık İlan<strong>${s.hiringOpenings.filter(j=>j.status==='open').length}</strong></div><div class="panel">Adaylar<strong>${s.hiringCandidates.length}</strong></div></div>
-   ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel"><div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
-    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort((a,b)=>(a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'))).map(c=>`<tr class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
+   <div class="panel"><h3>Aday Filtreleme ve Sıralama</h3><div class="hr-filter-grid">
+   <label>Ara<input data-hr-filter="search" placeholder="Ad, telefon, deneyim, pozisyon..." value="${safe(f.search||'')}"></label>
+   <label>Kurum<select data-hr-filter="organization"><option value="all">Tüm kurumlar</option>${s.organizations.map(o=>`<option value="${safe(o.id)}" ${f.organization===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label>
+   <label>Pozisyon<select data-hr-filter="opening"><option value="all">Tüm pozisyonlar</option>${s.hiringOpenings.map(j=>`<option value="${safe(j.id)}" ${f.opening===j.id?'selected':''}>${safe(j.title)}</option>`).join('')}</select></label>
+   <label>Başvuru Durumu<select data-hr-filter="stage"><option value="all">Tüm durumlar</option>${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${f.stage===v?'selected':''}>${safe(n)}</option>`).join('')}</select></label>
+   <label>Öncelik<select data-hr-filter="priority"><option value="all">Tüm öncelikler</option>${[['1','Acil'],['2','Normal'],['3','Yedek']].map(([v,n])=>`<option value="${v}" ${f.priority===v?'selected':''}>${n}</option>`).join('')}</select></label>
+   <label>Görüşme<select data-hr-filter="interview"><option value="all">Tüm görüşmeler</option>${[['scheduled','Planlanan'],['unscheduled','Planlanmayan'],['upcoming','Yaklaşan'],['past','Geçmiş']].map(([v,n])=>`<option value="${v}" ${f.interview===v?'selected':''}>${n}</option>`).join('')}</select></label>
+   <label>Sıralama<select data-hr-filter="sort">${[['priority','Öncelik'],['interview','Görüşme Tarihi'],['newest','En Yeni Başvuru'],['name','Aday Adı'],['stage','Başvuru Durumu']].map(([v,n])=>`<option value="${v}" ${f.sort===v?'selected':''}>${n}</option>`).join('')}</select></label>
+   </div><div class="actions"><span class="muted" data-hr-filter-count></span><button class="btn" data-hr-clear-filters>Filtreleri Temizle</button></div></div>
+   ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel" data-hr-opening-panel="${safe(j.id)}"<div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><span class="muted small" data-hr-opening-count></span><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
+    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort(hiringSort).map(c=>`<tr data-hr-candidate-row="${safe(c.id)}" class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
  }
 
 
