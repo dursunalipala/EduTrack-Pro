@@ -2310,6 +2310,7 @@ function simpleTaskRows(){
    if(state.simpleTaskStatus==="late"&&(!openTask(t)||!t.due_date||t.due_date>=day))return false;
    if(state.simpleTaskStatus==="week"&&(!openTask(t)||!t.due_date||t.due_date<day||t.due_date>later))return false;
    if(state.simpleTaskStatus==="done"&&t.status!=="tamamlandi")return false;
+   if(state.simpleTaskStatus!=="done"&&t.status==="tamamlandi")return false;
    if(state.simpleTaskStatus==="review"&&!awaitingMyApproval(t))return false;
    if(state.simpleTaskSearch&&!String(t.title||"").toLocaleLowerCase("tr-TR").includes(state.simpleTaskSearch.toLocaleLowerCase("tr-TR")))return false;
    return true;
@@ -2403,6 +2404,7 @@ function matchesTaskQuickFilter(task,filter=state.quickFilter){
 }
 function filteredTaskRows(){
  return state.tasks.filter(t=>matchesTaskQuickFilter(t)&&
+  (state.quickFilter==="completed"||t.status!=="tamamlandi")&&
   (state.status==="all"||state.status===t.status)&&
   (state.stream==="all"||state.stream===t.workstream_id)&&
   (!state.search||[t.title,t.description].some(x=>String(x||"").toLocaleLowerCase("tr-TR").includes(state.search.toLocaleLowerCase("tr-TR")))));
@@ -2432,7 +2434,7 @@ function tasksView(){
  if(state.showDeletedTasks&&canManage())return deletedTasksView();
  if(state.simpleMode||isStaff())return simpleTasksView();const can=canManage();
  const filtersActive=state.quickFilter!=="all"||state.status!=="all"||state.stream!=="all"||!!state.search;
- return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+state.tasks.length+')</span></h2>'+
+ return '<div class="titlebar"><h2>Görev Listesi <span class="muted small">('+filteredTaskRows().length+')</span></h2>'+
   (can?'<button class="btn primary" id="newTask">+ Yeni Görev</button>':'')+
   (can&&state.deletedTasks.length?'<button type="button" class="btn" id="taskTrashToggle">Silinenler ('+state.deletedTasks.length+')</button>':'')+'</div>'+
   reviewQueueShortcut()+
