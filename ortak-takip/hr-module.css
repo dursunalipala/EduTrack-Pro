@@ -8,3 +8,5 @@
 .hr-candidate-stage-screening{background:#f3efff}
 .hr-module .tablewrap td{vertical-align:top}
 @media(max-width:650px){.hr-cv-grid{grid-template-columns:1fr}.hr-dialog{max-height:90vh;overflow:auto}}
+
+.hr-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:12px 0}.hr-filter-grid label{display:flex;flex-direction:column;gap:5px}.hr-module tr[hidden],.hr-module [data-hr-opening-panel][hidden]{display:none!important}@media(max-width:600px){.hr-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hr-filter-grid label:first-child{grid-column:1/-1}}
