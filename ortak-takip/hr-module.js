@@ -46,6 +46,8 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-new-job]')?.addEventListener('click',()=>addJob(root));
   root.querySelectorAll('[data-hr-new-candidate]').forEach(b=>b.addEventListener('click',()=>addCandidate(root,b.dataset.hrNewCandidate)));
   root.querySelectorAll('[data-hr-candidate-edit]').forEach(b=>b.addEventListener('click',()=>candidateForm(root,b.dataset.hrCandidateEdit)));
+  root.querySelectorAll('[data-hr-message]').forEach(b=>b.addEventListener('click',()=>candidateMessage(b.dataset.hrMessage,b.dataset.channel)));
+  root.querySelectorAll('[data-hr-cv-export]').forEach(b=>b.addEventListener('click',()=>exportCandidateCv(b.dataset.hrCvExport)));
   root.querySelectorAll('[data-hr-candidate-delete]').forEach(b=>b.addEventListener('click',()=>deleteCandidate(root,b.dataset.hrCandidateDelete)));
   root.querySelectorAll('[data-hr-stage]').forEach(b=>b.addEventListener('change',()=>updateStage(root,b.dataset.hrStage,b.value)));
   root.querySelectorAll('[data-hr-job-status]').forEach(b=>b.addEventListener('change',()=>updateJobStatus(root,b.dataset.hrJobStatus,b.value)));
@@ -217,7 +219,52 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    <div class="actions" style="margin-bottom:12px"><button class="btn" data-hr-tab="staff">Personel Yönetimi</button><button class="btn primary" data-hr-tab="hiring">İşe Alım</button></div>
    <div class="hr-kpis"><div class="panel">İlanlar<strong>${s.hiringOpenings.length}</strong></div><div class="panel">Açık İlan<strong>${s.hiringOpenings.filter(j=>j.status==='open').length}</strong></div><div class="panel">Adaylar<strong>${s.hiringCandidates.length}</strong></div></div>
    ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel"><div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
-    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort((a,b)=>(a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'))).map(c=>`<tr class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> ${c.phone?`<a class="btn sm" href="https://wa.me/${String(c.phone).replace(/\\D/g,'').replace(/^0(?=5\\d{9}$)/,'90')}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`:''} <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
+    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort((a,b)=>(a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'))).map(c=>`<tr class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="whatsapp">WhatsApp</button> <button class="btn sm" data-hr-message="${safe(c.id)}" data-channel="email">E-posta</button> <button class="btn sm" data-hr-cv-export="${safe(c.id)}">CV Aktar</button> <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
+ }
+
+
+ const candidateTemplates={
+  interview:{name:'Görüşme Daveti',subject:'İş Görüşmesi Daveti',body:'Sayın {ad},\\n{pozisyon} pozisyonu için başvurunuz değerlendirilmiştir. Sizi {tarih} tarihinde görüşmeye davet ediyoruz. Uygunluğunuzu teyit etmenizi rica ederiz.\\nSaygılarımızla,\\n{kurum}'},
+  confirm:{name:'Görüşme Hatırlatması',subject:'İş Görüşmesi Hatırlatması',body:'Sayın {ad},\\n{pozisyon} pozisyonu için {tarih} tarihinde planlanan görüşmenizi hatırlatırız.\\n{kurum}'},
+  documents:{name:'Evrak Talebi',subject:'Başvuru Evrakları',body:'Sayın {ad},\\n{pozisyon} başvurunuzun değerlendirilmesi için gerekli belgeler konusunda bizimle iletişime geçmenizi rica ederiz. Lütfen hassas belgeleri güvenli bir kanaldan paylaşınız.\\n{kurum}'},
+  offer:{name:'İş Teklifi İçin İletişim',subject:'Başvurunuz Hakkında',body:'Sayın {ad},\\n{pozisyon} başvurunuzla ilgili teklif görüşmesi yapmak istiyoruz. Uygun olduğunuz zamanı bildirmenizi rica ederiz.\\n{kurum}'},
+  result:{name:'Başvuru Sonucu',subject:'İş Başvurunuz Hakkında',body:'Sayın {ad},\\n{pozisyon} başvurunuz için teşekkür ederiz. Değerlendirme sonucunda bu aşamada olumlu ilerleyemediğimizi bildirmek isteriz.\\n{kurum}'}
+ };
+ function candidateText(c,template){
+  const j=S().hiringOpenings.find(x=>x.id===c.opening_id),org=S().organizations.find(x=>x.id===j?.organization_id);
+  const dt=c.interview_at?new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'}):'[tarih ve saat belirlenecek]';
+  return template.replace(/\\n/g,'\n').replace(/\\{(ad|pozisyon|tarih|kurum)\\}/g,(_,k)=>({ad:c.full_name,pozisyon:j?.title||'ilgili',tarih:dt,kurum:org?.name||'İnsan Kaynakları'})[k]);
+ }
+ function candidateMessage(id,channel){
+  if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
+  const mailOptions=[...(c.email?[{email:c.email,label:'Aday • '+c.email}]:[]),...(state.members||[]).filter(m=>m.is_active!==false).map(m=>{
+   const p=(state.profiles||[]).find(p=>p.id===m.user_id);return {email:p?.email||m.email||'',label:(p?.full_name||'Ekip')+' • '+(p?.email||m.email||'')};
+  }).filter(x=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(x.email))];
+  const o=modal(`<form class="hr-dialog"><h2>${channel==='whatsapp'?'WhatsApp':'E-posta'} Mesajı</h2>
+  <label>Hazır Mesaj<select name="template">${Object.entries(candidateTemplates).map(([k,v])=>`<option value="${k}">${safe(v.name)}</option>`).join('')}</select></label>
+  ${channel==='email'?`<label>Gönderilecek E-posta Listesi<select name="recipient"><option value="">Alıcı seçin veya aşağıya yazın</option>${mailOptions.map(x=>`<option value="${safe(x.email)}">${safe(x.label)}</option>`).join('')}</select></label><label>Alıcı E-posta<input name="email" type="email" value="${safe(c.email||'')}" required></label><label>Konu<input name="subject" required></label>`:`<p class="muted">Adayın kayıtlı telefonu: ${safe(c.phone||'Bulunmuyor')}</p>`}
+  <label>Mesaj Metni<textarea name="message" rows="9" required></textarea></label>
+  <div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button class="btn primary" type="submit">${channel==='whatsapp'?'WhatsApp’ta Aç':'E-posta Uygulamasında Aç'}</button></div>
+  <p class="muted small">Mesaj gönderimi için cihazınızdaki ilgili uygulama açılır. Gönderme işlemini siz onaylarsınız.</p></form>`);
+  const f=o.querySelector('form');
+  const fill=()=>{const t=candidateTemplates[f.elements.template.value];if(!t)return;f.elements.message.value=candidateText(c,t.body);if(f.elements.subject)f.elements.subject.value=t.subject};
+  f.elements.template.addEventListener('change',fill);fill();
+  f.elements.recipient?.addEventListener('change',()=>{if(f.elements.recipient.value)f.elements.email.value=f.elements.recipient.value});
+  f.onsubmit=e=>{e.preventDefault();const d=new FormData(f),msg=String(d.get('message')||'').trim();if(!msg)return;
+   if(channel==='email'){const to=String(d.get('email')||'').trim();if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to)){toast('Geçerli alıcı e-posta adresi girin');return}
+    window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(String(d.get('subject')||''))+'&body='+encodeURIComponent(msg);
+   }else{let tel=String(c.phone||'').replace(/\\D/g,'');if(/^05\\d{9}$/.test(tel))tel='90'+tel.slice(1);else if(/^5\\d{9}$/.test(tel))tel='90'+tel;
+    if(!/^\\d{10,15}$/.test(tel)){toast('WhatsApp için geçerli aday telefonu gerekli');return}
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
+   }o.remove();
+  };
+ }
+ function exportCandidateCv(id){
+  if(!owner())return;const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
+  const j=S().hiringOpenings.find(x=>x.id===c.opening_id),org=S().organizations.find(x=>x.id===j?.organization_id);
+  const rows=[['Başvurulan Kurum',org?.name],['Pozisyon',j?.title],['Aday',c.full_name],['E-posta',c.email],['Telefon',c.phone],['Önceki İş Yerleri',c.previous_employers],['Tecrübe (Yıl)',c.experience_years],['Eğitim',c.education],['Yetenekler / Sertifikalar',c.skills],['Maaş Beklentisi (TL)',c.salary_expectation],['Başvuru Durumu',hiringStages[c.stage]],['Öncelik',c.priority],['Görüşme Tarihi',c.interview_at?new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'}):''],['Görüşme Notları',c.interview_notes],['Başvuru Notları',c.note]];
+  const html='<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Aday CV</title><style>body{font-family:Arial,sans-serif;color:#17243d;max-width:760px;margin:32px auto;padding:12px}h1{border-bottom:3px solid #183b6a;padding-bottom:12px}dl{display:grid;grid-template-columns:210px 1fr;gap:10px}dt{font-weight:bold;color:#40536f}dd{margin:0;white-space:pre-wrap;border-bottom:1px solid #ddd;padding-bottom:9px}@media print{button{display:none}}</style></head><body><h1>Aday CV / Başvuru Dosyası</h1><dl>'+rows.map(([k,v])=>'<dt>'+safe(k)+'</dt><dd>'+safe(v??'—')+'</dd>').join('')+'</dl><p>Bu belge kişisel veri içerir. Yalnızca yetkili kişilerle paylaşınız.</p><button onclick="window.print()">PDF Kaydet / Yazdır</button></body></html>';
+  const w=window.open('','_blank');if(!w){toast('CV için açılır pencereye izin verin');return}w.document.open();w.document.write(html);w.document.close();
  }
 
  function candidateForm(root,id,presetStage){
