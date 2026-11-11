@@ -43,7 +43,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  }
  function bind(root){
   root.querySelectorAll('[data-hr-tab]').forEach(b=>b.addEventListener('click',()=>{S().section=b.dataset.hrTab;draw(root)}));
-  root.querySelectorAll('[data-hr-filter]').forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{const f=S().hiringFilters||(S().hiringFilters={});f[el.dataset.hrFilter]=el.value;applyHiringFilters(root)}));
+  root.querySelectorAll('[data-hr-filter]').forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{const f=S().hiringFilters||(S().hiringFilters={});f[el.dataset.hrFilter]=el.value;if(el.dataset.hrFilter==='sort')draw(root);else applyHiringFilters(root)}));
   root.querySelector('[data-hr-clear-filters]')?.addEventListener('click',()=>{S().hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};draw(root)});
   root.querySelector('[data-hr-new-job]')?.addEventListener('click',()=>addJob(root));
   root.querySelectorAll('[data-hr-new-candidate]').forEach(b=>b.addEventListener('click',()=>addCandidate(root,b.dataset.hrNewCandidate)));
@@ -65,7 +65,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   root.querySelector('[data-hr-request]')?.addEventListener('click',()=>requestLeave(root));
   root.querySelectorAll('[data-hr-leave]').forEach(b=>b.addEventListener('click',()=>decideLeave(root,b.dataset.hrLeave,b.dataset.decision)));
  }
- function draw(root){root.innerHTML=view();bind(root)}
+ function draw(root){root.innerHTML=view();bind(root);if(S().section==='hiring')applyHiringFilters(root)}
  async function mount(root){if(!S().loaded)await load();draw(root)}
  function add(root){
   if(!owner())return;
@@ -227,7 +227,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     &&(!f.opening||f.opening==='all'||c.opening_id===f.opening)
     &&(!f.stage||f.stage==='all'||c.stage===f.stage)
     &&(!f.priority||f.priority==='all'||String(c.priority||2)===f.priority)
-    &&(!f.interview||f.interview==='all'||(f.interview==='scheduled'&&when!==null)||(false));
+    ;
    const matchInterview=!f.interview||f.interview==='all'||(f.interview==='scheduled'&&when!==null)
     ||(f.interview==='unscheduled'&&when===null)
     ||(f.interview==='upcoming'&&when!==null&&when>=now)
