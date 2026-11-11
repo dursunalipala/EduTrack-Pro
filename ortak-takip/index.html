@@ -713,11 +713,11 @@ body *{visibility:hidden!important}
 #shell #nav .ot-nav-group summary:after{content:"⌄";color:#6ed5d5}
 #shell #nav .ot-nav-group[open] summary:after{content:"⌃"}
 #shell #nav .ot-nav-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 8px 9px}
-#shell #nav .ot-nav-items>button{display:flex!important;width:100%!important;min-width:0!important;white-space:normal!important;min-height:48px!important;padding:10px!important;font-size:12px!important;align-items:center}
+#shell #nav .ot-nav-items>button{display:flex;width:100%!important;min-width:0!important;white-space:normal!important;min-height:48px!important;padding:10px!important;font-size:12px!important;align-items:center}
 #shell #nav .ot-nav-items>button .ic{flex:0 0 23px}
-#shell.simple-mode #nav .ot-nav-group:not(:first-child){display:none!important}
-#shell.staff-mode #nav .ot-nav-group{display:none!important}
-#shell.staff-mode #nav .ot-nav-group:first-child{display:block!important}
+#shell.simple-mode #nav .ot-nav-items>button:not([data-simple-nav="1"]),#shell.staff-mode #nav .ot-nav-items>button:not([data-simple-nav="1"]){display:none!important}
+#shell.simple-mode #nav .ot-nav-group{display:block!important}
+#shell.staff-mode #nav .ot-nav-group{display:block!important}
 #shell .ot-bottom-nav{position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#fff;border-top:1px solid #d9e5ee;z-index:15;padding:5px 4px max(5px,env(safe-area-inset-bottom));box-shadow:0 -4px 18px #102d4417}
 #shell .ot-bottom-nav button{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;background:transparent;border:0;color:#60778d;font-size:10px;font-weight:650;min-height:48px}
 #shell .ot-bottom-nav button .ot-ico{font-size:20px;line-height:1}
@@ -731,7 +731,7 @@ body *{visibility:hidden!important}
 </style><script>
 (function(){
  const nav=document.getElementById('nav');if(!nav||nav.dataset.otGrouped)return;nav.dataset.otGrouped='1';
- const groups=[['Yönetim',['overview','digital','members']],['İşlemler',['tasks','catalog','streams','calendar','appointments']],['Analiz',['goals','reports','ai']],['Kurumsal',['inspection','documents','notifications']]];
+ const groups=[['Yönetim',['overview','digital','members']],['İşlemler',['tasks','catalog','streams','calendar','appointments']],['Analiz',['goals','reports','ai']],['Kurumsal',['inspection','documents','notifications','hr']]];
  const existing=[...nav.querySelectorAll(':scope > button[data-view]')];const byView=Object.fromEntries(existing.map(b=>[b.dataset.view,b]));
  groups.forEach(([label,views],i)=>{const d=document.createElement('details');d.className='ot-nav-group';if(i===0)d.open=true;const summary=document.createElement('summary');summary.textContent=label;d.append(summary);const inner=document.createElement('div');inner.className='ot-nav-items';views.forEach(v=>{if(byView[v])inner.append(byView[v])});d.append(inner);nav.append(d)});
  const toggle=document.createElement('button');toggle.type='button';toggle.className='ot-menu-toggle';toggle.textContent='☰  Tüm Menüler';toggle.setAttribute('aria-expanded','false');nav.before(toggle);
