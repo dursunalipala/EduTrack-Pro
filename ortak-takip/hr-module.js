@@ -217,10 +217,10 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    <div class="actions" style="margin-bottom:12px"><button class="btn" data-hr-tab="staff">Personel Yönetimi</button><button class="btn primary" data-hr-tab="hiring">İşe Alım</button></div>
    <div class="hr-kpis"><div class="panel">İlanlar<strong>${s.hiringOpenings.length}</strong></div><div class="panel">Açık İlan<strong>${s.hiringOpenings.filter(j=>j.status==='open').length}</strong></div><div class="panel">Adaylar<strong>${s.hiringCandidates.length}</strong></div></div>
    ${s.hiringOpenings.length?s.hiringOpenings.map(j=>`<div class="panel"><div class="row"><div><h3>${safe(j.title)}</h3><p class="muted">${safe(s.organizations.find(o=>o.id===j.organization_id)?.name||'Kurum')} · ${safe(j.department||'Genel')} · ${safe(j.employment_type)}</p></div><label>İlan durumu<select data-hr-job-status="${safe(j.id)}">${Object.entries(hiringStatus).map(([v,n])=>`<option value="${v}" ${j.status===v?'selected':''}>${n}</option>`).join('')}</select></label><button class="btn primary" data-hr-new-candidate="${safe(j.id)}">Aday Ekle</button></div>
-    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort((a,b)=>(a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'))).map(c=>`<tr class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="3">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
+    <div class="tablewrap"><table><thead><tr><th>Aday</th><th>İletişim</th><th>Başvuru Aşaması</th><th>Görüşme / İşlem</th></tr></thead><tbody>${s.hiringCandidates.filter(c=>c.opening_id===j.id).sort((a,b)=>(a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'))).map(c=>`<tr class="hr-candidate-stage-${safe(c.stage)}"><td><strong>${safe(c.full_name)}</strong><div class="muted small">${c.priority===1?'🔴 Acil / Öncelikli':c.priority===3?'⚪ Yedek':'🟡 Normal'}</div><div class="muted small">${safe(c.note||'')}</div></td><td>${safe(c.email||'')}<div>${safe(c.phone||'')}</div></td><td><select data-hr-stage="${safe(c.id)}">${Object.entries(hiringStages).map(([v,n])=>`<option value="${v}" ${c.stage===v?'selected':''}>${n}</option>`).join('')}</select></td><td><div class="muted small">${c.interview_at?safe(new Date(c.interview_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Görüşme planlanmadı'}</div><div class="muted small">${safe((state.profiles||[]).find(p=>p.id===c.interviewer_id)?.full_name||'')}</div><div class="muted small">${safe(c.interview_notes||'')}</div><button class="btn sm" data-hr-candidate-edit="${safe(c.id)}">CV / Düzenle</button> <button class="btn sm" data-hr-candidate-delete="${safe(c.id)}">Sil</button></td></tr>`).join('')||'<tr><td colspan="4">Henüz aday yok.</td></tr>'}</tbody></table></div></div>`).join(''):'<div class="panel"><p>Henüz ilan oluşturulmadı. Yeni İlan ile başlayabilirsiniz.</p></div>'}</div>`;
  }
 
- function candidateForm(root,id){
+ function candidateForm(root,id,presetStage){
   if(!owner())return;
   const c=S().hiringCandidates.find(x=>x.id===id);if(!c)return;
   const members=(state.members||[]).filter(m=>m.is_active!==false);
@@ -242,6 +242,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   <div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Değişiklikleri Kaydet</button></div></form>`);
   const f=o.querySelector('form');
   for(const k of ['full_name','email','phone','previous_employers','education','experience_years','salary_expectation','priority','stage','interviewer_id','skills','note','interview_notes'])if(f.elements[k])f.elements[k].value=c[k]??'';
+  if(presetStage&&f.elements.stage)f.elements.stage.value=presetStage;
   if(c.interview_at){const dt=new Date(c.interview_at);f.elements.interview_at.value=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(dt).replace(' ','T')}
   f.onsubmit=async ev=>{ev.preventDefault();const d=new FormData(f),button=f.querySelector('[type=submit]');button.disabled=true;
    try{
@@ -250,6 +251,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     data.priority=Number(d.get('priority'));
     const local=String(d.get('interview_at')||'');data.interview_at=local?new Date(local+':00+03:00').toISOString():null;
     if(data.stage==='call'&&!data.interview_at)throw Error('Kesinlikle çağrılacak aday için görüşme tarihi belirleyin.');
+    if(data.interview_at&&!data.interviewer_id)throw Error('Görüşme için sorumlu kişiyi seçin.');
     const {error:err}=await sb.from('hr_candidates').update(data).eq('workspace_id',WS).eq('id',id);
     if(err)throw err;o.remove();await load();draw(root);toast('Aday CV ve görüşme bilgileri güncellendi');
    }catch(e){error(e)}finally{button.disabled=false}
@@ -275,15 +277,15 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   if(!owner()||!S().hiringOpenings.some(j=>j.id===openingId))return;
   const o=modal('<form class="hr-dialog"><h2>Aday Başvurusu</h2><label>Ad Soyad<input name="name" maxlength="180" required></label><label>E-posta<input name="email" type="email" maxlength="254"></label><label>Telefon<input name="phone" maxlength="30"></label><label>Görüşme Notu<textarea name="note" maxlength="2000"></textarea></label><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Adayı Kaydet</button></div></form>');
   o.querySelector('form').onsubmit=async ev=>{ev.preventDefault();const f=ev.currentTarget,d=new FormData(f),b=f.querySelector('[type=submit]');b.disabled=true;try{
-   const {error:err}=await sb.from('hr_candidates').insert({workspace_id:WS,opening_id:openingId,full_name:String(d.get('name')).trim(),email:String(d.get('email')).trim()||null,phone:String(d.get('phone')).trim()||null,note:String(d.get('note')).trim()||null});
-   if(err)throw err;o.remove();await load();draw(root);toast('Aday kaydedildi');
+   const {data:created,error:err}=await sb.from('hr_candidates').insert({workspace_id:WS,opening_id:openingId,full_name:String(d.get('name')).trim(),email:String(d.get('email')).trim()||null,phone:String(d.get('phone')).trim()||null,note:String(d.get('note')).trim()||null}).select('id').single();
+   if(err)throw err;o.remove();await load();draw(root);toast('Aday kaydedildi');candidateForm(root,created.id);
   }catch(e){error(e)}finally{b.disabled=false}};
  }
  async function updateStage(root,id,stage){
   if(!owner()||!Object.keys(hiringStages).includes(stage))return;
-  if(stage==='call'){candidateForm(root,id);return}
+  if(stage==='call'){candidateForm(root,id,'call');draw(root);return}
   const {error:err}=await sb.from('hr_candidates').update({stage}).eq('workspace_id',WS).eq('id',id);
-  if(err){error(err);await load();draw(root)}else{const c=S().hiringCandidates.find(x=>x.id===id);if(c)c.stage=stage;toast('Başvuru aşaması güncellendi')}
+  if(err){error(err);await load();draw(root)}else{const c=S().hiringCandidates.find(x=>x.id===id);if(c)c.stage=stage;draw(root);toast('Başvuru aşaması güncellendi')}
  }
  async function updateJobStatus(root,id,status){
   if(!owner()||!Object.keys(hiringStatus).includes(status))return;
