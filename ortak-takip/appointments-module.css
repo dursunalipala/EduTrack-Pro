@@ -134,3 +134,101 @@
 .appt-task-kpis{gap:6px}.appt-task-kpis>div{padding:11px}.appt-task-kpis b{font-size:21px}
 .appt-task-table th,.appt-task-table td{padding:8px}
 }
+
+
+/* Randevu Merkezi · mobile-first ergonomics, Nov 2026 */
+.appt-root,.appt-icmal-view{min-width:0;max-width:100%}
+.appt-search-row{position:relative;display:flex;align-items:center;gap:10px;min-width:0;width:100%}
+.appt-search-row #apptSearch{flex:1;min-width:0;max-width:none;width:100%;border-radius:11px;border:1px solid #d5e3ea;background:#f8fbfd;color:#24435a;min-height:45px;padding:10px 12px 10px 38px;font-size:14px}
+.appt-search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-weight:750;color:#537f93;font-size:25px;pointer-events:none}
+.appt-filter-toggle{display:none}
+.appt-tab-short{display:none}
+.appt-icmal-displaybar,.appt-mobile-cards{display:none}
+.appt-filters{grid-template-columns:repeat(4,minmax(0,1fr));align-items:center}
+.appt-filters select{width:100%;max-width:none}
+.appt-filters .appt-check{grid-column:1/-1;justify-self:start;gap:8px}
+.appt-table-wrap{max-width:100%}
+@media(min-width:761px){
+ .appt-icmal-view .appt-table-wrap{display:block}
+}
+@media(max-width:760px){
+ .appt-root{gap:11px;width:100%}
+ .appt-intro{padding:13px 15px;gap:7px;border-radius:12px}
+ .appt-intro h2{font-size:17px}
+ .appt-intro .appt-live{font-size:10px}
+ .appt-toolbar{padding:12px;gap:10px;border-radius:12px}
+ .appt-toolbar .appt-actions-row{gap:8px}
+ .appt-toolbar .appt-actions-row #apptNew{min-height:44px}
+ .appt-search-row{gap:8px}
+ .appt-search-row #apptSearch{min-height:45px;font-size:13px;border-radius:10px;padding-right:8px}
+ .appt-filter-toggle{flex:none;display:flex;align-items:center;gap:5px;justify-content:center;min-height:45px;padding:0 11px;border:1px solid #ccdfe9;border-radius:10px;background:#eff6fa;color:#1b6079;font-weight:800;font-size:12px;white-space:nowrap;cursor:pointer}
+ .appt-filter-toggle.has-active{background:#ddf6f3;border-color:#71c6b7;color:#14645d}
+ .appt-filter-toggle b{display:grid;place-items:center;background:#0f7885;color:#fff;border-radius:99px;width:19px;height:19px;font-size:10px}
+ .appt-filters,.appt-filters:not(.is-open){display:none}
+ .appt-filters.is-open{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:3px}
+ .appt-filters select{height:43px;min-width:0;width:100%;padding:8px 24px 8px 9px;font-size:12px;border-radius:9px}
+ .appt-filters .appt-check{grid-column:1/-1;min-height:37px;padding:3px 4px}
+ .appt-tabs{gap:5px;padding-bottom:3px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+ .appt-tabs::-webkit-scrollbar{display:none}
+ .appt-tabs button{flex:1 0 auto;min-width:64px;min-height:43px;padding:9px 11px;border-radius:10px;font-size:12px;scroll-snap-align:start;line-height:1.2}
+ .appt-tab-full{display:none}
+ .appt-tab-short{display:inline}
+ .appt-icmal-displaybar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:1px 0 9px;color:#597488;font-size:12px;font-weight:800}
+ .appt-mobile-layout-switch{display:flex;align-items:center;gap:4px;border:1px solid #d6e7eb;padding:3px;border-radius:11px;background:#eff6f8}
+ .appt-mobile-layout-switch button{border:none;background:transparent;border-radius:8px;min-height:36px;padding:6px 12px;font-size:12px;font-weight:800;color:#476e80;cursor:pointer}
+ .appt-mobile-layout-switch button.active{background:#fff;color:#126e87;box-shadow:0 1px 6px #16476b1d}
+ .appt-icmal-view[data-mobile-mode="cards"]>.appt-table-wrap{display:none}
+ .appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{display:flex}
+ .appt-icmal-view[data-mobile-mode="table"]>.appt-mobile-cards{display:none}
+ .appt-icmal-view[data-mobile-mode="table"]>.appt-table-wrap{display:block}
+ .appt-table td:first-child,.appt-table th:first-child{position:static;left:auto;box-shadow:none}
+ .appt-mobile-cards{flex-direction:column;gap:10px;min-width:0}
+ .appt-mobile-card{display:block;border:1px solid #dbe7ed;border-radius:13px;background:#fff;box-shadow:0 3px 12px rgba(22,63,84,.04);padding:13px 14px;min-width:0}
+ .appt-card-top{display:flex;align-items:center;justify-content:space-between;gap:9px}
+ .appt-card-id{border-radius:7px;background:#e5f4f8;color:#116c85;font-weight:900;padding:5px 9px;font-size:12px;font-variant-numeric:tabular-nums}
+ .appt-card-school{max-width:65%;font-size:11px;color:#5b7586;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .appt-card-name{border:0;background:transparent;display:block;width:100%;padding:10px 0 4px;text-align:left;color:#144c69;font-size:16px;font-weight:850;line-height:1.36;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+ .appt-card-badges{padding:2px 0 9px}
+ .appt-card-badges .appt-status{font-size:11px;padding:5px 8px}
+ .appt-card-brief{display:grid;grid-template-columns:1.1fr .9fr;gap:10px;padding:9px 0 12px;border-top:1px solid #eff3f6}
+ .appt-card-brief>span,.appt-card-detailgrid>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .appt-card-brief small,.appt-card-detailgrid small,.appt-card-phone small{font-size:10px;color:#7b90a0;font-weight:650}
+ .appt-card-brief strong{font-size:12px;color:#3e5a6b;font-weight:750;overflow-wrap:anywhere}
+ .appt-card-actionbar{display:flex;align-items:center;gap:7px;border-top:1px solid #edf2f5;padding:11px 0 0;min-width:0}
+ .appt-card-phone{display:flex;flex:1 1 auto;min-width:0;flex-direction:column;gap:3px;overflow:hidden}
+ .appt-card-phone strong{color:#1b465f;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+ .appt-card-quick{flex:none}
+ .appt-card-quick .appt-quick{gap:5px}
+ .appt-card-quick .appt-quick .appt-call-btn,.appt-card-quick .appt-quick .appt-wa-btn{width:44px;height:44px;min-width:44px;border-radius:11px}
+ .appt-card-quick .appt-wa-btn svg{height:26px;width:26px}
+ .appt-card-open{flex:none;min-height:44px;padding:0 11px;border:1px solid #d4e4ed;background:#f1f7f9;color:#176781;border-radius:10px;font-size:12px;font-weight:850;cursor:pointer}
+ .appt-card-open span{font-size:20px;vertical-align:middle}
+ .appt-card-details{margin-top:10px;border-top:1px solid #e9f0f3}
+ .appt-card-details>summary{cursor:pointer;list-style:none;color:#607d90;font-size:12px;font-weight:750;padding:12px 2px 2px}
+ .appt-card-details>summary::-webkit-details-marker{display:none}
+ .appt-card-details>summary::after{content:"⌄";float:right;font-size:16px}
+ .appt-card-details[open]>summary::after{content:"⌃"}
+ .appt-card-detailbody{padding:12px 2px 2px}
+ .appt-card-detailgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#f8fbfc;border-radius:10px;padding:12px}
+ .appt-card-detailgrid strong{font-size:11px;color:#365269;overflow-wrap:anywhere}
+ .appt-card-notes{font-size:12px;color:#475c70;overflow-wrap:anywhere;padding:9px 2px;line-height:1.5}
+ .appt-card-result-label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#556f81;margin:10px 0;font-weight:750}
+ .appt-card-result-label .appt-quick-result{width:100%;max-width:none;min-height:42px}
+ .appt-card-moreactions{display:flex;flex-wrap:wrap;gap:7px;padding:7px 0 4px}
+ .appt-card-empty{background:#fff;border:1px dashed #d2e2ea;border-radius:11px;padding:22px;text-align:center;color:#698296;font-size:13px}
+ .appt-pagination{margin-top:10px;border-radius:11px}
+ .appt-mobile-card button:focus-visible,.appt-mobile-layout-switch button:focus-visible,.appt-filter-toggle:focus-visible{outline:2px solid #128a9f;outline-offset:2px}
+}
+@media(max-width:350px){
+ .appt-card-phone strong{font-size:11px}
+ .appt-card-actionbar{gap:5px}
+ .appt-card-quick .appt-quick .appt-call-btn,.appt-card-quick .appt-quick .appt-wa-btn{width:40px;height:42px;min-width:40px}
+ .appt-card-open{padding:0 7px}
+ .appt-mobile-card{padding:11px}
+ .appt-tabs button{padding:8px;min-width:59px}
+}
+@media print{
+ .appt-mobile-cards,.appt-icmal-displaybar,.appt-filter-toggle{display:none!important}
+ .appt-icmal-view .appt-table-wrap{display:block!important}
+ .appt-filters{display:grid!important}
+}
