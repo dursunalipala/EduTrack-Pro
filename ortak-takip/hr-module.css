@@ -38,3 +38,28 @@
 
 /* Compact candidate rows always show branch and priority, even while collapsed. */
 @media(max-width:650px){.hr-hiring-view.hr-display-list .tablewrap tr[data-hr-candidate-row]>td:first-child>.hr-candidate-branch{display:block!important;font-size:12px;line-height:1.35;margin-top:4px;color:#49627b}.hr-hiring-view.hr-display-list .tablewrap tr[data-hr-candidate-row]>td:first-child>.hr-candidate-branch+.muted.small{display:block!important;font-size:11px;margin-top:3px}}
+
+/* Hiring: desktop/tablet card toggle and left-anchored action toolbar */
+.hr-hiring-view .hr-candidate-actions{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:6px;margin-top:10px;width:100%}
+.hr-hiring-view .hr-candidate-actions>.btn{margin:0;white-space:nowrap}
+.hr-hiring-view .tablewrap td[data-label="Görüşme ve İşlemler"]{text-align:left}
+@media(min-width:651px){
+ .hr-hiring-view .tablewrap{overflow-x:visible}
+ .hr-hiring-view .tablewrap table,.hr-hiring-view .tablewrap tbody{display:block;width:100%;min-width:0}
+ .hr-hiring-view .tablewrap thead{display:none}
+ .hr-hiring-view .tablewrap tr[data-hr-candidate-row]{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(150px,1fr) minmax(145px,.8fr);gap:8px 16px;padding:14px 16px;margin:10px 0;border:1px solid #d9e2ec;border-radius:12px;min-width:0}
+ .hr-hiring-view .tablewrap tr[data-hr-candidate-row]>td{display:block;min-width:0;width:100%;padding:4px 0;border:0;overflow-wrap:anywhere}
+ .hr-hiring-view .tablewrap tr[data-hr-candidate-row]>td:last-child{grid-column:1/-1}
+ .hr-hiring-view .tablewrap tr[data-hr-candidate-row]>td:last-child>.muted{display:inline-block;margin-right:16px}
+ .hr-hiring-view .tablewrap tr[data-hr-candidate-row]>td[data-label]:before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:#65758a;margin-bottom:5px;text-transform:uppercase}
+ .hr-hiring-view.hr-display-cards .tablewrap tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:14px;align-items:start}
+ .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]{display:flex;flex-direction:column;gap:8px;margin:0;min-width:0;height:100%;box-shadow:0 3px 12px #102a4614}
+ .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]>td{display:block;width:100%;border:0}
+ .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]>td:last-child{grid-column:auto}
+ .hr-hiring-view.hr-display-cards .hr-candidate-actions{display:flex;flex-wrap:wrap}
+}
+@media(max-width:650px){
+ .hr-hiring-view .hr-candidate-actions{display:flex;flex-wrap:wrap;justify-content:flex-start}
+ .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]>td{display:block!important}
+ .hr-hiring-view.hr-display-cards .tablewrap tr[data-hr-candidate-row]>td:before{display:block}
+}
