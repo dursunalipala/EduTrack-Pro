@@ -3160,7 +3160,7 @@ function bindView(){
  document.querySelectorAll("#simplePriorityPanel [data-edit-task]").forEach(b=>b.onclick=()=>{
   const task=state.tasks.find(t=>t.id===b.dataset.editTask);if(task)openTaskDetail(task);
  });
- document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks","digital","appointments","profile","hr"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks")resetTaskFilters();state.view=b.dataset.view;render()});
+ document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(isStaff()&&!["overview","tasks","digital","appointments","profile","hr"].includes(b.dataset.view))return;if(b.dataset.view==="tasks"&&state.view!=="tasks"){resetTaskFilters();state.taskDisplayMode="cards"}state.view=b.dataset.view;render()});
 if(state.view==="digital")bindDigitalCenter();
 if(state.view==="appointments")appointments.bind();
 if(state.view==="inspection"||state.view==="documents")inspection.bind();
@@ -3275,7 +3275,7 @@ document.querySelectorAll("[data-calendar-event]").forEach(b=>b.addEventListener
 $("#newTaskOnDay")?.addEventListener("click",()=>{openModal("task");const field=$("#modalForm [name=due_date]");if(field)field.value=state.calendarDay||""});
 $("#calendarToday")?.addEventListener("click",()=>selectCalendarDay(iso(new Date())));
 $("#prevMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);render()});$("#nextMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);render()})}
-document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")state.taskDisplayMode="cards";state.view=b.dataset.view;render()});
 let editing=null,modalKind="";
 const toDatetimeLocal=v=>{if(!v)return "";const d=new Date(v);return iso(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const field=(name,label,val="",type="text",extra="")=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(val??"")+'" '+extra+'></label>';
