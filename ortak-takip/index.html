@@ -1004,7 +1004,11 @@ function vapidBytes(s){
  const b=atob(s.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(s.length/4)*4,"="));
  return Uint8Array.from(b,c=>c.charCodeAt(0));
 }
-function playTaskSound(){
+function notificationPriority(n){
+ const content=String([n?.title,n?.body,n?.message,n?.type].filter(Boolean).join(" ")).toLocaleLowerCase("tr-TR");
+ return /kritik|gecik|süresi dol|acil/.test(content)?"critical":/onay|kontrol|atandı|görev/.test(content)?"important":"normal";
+}
+function playTaskSound(priority="normal"){
  if(!soundOn()||document.hidden)return;
  try{
   const Audio=window.AudioContext||window.webkitAudioContext;
@@ -1012,22 +1016,25 @@ function playTaskSound(){
   const ctx=pushAudio||new Audio();pushAudio=ctx;
   if(ctx.state==="suspended")void ctx.resume();
   const now=ctx.currentTime;
-  [784,1046].forEach((freq,i)=>{
-   const oscillator=ctx.createOscillator(),volume=ctx.createGain(),start=now+i*.12;
-   oscillator.type="sine";oscillator.frequency.setValueAtTime(freq,start);
+  const tones=priority==="critical"?[880,1175,880,1175]:priority==="important"?[784,1046,1318]:[784,1046];
+  tones.forEach((freq,i)=>{
+   const oscillator=ctx.createOscillator(),volume=ctx.createGain(),start=now+i*.17;
+   oscillator.type=priority==="critical"?"triangle":"sine";
+   oscillator.frequency.setValueAtTime(freq,start);
    volume.gain.setValueAtTime(.0001,start);
-   volume.gain.exponentialRampToValueAtTime(.08,start+.02);
-   volume.gain.exponentialRampToValueAtTime(.0001,start+.23);
+   volume.gain.exponentialRampToValueAtTime(priority==="critical"?.16:.11,start+.025);
+   volume.gain.exponentialRampToValueAtTime(.0001,start+.24);
    oscillator.connect(volume);volume.connect(ctx.destination);
-   oscillator.start(start);oscillator.stop(start+.24);
+   oscillator.start(start);oscillator.stop(start+.25);
   });
+  if(priority==="critical"&&navigator.vibrate)navigator.vibrate([180,90,180]);
  }catch(e){console.warn("Bildirim sesi açılamadı",e)}
 }
-function playSoundOnce(id){
+function playSoundOnce(id,priority="normal"){
  if(!id||playedSoundIds.has(id))return;
  playedSoundIds.add(id);
  if(playedSoundIds.size>100)playedSoundIds.clear();
- playTaskSound();
+ playTaskSound(priority);
 }
 async function updatePushControls(){
  const on=$("#enableDeviceNotifications"),off=$("#disableDeviceNotifications"),test=$("#testDeviceNotifications"),status=$("#notifyDeviceStatus");
@@ -1184,7 +1191,7 @@ async function loadMyNotifications(){
    const rows=listResult.data||[];
    if(lastInboxIds!==null){
     for(const n of rows)if(!n.read_at&&!lastInboxIds.has(n.id)&&
-       Date.now()-new Date(n.created_at).getTime()<180000)playSoundOnce(n.id);
+       Date.now()-new Date(n.created_at).getTime()<180000)playSoundOnce(n.id,notificationPriority(n));
    }
    lastInboxIds=new Set(rows.map(n=>n.id));
    state.userNotifications=rows;
