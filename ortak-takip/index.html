@@ -850,6 +850,7 @@ const loadDigitalSort=()=>{
  }catch{return "newest"}
 };
 
+document.addEventListener("input",e=>{if(e.target?.id!=="progressStepNames")return;const box=document.querySelector("#progressStepChecks");if(!box)return;const prior=[...box.querySelectorAll("[data-step-done]")].map(x=>x.checked);const names=e.target.value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean).slice(0,30);box.innerHTML=names.map((title,i)=>'<label><input type="checkbox" data-step-done="'+i+'" '+(prior[i]?"checked":"")+'> '+esc(title)+'</label>').join("");});
 const state={simpleMode:loadSimpleMode(),taskScope:"mine",taskDisplayMode:"cards",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
@@ -3331,6 +3332,7 @@ if(kind==="task"){
  sel("status","Durum",[["taslak","Planlandı"],["beklemede","Bekliyor"],["devam_ediyor","Devam Ediyor"],["kontrol_bekliyor","Kontrol Bekliyor"],["tamamlandi","Tamamlandı"],["iptal","İptal Edildi"]],item?.status||"beklemede")+
  sel("priority","Öncelik",[["dusuk","Düşük"],["normal","Normal"],["yuksek","Yüksek"],["kritik","Kritik"]],item?.priority||"normal")+
  field("start_date","Başlangıç Tarihi",item?.start_date||"","date")+field("due_date","Hedef Bitiş Tarihi",item?.due_date||"","date")+
+ '<div class="span2"><label>Alt aşamalar (her satıra bir aşama)<textarea id="progressStepNames" rows="3" placeholder="Örn. Evrak hazırlığı\\nBaşvuru\\nKontrol">'+esc((item?.progress_steps||[]).map(x=>x.title).join("\\n"))+'</textarea></label><div id="progressStepChecks" style="display:grid;gap:8px;margin-top:8px">'+(item?.progress_steps||[]).map((x,i)=>'<label><input type="checkbox" data-step-done="'+i+'" '+(x.done?"checked":"")+'> '+esc(x.title)+'</label>').join("")+'</div><p class="small muted">Aşama eklenirse ilerleme eşit ağırlıklı otomatik hesaplanır. Aşama yoksa yüzde manuel girilir.</p></div>'+ 
  field("progress","İlerleme (%)",item?.progress??0,"number","min=0 max=100")+
  '<div class="span2 multi-people"><strong>Yardımcı Personeller</strong><div class="multi-person-grid">'+
  state.members.filter(m=>m.is_active).map(m=>'<label><input type="checkbox" name="helper_users" value="'+esc(m.user_id)+'"'+((item?.helper_user_ids||[]).includes(m.user_id)?" checked":"")+'> '+esc(memberName(m.user_id))+'</label>').join("")+'</div><p class="small muted">Bir ana uygulayıcıya ek yardımcılar seçilebilir.</p></div>'+
@@ -3656,7 +3658,13 @@ if(modalKind==="task"){
   throw Error("Tamamlanmış görevde durum değiştirilemez");
  payload.helper_user_ids=helpers.filter(id=>id!==data.executor_id);
  payload.collaborator_user_ids=editing?.collaborator_user_ids||[];
- payload.progress=Number(payload.progress);
+ const names=String(document.querySelector("#progressStepNames")?.value||"").split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean).slice(0,30);
+ const oldSteps=Array.isArray(editing?.progress_steps)?editing.progress_steps:[];
+ payload.progress_steps=names.map((title,i)=>({title,done:document.querySelector('[data-step-done="'+i+'"]')?.checked??(oldSteps[i]?.title===title&&!!oldSteps[i]?.done)}));
+ payload.progress=payload.progress_steps.length?Math.round(95*payload.progress_steps.filter(x=>x.done).length/payload.progress_steps.length):Math.max(0,Math.min(95,Number(payload.progress)||0));
+ if(editing?.status==="tamamlandi")payload.progress=100;
+ if(editing?.status==="kontrol_bekliyor")payload.progress=Math.min(95,payload.progress);
+
  if(editing&&editing.assigned_to!==payload.assigned_to){
   payload.last_delegated_at=new Date().toISOString();payload.last_delegated_by=state.user.id;
  }
