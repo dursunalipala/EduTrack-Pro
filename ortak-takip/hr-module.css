@@ -92,3 +92,31 @@
  .hr-module .hr-kpis .panel .muted{font-size:11px}
 }
 @media(max-width:420px){.hr-module .hr-employee-table tbody tr{grid-template-columns:minmax(0,1fr) auto;gap:7px}.hr-module .hr-employee-table tbody td:nth-child(4) .btn{font-size:11px;padding:8px}}
+
+
+/* Leave requests: responsive cards, no horizontal page overflow */
+.hr-module .hr-leave-panel{min-width:0;max-width:100%;overflow:hidden}
+.hr-module .hr-leave-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.hr-module .hr-leave-heading h2{margin:0;min-width:0}
+.hr-module .hr-leave-table{max-width:100%;min-width:0}
+@media(max-width:800px){
+ .hr-module .hr-leave-heading .btn{white-space:normal;max-width:100%;flex-shrink:1}
+ .hr-module .hr-leave-table{overflow:visible!important}
+ .hr-module .hr-leave-table table,.hr-module .hr-leave-table tbody{display:block!important;width:100%!important;min-width:0!important}
+ .hr-module .hr-leave-table thead{display:none!important}
+ .hr-module .hr-leave-table tbody tr{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;width:100%;min-width:0;padding:13px;margin:10px 0;border:1px solid #dce5ef;border-radius:12px;background:#fff;box-sizing:border-box}
+ .hr-module .hr-leave-table tbody td{display:block!important;width:auto!important;min-width:0!important;max-width:100%;padding:0!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere!important}
+ .hr-module .hr-leave-table tbody td[data-label]:before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:#667b91;margin-bottom:4px}
+ .hr-module .hr-leave-table tbody td:first-child{grid-column:1;grid-row:1;font-weight:700}
+ .hr-module .hr-leave-table tbody td:nth-child(4){grid-column:2;grid-row:1;font-size:12px;font-weight:700;color:#137f77}
+ .hr-module .hr-leave-table tbody td:nth-child(2),.hr-module .hr-leave-table tbody td:nth-child(3),.hr-module .hr-leave-table tbody td:nth-child(5){grid-column:1/-1}
+ .hr-module .hr-leave-table tbody td:last-child{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px}
+ .hr-module .hr-leave-table tbody td:last-child:before{flex-basis:100%}
+ .hr-module .hr-leave-table tbody td .btn{margin:0;white-space:normal}
+}
+@media(max-width:420px){
+ .hr-module .hr-leave-heading{align-items:stretch}
+ .hr-module .hr-leave-heading .btn{width:100%}
+ .hr-module .hr-leave-table tbody tr{grid-template-columns:minmax(0,1fr);gap:8px}
+ .hr-module .hr-leave-table tbody td:nth-child(4){grid-column:1;grid-row:auto}
+}
