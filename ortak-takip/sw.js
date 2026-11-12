@@ -19,11 +19,14 @@ self.addEventListener("push",event=>{
  const body=String(data.body||"Ortak Takip'te yeni bir işleminiz var.").slice(0,180);
  const url=typeof data.url==="string"&&/^\/(?!\/)/.test(data.url)?data.url:"/";
  const id=String(data.id||"");
+ const content=(title+" "+body+" "+String(data.priority||"")).toLocaleLowerCase("tr-TR");
+ const critical=/kritik|gecik|süresi dol|acil|critical/.test(content);
+ const important=critical||/onay|kontrol|atandı|görev|important/.test(content);
  event.waitUntil((async()=>{
   await self.registration.showNotification(title,{
    body,icon:"./icons/icon-192.png",badge:"./icons/icon-192.png",
    tag:id?"ortak-"+id:undefined,renotify:!!id,
-   vibrate:[160,60,100],silent:false,data:{url,id}
+   vibrate:critical?[220,100,220,100,260]:important?[180,80,130]:[100],silent:false,requireInteraction:critical,data:{url,id,priority:critical?"critical":important?"important":"normal"}
   });
   const clients=await self.clients.matchAll({type:"window",includeUncontrolled:true});
   for(const client of clients)client.postMessage({type:"ortak-push-received",id});
