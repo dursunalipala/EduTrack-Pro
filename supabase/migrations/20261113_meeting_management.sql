@@ -78,12 +78,12 @@ revoke all on schema private from public,anon;
 grant usage on schema private to authenticated;
 create or replace function private.meeting_participant_exists(p_meeting uuid, p_user uuid)
 returns boolean language sql stable security definer set search_path = ''
-as $ select exists(select 1 from public.meeting_participants p where p.meeting_id=p_meeting and p.user_id=p_user) $;
+as $body$ select exists(select 1 from public.meeting_participants p where p.meeting_id=p_meeting and p.user_id=p_user) $body$;
 revoke all on function private.meeting_participant_exists(uuid,uuid) from public,anon;
 grant execute on function private.meeting_participant_exists(uuid,uuid) to authenticated;
 create or replace function public.is_meeting_participant(p_meeting uuid)
 returns boolean language sql stable security invoker set search_path = ''
-as $ select (select auth.uid()) is not null and private.meeting_participant_exists(p_meeting,(select auth.uid())) $;
+as $body$ select (select auth.uid()) is not null and private.meeting_participant_exists(p_meeting,(select auth.uid())) $body$;
 revoke all on function public.is_meeting_participant(uuid) from public,anon;
 grant execute on function public.is_meeting_participant(uuid) to authenticated;
 create or replace function public.can_manage_meeting(p_meeting uuid) returns boolean
