@@ -863,7 +863,7 @@ const isStaff=()=>!canManage();
 const reporting=createReportingModule({state,sb,WS,esc,options,toast,render,memberName:id=>memberName(id),streamName:id=>streamName(id),loadReportLibrary,canManage,refresh});
 const appointments=createAppointmentModule({sb,WS,state,esc,toast,error,requireActiveSession,render});
 const hr=createHrModule({sb,WS,state,esc,toast,error});
-const meetings=createMeetingModule({sb,WS,state,esc,toast});
+const meetings=createMeetingModule({sb,WS,state,esc,toast,onAskAI:(prompt)=>{state.view="ai";render();const input=document.getElementById("aiChatInput");if(input){input.value=prompt;input.focus();input.scrollIntoView({block:"center",behavior:"smooth"});}}});
 const inspection=createInspectionModule({sb,WS,state,esc,options,toast,error,requireActiveSession,render,canManage,
  openFindingTask:(finding)=>{
   openModal("task");
@@ -2065,6 +2065,7 @@ const aiQuestions=[
  "Hangi kurumun kritik işleri daha fazla?",
  "Kasım hedeflerimizi karşılaştır ve öncelik öner.",
  "Yarınki yönetim toplantısına gündem hazırla.",
+ "Toplantı kararları için takip ve uygulama planı öner.",
  "Elit İlkokulu için yapılacakları planla."
 ];
 const aiModeTitle=mode=>aiOptions.find(x=>x[0]===mode)?.[1]||"Yönetim Analizi";
