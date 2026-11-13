@@ -39,6 +39,45 @@ export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
   const [ag,de,di,mi]=await Promise.all([sb.from("meeting_agenda").select("id,title,status").eq("meeting_id",id).order("sort_order"),sb.from("meeting_decisions").select("id,decision_text,status,due_date").eq("meeting_id",id),sb.from("meeting_directives").select("id,directive_text,status,due_date").eq("meeting_id",id),sb.from("meeting_minutes").select("meeting_id,draft_text,approved_text,status,approved_at").eq("meeting_id",id).maybeSingle()]);
   if(!document.getElementById("meetingDetail")||selected!==id)return;
   el.innerHTML='<div class="meeting-card-head"><h3>Toplantı ayrıntıları</h3><button class="btn sm" id="meetingClose">Kapat</button></div><h4>Gündem önerileri</h4>'+(ag.data||[]).map(x=>'<p>• '+e(x.title)+' <small>('+e(x.status)+')</small></p>').join("")+'<form id="meetingAgendaForm"><input name="title" required minlength="3" maxlength="240" placeholder="Yeni gündem önerisi"><button class="btn primary">Gündem ekle</button></form><h4>Kararlar</h4>'+((de.data||[]).map(x=>'<p>• '+e(x.decision_text)+' <small>('+e(decisionNames[x.status]||x.status)+')</small></p>').join("")||'<p>Henüz karar kaydı yok.</p>')+(canManage()?'<form id="meetingDecisionForm"><textarea name="decision_text" required minlength="3" rows="2" placeholder="Alınan karar" style="width:100%"></textarea><label>Son tarih<input name="due_date" type="date"></label><button class="btn primary">Karar kaydet</button></form>':'')+'<h4>MEM talimatları</h4>'+((di.data||[]).map(x=>'<p>• '+e(x.directive_text)+' <small>('+e(x.status)+')</small></p>').join("")||'<p>Talimat kaydı yok.</p>');
+  const currentMeeting=rows.find(x=>x.id===id);
+  if(currentMeeting){
+   const share=document.createElement("section");share.className="meeting-share";
+   share.innerHTML='<h4>Bildirim ve paylaşım</h4><p class="meeting-muted">E-posta ve WhatsApp bağlantıları mesaj taslağını açar. Gönderme işlemini siz onaylarsınız.</p><div class="meeting-actions"><button type="button" class="btn sm" data-share="whatsapp">WhatsApp</button><button type="button" class="btn sm" data-share="email">E-posta</button><button type="button" class="btn sm" data-share="copy">Metni kopyala</button></div>'+
+    (state.role==="owner"?'<form id="meetingNotifyForm"><label>Uygulama içi bildirim alıcısı<select name="recipient_id" required><option value="">Alıcı seçin</option></select></label><button class="btn primary" type="submit">Bildirim gönder</button></form>':'');
+   el.append(share);
+   const msg=['Ortak Takip | Toplantı: '+currentMeeting.title,'Tür: '+(types[currentMeeting.type]||currentMeeting.type),'Tarih: '+fmt(currentMeeting.starts_at),'Yer: '+(currentMeeting.location||'Belirtilmedi'),'Durum: '+(statusNames[currentMeeting.status]||currentMeeting.status),currentMeeting.meeting_url?'Katılım: '+currentMeeting.meeting_url:''].filter(Boolean).join("\n");
+   share.querySelectorAll("[data-share]").forEach(button=>button.onclick=async()=>{
+    const kind=button.dataset.share;
+    if(kind==="whatsapp")window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+    else if(kind==="email")window.location.href="mailto:?subject="+encodeURIComponent("Toplantı: "+currentMeeting.title)+"&body="+encodeURIComponent(msg);
+    else try{await navigator.clipboard.writeText(msg);toast("Toplantı metni kopyalandı")}catch{toast("Kopyalama desteklenmiyor")}
+   });
+   const notifyForm=share.querySelector("#meetingNotifyForm");
+   if(notifyForm){
+    const {data:members,error:membersError}=await sb.from("workspace_members").select("user_id,role").eq("workspace_id",WS).eq("is_active",true);
+    if(!document.contains(notifyForm)||selected!==id)return;
+    if(membersError){toast("Alıcı listesi yüklenemedi: "+membersError.message)}
+    else {
+     const ids=[...new Set((members||[]).map(m=>m.user_id).filter(Boolean))];
+     if(ids.length){
+      const {data:profiles}=await sb.from("profiles").select("id,full_name").in("id",ids);
+      const names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.full_name]));
+      const select=notifyForm.querySelector("select");
+      ids.forEach(uid=>{const option=document.createElement("option");option.value=uid;option.textContent=names[uid]||"Üye ("+uid.slice(0,8)+")";select.append(option)});
+     }
+    }
+    notifyForm.onsubmit=async ev=>{
+     ev.preventDefault();const button=notifyForm.querySelector("button");button.disabled=true;
+     const recipient_id=new FormData(notifyForm).get("recipient_id");
+     const batch_id=crypto.randomUUID();
+     const payload={body:msg.slice(0,1500),sender_id:state.user.id,batch_id,meeting_id:id};
+     const {error}=await sb.from("user_notifications").insert({workspace_id:WS,recipient_id,kind:"admin_message",title:("Toplantı: "+currentMeeting.title).slice(0,120),payload});
+     button.disabled=false;
+     if(error){toast("Bildirim gönderilemedi: "+error.message);return}
+     toast("Uygulama içi bildirim oluşturuldu");
+    };
+   }
+  }
   const minutes=mi.data||null;
   const minutesSection=document.createElement("section");
   minutesSection.className="meeting-minutes";
