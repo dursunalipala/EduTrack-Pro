@@ -5,7 +5,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  const leaveTypeLabel={annual:'Yıllık İzin',sick:'Sağlık İzni',unpaid:'Ücretsiz İzin',parental:'Ebeveyn İzni',other:'Diğer İzin'};
  const leaveStatusLabel={pending:'Onay Bekliyor',approved:'Onaylandı',rejected:'Reddedildi',cancelled:'İptal Edildi'};
  const owner=()=>state.role==='owner';
- const canViewHiring=()=>owner()||(state.role==='manager'&&S().access.some(a=>a.user_id===state.user.id&&['manager','admin','manage','write','full'].includes(a.access_level)));
+ const canViewHiring=()=>owner()||(state.role==='manager'&&S().access.some(a=>a.user_id===state.user.id&&['hr_manager','manager','admin','manage','write','full'].includes(a.access_level)));
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
  async function load(){
   const s=S();s.loading=true;
@@ -19,7 +19,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=(owner()||(state.role==='manager'&&(a.data||[]).some(x=>x.user_id===state.user.id&&['manager','admin','manage','write','full'].includes(x.access_level))))?await Promise.all([
+   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=(owner()||(state.role==='manager'&&(a.data||[]).some(x=>x.user_id===state.user.id&&['hr_manager','manager','admin','manage','write','full'].includes(x.access_level))))?await Promise.all([
     sb.from('hr_job_openings').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidates').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidate_interviews').select('*').eq('workspace_id',WS).order('interviewed_at',{ascending:false}).limit(500),
