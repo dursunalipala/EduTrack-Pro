@@ -35,7 +35,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   let rows=activeRows().filter(r=>(s.result==='all'||r.outcome===s.result)&&(s.school==='all'||r.school_unit===s.school)&&(s.branch==='all'||r.branch===s.branch)&&(!search||[r.full_name,r.phone,r.district,r.province,r.first_contact,r.staff_name,r.notes,r.source_record_id].some(v=>String(v||'').toLocaleLowerCase('tr-TR').includes(search))));
   if(s.tab==='gecmis')rows=rows.filter(r=>r.appointment_date&&r.appointment_date<today());
   const key=s.order;rows.sort((a,b)=>{
-   if(key==='latest')return (Number(b.source_record_id)||0)-(Number(a.source_record_id)||0)||(b.created_at||'').localeCompare(a.created_at||'');
+   if(key==='latest')return (b.created_at||'').localeCompare(a.created_at||'')||(Number(b.source_record_id)||0)-(Number(a.source_record_id)||0);
    if(key==='name')return a.full_name.localeCompare(b.full_name,'tr');
    if(key==='amount')return (Number(b.quoted_amount)||0)-(Number(a.quoted_amount)||0);
    if(key==='contact')return (b.contact_date||'').localeCompare(a.contact_date||'');
@@ -215,7 +215,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   if(r&&!mayEdit(r))return '<div class="panel">Bu randevuyu düzenleme yetkiniz bulunmuyor. <button type="button" class="btn" id="apptCancel">Geri dön</button></div>';
   const d=r||blank();
   const linkedTask=r?taskFor(r.id):null;
-  const nextNumber=['owner','manager'].includes(state.role)?'#'+(Math.max(0,...s.rows.map(x=>Number(x.source_record_id)||0))+1):'Otomatik';
+  const nextNumber='Otomatik (Ortak Takip ID)';
   const staffOptions=state.members.filter(m=>m.is_active).map(m=>{const p=state.profiles.find(p=>p.id===m.user_id);return '<option value="'+esc(m.user_id)+'"'+(d.staff_user_id===m.user_id?' selected':'')+'>'+esc(p?.full_name||m.user_id.slice(0,8))+'</option>'}).join('');
   const resultButtons=statuses.map(a=>'<label class="appt-result-option"><input type="radio" name="outcome" value="'+a[0]+'"'+(d.outcome===a[0]?' checked':'')+'><span style="--appt-color:'+a[3]+'">'+a[2]+' '+esc(a[1])+'</span></label>').join('');
   return '<section class="appt-form"><div class="appt-form-head"><h2>'+(r?'Randevu Düzenle':'Yeni Randevu')+'</h2><button type="button" class="btn" id="apptCancel">← İcmale Dön</button></div><p class="muted small">* işaretli alanlar zorunludur. Belgeler için dosya yüklemek yerine kurumca yetkilendirilmiş bağlantı girin.</p>'+
