@@ -5,6 +5,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  const leaveTypeLabel={annual:'Yıllık İzin',sick:'Sağlık İzni',unpaid:'Ücretsiz İzin',parental:'Ebeveyn İzni',other:'Diğer İzin'};
  const leaveStatusLabel={pending:'Onay Bekliyor',approved:'Onaylandı',rejected:'Reddedildi',cancelled:'İptal Edildi'};
  const owner=()=>state.role==='owner';
+ const canViewHiring=()=>owner()||(state.role==='manager'&&S().access.some(a=>a.user_id===state.user.id&&['manager','admin','manage','write','full'].includes(a.access_level)));
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
  async function load(){
   const s=S();s.loading=true;
@@ -18,7 +19,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=owner()?await Promise.all([
+   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=(owner()||(state.role==='manager'&&(a.data||[]).some(x=>x.user_id===state.user.id&&['manager','admin','manage','write','full'].includes(x.access_level))))?await Promise.all([
     sb.from('hr_job_openings').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidates').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidate_interviews').select('*').eq('workspace_id',WS).order('interviewed_at',{ascending:false}).limit(500),
@@ -300,7 +301,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   return (a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'));
  }
  function hiringView(){
-  const s=S();if(!owner())return '<div class="hr-module"><h2>İşe Alım</h2><p>Bu alan yalnızca yönetici yetkisine açıktır.</p><button class="btn" data-hr-tab="staff">Personel Yönetimine Dön</button></div>';
+  const s=S();if(!canViewHiring())return '<div class="hr-module"><h2>İşe Alım</h2><p>Bu alan yalnızca yönetici yetkisine açıktır.</p><button class="btn" data-hr-tab="staff">Personel Yönetimine Dön</button></div>';
   const f=s.hiringFilters||(s.hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'});
   return `<div class="hr-module hr-hiring-view hr-display-${safe(s.hiringDisplay||'list')}"><div class="titlebar"><div><h2>İşe Alım</h2><p class="muted">İlanlar, aday başvuruları ve görüşme aşamaları</p></div><button class="btn primary" data-hr-new-job>Yeni İlan</button></div>
    <div class="actions" style="margin-bottom:12px"><button class="btn" data-hr-tab="staff">Personel Yönetimi</button><button class="btn primary" data-hr-tab="hiring">İşe Alım</button></div>
