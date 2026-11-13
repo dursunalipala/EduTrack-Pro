@@ -5,7 +5,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
  const leaveTypeLabel={annual:'Yıllık İzin',sick:'Sağlık İzni',unpaid:'Ücretsiz İzin',parental:'Ebeveyn İzni',other:'Diğer İzin'};
  const leaveStatusLabel={pending:'Onay Bekliyor',approved:'Onaylandı',rejected:'Reddedildi',cancelled:'İptal Edildi'};
  const owner=()=>state.role==='owner';
- const canViewHiring=()=>owner()||(state.role==='manager'&&S().access.some(a=>a.user_id===state.user.id&&['hr_manager','manager','admin','manage','write','full'].includes(a.access_level)));
+ const canViewHiring=()=>owner()||(state.role==='manager'&&S().access.some(a=>a.user_id===state.user.id&&['hr_manager','hr_admin','manager','admin','manage','write','full'].includes(a.access_level)));
  const selfEmployee=()=>S().employees.find(e=>e.id===S().myEmployeeId);
  async function load(){
   const s=S();s.loading=true;
@@ -19,7 +19,7 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
     sb.from('hr_employees').select('id').eq('workspace_id',WS).eq('user_id',state.user.id).maybeSingle()
    ]);
    for(const r of [o,e,m,l,a,me])if(r.error)throw r.error;
-   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=(owner()||(state.role==='manager'&&(a.data||[]).some(x=>x.user_id===state.user.id&&['hr_manager','manager','admin','manage','write','full'].includes(x.access_level))))?await Promise.all([
+   const [jobs,candidates,interviews,activity,promotions,documents,messages,links]=(owner()||(state.role==='manager'&&(a.data||[]).some(x=>x.user_id===state.user.id&&['hr_manager','hr_admin','manager','admin','manage','write','full'].includes(x.access_level))))?await Promise.all([
     sb.from('hr_job_openings').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidates').select('*').eq('workspace_id',WS).order('created_at',{ascending:false}),
     sb.from('hr_candidate_interviews').select('*').eq('workspace_id',WS).order('interviewed_at',{ascending:false}).limit(500),
@@ -165,6 +165,8 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    form.elements.primary.checked=x?!!x.is_primary:true;
   };
   choice.onchange=fill;fill();
+  const permissionBtn=document.createElement('button');permissionBtn.type='button';permissionBtn.className='btn';permissionBtn.textContent='Kurum İK Yetkisi';permissionBtn.onclick=()=>{const org=form.elements.org.value;overlay.remove();manageAccess(root,{org,user:person.user_id})};form.querySelector('.actions')?.prepend(permissionBtn);
+  const hint=document.createElement('p');hint.className='small muted';hint.textContent='Görev yeri değişikliği otomatik erişim yetkisi vermez. Kurum yetkileri ayrı yönetilir.';form.querySelector('.actions')?.before(hint);
   form.onsubmit=async ev=>{
    ev.preventDefault();const fd=new FormData(form),button=form.querySelector('[type=submit]');button.disabled=true;
    try{
@@ -252,12 +254,14 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   };
  }
 
- function manageAccess(root){
+ function manageAccess(root,preset={}){
   if(!owner())return;
   const orgs=S().organizations, members=(state.members||[]).filter(m=>m.is_active!==false);
   if(!orgs.length||!members.length){toast('Kurum ve aktif kullanıcı kaydı gerekli');return}
   const overlay=modal(`<form class="hr-dialog"><h2>Kurum İK Yetkisi</h2><label>Kurum<select name="org" required>${orgs.map(o=>`<option value="${safe(o.id)}">${safe(o.name)}</option>`).join('')}</select></label><label>Kullanıcı<select name="user" required>${members.map(m=>`<option value="${safe(m.user_id)}">${safe((state.profiles||[]).find(p=>p.id===m.user_id)?.full_name||m.user_id)}</option>`).join('')}</select></label><label>Yetki<select name="level"><option value="hr_manager">Kurum İK Yöneticisi</option><option value="hr_admin">Kurum İK Admini</option><option value="employee">Personel</option><option value="viewer">İzleyici</option></select></label><p class="small muted">Yetkiler yalnızca seçilen kurum için geçerlidir. Admin erişimi ayrıca korunur.</p><div data-hr-existing></div><div class="actions"><button type="button" class="btn" data-hr-cancel>Vazgeç</button><button type="submit" class="btn primary">Yetkiyi Kaydet</button></div></form>`);
   const f=overlay.querySelector('form');
+  if(preset.org&&orgs.some(o=>o.id===preset.org))f.elements.org.value=preset.org;
+  if(preset.user&&members.some(m=>m.user_id===preset.user))f.elements.user.value=preset.user;
   const existing=overlay.querySelector('[data-hr-existing]');
   const renderExisting=()=>{
    const org=f.elements.org.value;
