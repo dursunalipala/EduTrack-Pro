@@ -341,12 +341,13 @@ function otOutboxSync_(){
     if(duplicates.has(id)){conflicted.push({id:item.id,version:item.version});return;}
 
     var fields=item.fields||{};
-    var names=Object.keys(fields);
+    // AppSheet'in gercek tablosunda bulunmayan istege bagli alanlar
+    // (or. Sonraki Arama Tarihi) kaynaga yeni sutun eklemeden Ortak Takip'te kalir.
+    var allNames=Object.keys(fields);
+    var names=allNames.filter(function(field){return positions[field]!==undefined;});
+    var excluded=allNames.filter(function(field){return positions[field]===undefined;});
+    if(excluded.length)Logger.log('Sheets tablosunda bulunmayan %s alan Ortak Takip tarafinda kaldi.',excluded.length);
     if(!names.length){acked.push({id:item.id,version:item.version});return;}
-    // Eslesmeyen zorunlu alan: asla sessizce kaybetme.
-    if(names.some(function(field){return positions[field]===undefined;})){
-      conflicted.push({id:item.id,version:item.version});return;
-    }
 
     var sheetRow=rowMap.get(id)||null;
     var key=otSignatureKey_(id);
