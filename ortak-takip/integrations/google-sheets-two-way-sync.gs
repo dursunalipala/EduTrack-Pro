@@ -373,8 +373,10 @@ function otOutboxSync_(){
       var current=sheet.getRange(sheetRow,1,1,columnCount).getDisplayValues()[0];
       var currentHash=otSignature_(current,meta),baseline=cached[key]||'';
       var alreadyDone=names.every(function(field){
+        var desired=(field==='outcome')
+          ?otToSheetValue_(field,fields[field]):fields[field];
         return otNormalizedValue_(field,current[positions[field]])===
-               otNormalizedValue_(field,otToSheetValue_(field,fields[field]));
+               otNormalizedValue_(field,desired);
       });
       // Eger kullanici ayni degisikligi Sheet'te de yaptiysa yeniden yazma.
       // Diger Sheet alanlari degismis olabilir: eski hash'i sakla ki iceri alinsin.
