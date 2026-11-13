@@ -3319,6 +3319,26 @@ document.querySelectorAll("[data-calendar-event]").forEach(b=>b.addEventListener
 $("#newTaskOnDay")?.addEventListener("click",()=>{openModal("task");const field=$("#modalForm [name=due_date]");if(field)field.value=state.calendarDay||""});
 $("#calendarToday")?.addEventListener("click",()=>selectCalendarDay(iso(new Date())));
 $("#prevMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);render()});$("#nextMonth")?.addEventListener("click",()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);render()})}
+// Meeting navigation: handle the grouped mobile tile before generic view handlers.
+document.getElementById("nav")?.addEventListener("click",event=>{
+ const button=event.target.closest('button[data-view="meetings"]');
+ if(!button)return;
+ event.preventDefault();
+ event.stopImmediatePropagation();
+ state.view="meetings";
+ try{
+  render();
+  document.getElementById("nav")?.classList.remove("ot-open");
+  document.querySelector(".ot-bottom-nav button[aria-label='Menü']")?.classList.remove("active");
+  document.querySelectorAll("#nav .ot-nav-group").forEach(group=>group.open=false);
+  document.getElementById("pageTitle")?.scrollIntoView({block:"start",behavior:"instant"});
+ }catch(err){
+  console.error("Toplantı Merkezi açılış hatası",err);
+  const content=document.getElementById("content");
+  if(content)content.innerHTML='<section class="meeting-alert" role="alert"><h2>Toplantı Merkezi açılamadı</h2><p>Uygulama açılış hatası algılandı. Lütfen ekran görüntüsünü paylaşın.</p><small>'+esc(err?.message||"Bilinmeyen hata")+'</small></section>';
+  toast("Toplantı Merkezi açılış hatası: "+(err?.message||"Bilinmeyen hata"));
+ }
+},true);
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{if(b.dataset.view==="tasks"&&state.view!=="tasks")state.taskDisplayMode="cards";state.view=b.dataset.view;render()});
 let editing=null,modalKind="";
 const toDatetimeLocal=v=>{if(!v)return "";const d=new Date(v);return iso(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
