@@ -254,8 +254,8 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   el.disabled=true;
   try{
    await requireActiveSession();
-   const {data,error:err}=await sb.from('appointments').update({outcome:value,updated_at:new Date().toISOString()}).eq('workspace_id',WS).eq('id',row.id).select('id').single();
-   if(err||!data)throw Error(err?.message||'Randevu güncellenemedi.');
+   const {data,error:err}=await sb.from('appointments').update({outcome:value,updated_at:new Date().toISOString()}).eq('workspace_id',WS).eq('id',row.id).eq('updated_at',row.updated_at).select('id').single();
+   if(err||!data)throw Error('Randevu başka bir kullanıcı veya AppSheet tarafından güncellenmiş olabilir. Sayfayı yenileyip tekrar deneyin.');
    row.outcome=value;await load(true);toast('Randevu sonucu ve takip görevi güncellendi.');
   }catch(ex){el.value=previous;error(ex)}finally{el.disabled=false}
  }
@@ -278,9 +278,9 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    for(const key of ['age','grade','aol_credit','quoted_amount'])if(payload[key]!==null&&(!Number.isFinite(payload[key])||payload[key]<0))throw Error('Sayısal alan geçersiz.');
    const old=s.rows.find(r=>r.id===s.editingId);
    if(old&&!mayEdit(old))throw Error('Düzenleme yetkisi bulunmuyor.');
-   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).select('id,source_record_id').single():
+   const result=old?await sb.from('appointments').update(payload).eq('workspace_id',WS).eq('id',old.id).eq('updated_at',old.updated_at).select('id,source_record_id').single():
     await sb.from('appointments').insert({...payload,workspace_id:WS,created_by:state.user.id}).select('id,source_record_id').single();
-   if(result.error)throw result.error;
+   if(result.error||!result.data)throw Error(old?'Randevu başka yerde değiştirildi. Kayıt üzerine yazılmadı; ekranı yenileyip tekrar düzenleyin.':(result.error?.message||'Randevu kaydedilemedi.'));
    s.form=false;s.editingId=null;await load(true);toast(old?'Randevu güncellendi.':'#'+result.data.source_record_id+' numaralı randevu eklendi.');
   }catch(e){error(e)}finally{if(btn)btn.disabled=false}
  }
