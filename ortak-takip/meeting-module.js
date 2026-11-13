@@ -1,4 +1,4 @@
-export function createMeetingModule({sb,WS,state,esc,toast}){
+export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
  const types={board:"Yönetim Kurulu",partners:"Ortaklar",school_management:"Okul Yönetimi",teachers:"Öğretmenler Kurulu",department:"Zümre / Kurul",mem:"MEM Müdürler Toplantısı",other:"Diğer"};
  let rows=[],selected=null,loading=false,problem="";
  const statusNames={requested:"Talep Edildi",scheduled:"Planlandı",in_progress:"Devam Ediyor",minutes_pending:"Tutanak Bekleniyor",completed:"Tamamlandı",cancelled:"İptal Edildi"};
@@ -39,6 +39,17 @@ export function createMeetingModule({sb,WS,state,esc,toast}){
   const [ag,de,di]=await Promise.all([sb.from("meeting_agenda").select("id,title,status").eq("meeting_id",id).order("sort_order"),sb.from("meeting_decisions").select("id,decision_text,status,due_date").eq("meeting_id",id),sb.from("meeting_directives").select("id,directive_text,status,due_date").eq("meeting_id",id)]);
   if(!document.getElementById("meetingDetail")||selected!==id)return;
   el.innerHTML='<div class="meeting-card-head"><h3>Toplantı ayrıntıları</h3><button class="btn sm" id="meetingClose">Kapat</button></div><h4>Gündem önerileri</h4>'+(ag.data||[]).map(x=>'<p>• '+e(x.title)+' <small>('+e(x.status)+')</small></p>').join("")+'<form id="meetingAgendaForm"><input name="title" required minlength="3" maxlength="240" placeholder="Yeni gündem önerisi"><button class="btn primary">Gündem ekle</button></form><h4>Kararlar</h4>'+((de.data||[]).map(x=>'<p>• '+e(x.decision_text)+' <small>('+e(decisionNames[x.status]||x.status)+')</small></p>').join("")||'<p>Henüz karar kaydı yok.</p>')+(canManage()?'<form id="meetingDecisionForm"><textarea name="decision_text" required minlength="3" rows="2" placeholder="Alınan karar" style="width:100%"></textarea><label>Son tarih<input name="due_date" type="date"></label><button class="btn primary">Karar kaydet</button></form>':'')+'<h4>MEM talimatları</h4>'+((di.data||[]).map(x=>'<p>• '+e(x.directive_text)+' <small>('+e(x.status)+')</small></p>').join("")||'<p>Talimat kaydı yok.</p>');
+  const meeting=rows.find(x=>x.id===id);
+  if(meeting&&typeof onAskAI==="function"){
+   const aiBtn=document.createElement("button");aiBtn.type="button";aiBtn.className="btn sm";aiBtn.textContent="✦ Yapay Zekâ ile Toplantıyı Değerlendir";
+   el.querySelector(".meeting-card-head")?.after(aiBtn);
+   aiBtn.onclick=()=>{
+    const agenda=(ag.data||[]).map(x=>x.title).join("; ");
+    const decisions=(de.data||[]).map(x=>x.decision_text).join("; ");
+    const prompt=["Aşağıdaki toplantı için gündem düzeni, toplantı tutanağı taslağı ve kararların takip planını öner. Yalnızca verilen bilgilere dayan, alınmamış kararları alınmış gibi gösterme.","Toplantı: "+meeting.title,"Tür: "+(types[meeting.type]||meeting.type),"Açıklama: "+(meeting.description||"Belirtilmedi"),"Gündem: "+(agenda||"Henüz yok"),"Kayıtlı kararlar: "+(decisions||"Henüz yok")].join("\\n").slice(0,1450);
+    onAskAI(prompt);
+   };
+  }
   if(canManage()){
    const m=rows.find(x=>x.id===id);
    const actions=document.createElement("div");actions.className="meeting-actions";
