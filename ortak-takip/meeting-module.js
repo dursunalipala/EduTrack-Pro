@@ -36,9 +36,31 @@ export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
  async function openDetail(id){selected=id;paint()}
  async function loadDetail(id){
   const el=document.getElementById("meetingDetail");if(!el)return;
-  const [ag,de,di]=await Promise.all([sb.from("meeting_agenda").select("id,title,status").eq("meeting_id",id).order("sort_order"),sb.from("meeting_decisions").select("id,decision_text,status,due_date").eq("meeting_id",id),sb.from("meeting_directives").select("id,directive_text,status,due_date").eq("meeting_id",id)]);
+  const [ag,de,di,mi]=await Promise.all([sb.from("meeting_agenda").select("id,title,status").eq("meeting_id",id).order("sort_order"),sb.from("meeting_decisions").select("id,decision_text,status,due_date").eq("meeting_id",id),sb.from("meeting_directives").select("id,directive_text,status,due_date").eq("meeting_id",id),sb.from("meeting_minutes").select("meeting_id,draft_text,approved_text,status,approved_at").eq("meeting_id",id).maybeSingle()]);
   if(!document.getElementById("meetingDetail")||selected!==id)return;
   el.innerHTML='<div class="meeting-card-head"><h3>Toplantı ayrıntıları</h3><button class="btn sm" id="meetingClose">Kapat</button></div><h4>Gündem önerileri</h4>'+(ag.data||[]).map(x=>'<p>• '+e(x.title)+' <small>('+e(x.status)+')</small></p>').join("")+'<form id="meetingAgendaForm"><input name="title" required minlength="3" maxlength="240" placeholder="Yeni gündem önerisi"><button class="btn primary">Gündem ekle</button></form><h4>Kararlar</h4>'+((de.data||[]).map(x=>'<p>• '+e(x.decision_text)+' <small>('+e(decisionNames[x.status]||x.status)+')</small></p>').join("")||'<p>Henüz karar kaydı yok.</p>')+(canManage()?'<form id="meetingDecisionForm"><textarea name="decision_text" required minlength="3" rows="2" placeholder="Alınan karar" style="width:100%"></textarea><label>Son tarih<input name="due_date" type="date"></label><button class="btn primary">Karar kaydet</button></form>':'')+'<h4>MEM talimatları</h4>'+((di.data||[]).map(x=>'<p>• '+e(x.directive_text)+' <small>('+e(x.status)+')</small></p>').join("")||'<p>Talimat kaydı yok.</p>');
+  const minutes=mi.data||null;
+  const minutesSection=document.createElement("section");
+  minutesSection.className="meeting-minutes";
+  minutesSection.innerHTML='<h4>Toplantı tutanağı</h4><p class="meeting-muted">Yapay zekâ taslağını buraya yapıştırıp düzenleyebilirsiniz. Yönetici onayı olmadan resmî tutanak oluşmaz.</p>'+
+   (minutes?.status==="approved"?
+    '<div class="meeting-approved"><strong>Onaylı tutanak</strong><p class="meeting-minute-text">'+e(minutes.approved_text||"")+'</p></div>':
+    (canManage()?'<form id="meetingMinutesForm"><textarea name="draft_text" rows="7" maxlength="30000" required placeholder="Tutanak taslağını buraya yazın veya yapay zekâ çıktısını yapıştırın.">'+e(minutes?.draft_text||"")+'</textarea><div class="meeting-actions"><button class="btn" type="submit" name="action" value="save">Taslağı kaydet</button><button class="btn primary" type="submit" name="action" value="approve">Tutanağı onayla</button></div></form>':
+    '<p>'+(minutes?.draft_text?e(minutes.draft_text):"Henüz tutanak taslağı yok.")+'</p>'));
+  el.append(minutesSection);
+  const minutesForm=minutesSection.querySelector("#meetingMinutesForm");
+  if(minutesForm)minutesForm.onsubmit=async event=>{
+   event.preventDefault();
+   const action=event.submitter?.value||"save";
+   const content=String(new FormData(minutesForm).get("draft_text")||"").trim();
+   if(content.length<10){toast("Tutanak en az 10 karakter olmalıdır.");return}
+   if(action==="approve"&&!confirm("Tutanak onaylandıktan sonra bu ekrandan değiştirilemez. Onaylıyor musunuz?"))return;
+   const btns=[...minutesForm.querySelectorAll("button")];btns.forEach(b=>b.disabled=true);
+   const payload={meeting_id:id,draft_text:content,status:action==="approve"?"approved":"draft",approved_text:action==="approve"?content:null,approved_by:action==="approve"?state.user.id:null,approved_at:action==="approve"?new Date().toISOString():null,updated_at:new Date().toISOString()};
+   const {error}=await sb.from("meeting_minutes").upsert(payload,{onConflict:"meeting_id"});
+   if(error){toast("Tutanak kaydedilemedi: "+error.message);btns.forEach(b=>b.disabled=false);return}
+   toast(action==="approve"?"Tutanak onaylandı":"Tutanak taslağı kaydedildi");await loadDetail(id);
+  };
   const meeting=rows.find(x=>x.id===id);
   if(meeting&&typeof onAskAI==="function"){
    const aiBtn=document.createElement("button");aiBtn.type="button";aiBtn.className="btn sm";aiBtn.textContent="✦ Yapay Zekâ ile Toplantıyı Değerlendir";
