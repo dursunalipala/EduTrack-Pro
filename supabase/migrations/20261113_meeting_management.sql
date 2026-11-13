@@ -72,6 +72,20 @@ create table if not exists public.meeting_directives (
 create index if not exists meetings_workspace_start_idx on public.meetings(workspace_id,starts_at desc);
 create index if not exists meeting_decisions_status_idx on public.meeting_decisions(status,due_date);
 create index if not exists meeting_directives_due_idx on public.meeting_directives(due_date);
+-- A narrowly scoped definer lookup avoids meetings <-> participants RLS recursion.
+create schema if not exists private;
+revoke all on schema private from public,anon;
+grant usage on schema private to authenticated;
+create or replace function private.meeting_participant_exists(p_meeting uuid, p_user uuid)
+returns boolean language sql stable security definer set search_path = ''
+as $ select exists(select 1 from public.meeting_participants p where p.meeting_id=p_meeting and p.user_id=p_user) $;
+revoke all on function private.meeting_participant_exists(uuid,uuid) from public,anon;
+grant execute on function private.meeting_participant_exists(uuid,uuid) to authenticated;
+create or replace function public.is_meeting_participant(p_meeting uuid)
+returns boolean language sql stable security invoker set search_path = ''
+as $ select (select auth.uid()) is not null and private.meeting_participant_exists(p_meeting,(select auth.uid())) $;
+revoke all on function public.is_meeting_participant(uuid) from public,anon;
+grant execute on function public.is_meeting_participant(uuid) to authenticated;
 create or replace function public.can_manage_meeting(p_meeting uuid) returns boolean
 language sql stable security invoker set search_path = '' as $$
  select exists(select 1 from public.meetings m join public.workspace_members wm on wm.workspace_id=m.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active
@@ -81,7 +95,7 @@ create or replace function public.can_view_meeting(p_meeting uuid) returns boole
 language sql stable security invoker set search_path = '' as $$
  select exists(select 1 from public.meetings m join public.workspace_members wm on wm.workspace_id=m.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active
  where m.id=p_meeting and (wm.role='owner' or m.created_by=(select auth.uid()) or m.chair_user_id=(select auth.uid())
- or exists(select 1 from public.meeting_participants mp where mp.meeting_id=m.id and mp.user_id=(select auth.uid()))))
+ or public.is_meeting_participant(m.id)))
 $$;
 alter table public.meetings enable row level security;
 alter table public.meeting_participants enable row level security;
@@ -92,7 +106,7 @@ alter table public.meeting_decision_tasks enable row level security;
 alter table public.meeting_directives enable row level security;
 create policy meetings_select on public.meetings for select to authenticated using (
  exists(select 1 from public.workspace_members wm where wm.workspace_id=meetings.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active)
- and (created_by=(select auth.uid()) or chair_user_id=(select auth.uid()) or exists(select 1 from public.workspace_members wm where wm.workspace_id=meetings.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active and wm.role='owner') or exists(select 1 from public.meeting_participants mp where mp.meeting_id=meetings.id and mp.user_id=(select auth.uid())))
+ and (created_by=(select auth.uid()) or chair_user_id=(select auth.uid()) or exists(select 1 from public.workspace_members wm where wm.workspace_id=meetings.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active and wm.role='owner') or public.is_meeting_participant(id))
 );
 create policy meetings_insert on public.meetings for insert to authenticated with check (
  created_by=(select auth.uid()) and exists(select 1 from public.workspace_members wm where wm.workspace_id=meetings.workspace_id and wm.user_id=(select auth.uid()) and wm.is_active and wm.role in ('owner','manager','member'))
