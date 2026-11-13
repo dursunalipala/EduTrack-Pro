@@ -116,6 +116,8 @@ function otSendBatch_(batch,secret) {
   var code=response.getResponseCode();
   var body;
   try{body=JSON.parse(response.getContentText());}catch(e){body=null;}
+  // 207: kimi satirlar kabul edildi, kimileri hatali. Tekli tekrar ile ayrisir.
+  if(code===207&&body&&body.summary&&body.summary.errors>0) return {partial:true};
   if(code!==200||!body||body.ok!==true||body.summary && body.summary.errors>0){
     // Kisisel veriler ve anahtar hata loguna yazilmaz.
     throw new Error('Senkronizasyon servisi hatasi HTTP '+code+'; basarisiz kayit sayisi '+(body&&body.summary?body.summary.errors:'bilinmiyor'));
@@ -155,11 +157,27 @@ function ortakTakipSenkronizeEt() {
       try{
         var result=otSendBatch_(batch,secret);
         var patch={};
-        batch.forEach(function(item){patch[item.key]=item.signature;});
-        props.setProperties(patch,false);
-        done+=batch.length;
-        created+=(result.created||0);updated+=(result.updated||0);
-        unchanged+=(result.unchanged||0);
+        if(result.partial){
+          // Hatali tek satir, diger 19 randevunun senkronizasyonunu durdurmasin.
+          batch.forEach(function(item){
+            try{
+              var one=otSendBatch_([item],secret);
+              if(one.partial)throw new Error('Gecersiz satir');
+              patch[item.key]=item.signature;done++;
+              created+=(one.created||0);updated+=(one.updated||0);
+              unchanged+=(one.unchanged||0);
+            }catch(singleError){
+              failedBatches++;
+              Logger.log('Bir satir aktarılamadi, tablo satir no %s (kisisel veri yazilmadi).',item.sheetRow);
+            }
+          });
+        }else{
+          batch.forEach(function(item){patch[item.key]=item.signature;});
+          done+=batch.length;
+          created+=(result.created||0);updated+=(result.updated||0);
+          unchanged+=(result.unchanged||0);
+        }
+        if(Object.keys(patch).length)props.setProperties(patch,false);
       }catch(e){
         failedBatches++;
         Logger.log('Grup %s aktarilamadi: %s',Math.floor(k/ORTAK_CONFIG.batchSize)+1,String(e.message).slice(0,160));
