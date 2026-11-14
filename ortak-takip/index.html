@@ -3283,14 +3283,26 @@ if(state.view==="notifications"&&state.role==="owner"&&!state.adminHistoryLoaded
 }
 $("#ownerPasswordForm")?.addEventListener("submit",changeOwnerPassword);
 $("#teamPasswordResetForm")?.addEventListener("submit",sendTeamPasswordRecovery);
-$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);if(state.view==="reports")reporting.bind();$("#taskBody")?.addEventListener("click",e=>{
- const share=e.target.closest("[data-wa-task]");
- if(share){e.stopPropagation();shareTaskWhatsApp(share.dataset.waTask);return}
- const b=e.target.closest("[data-edit-task]");
+$("#showOwnerPassword")?.addEventListener("change",e=>{document.querySelectorAll("#ownerPasswordForm input[type=password],#ownerPasswordForm input[type=text]").forEach(input=>{input.type=e.target.checked?"text":"password"})});document.querySelectorAll("[data-edit-stream]").forEach(b=>b.addEventListener("click",()=>openModal("stream",state.streams.find(w=>w.id===b.dataset.editStream))));$("#reportPeriod")?.addEventListener("change",e=>{state.reportPeriod=e.target.value;render()});$("#reportStream")?.addEventListener("change",e=>{state.reportStream=e.target.value;render()});$("#exportReportPdf")?.addEventListener("click",exportReportPdf);$("#exportReportExcel")?.addEventListener("click",exportReportExcel);$("#printReportButton")?.addEventListener("click",printManagementReport);if(state.view==="reports")reporting.bind();// Task cards and table rows are rendered with innerHTML after bindView().
+ // Delegate on persistent containers so their buttons continue to work after
+ // searching, filtering, changing view mode and re-rendering on mobile.
+const handleTaskListAction=e=>{
+ const target=e.target;
+ if(!(target instanceof Element))return;
+ const share=target.closest("[data-wa-task]");
+ if(share){
+  e.preventDefault();e.stopPropagation();
+  shareTaskWhatsApp(share.dataset.waTask);return;
+ }
+ const b=target.closest("[data-edit-task]");
  if(!b)return;
+ e.preventDefault();e.stopPropagation();
  const task=state.tasks.find(t=>t.id===b.dataset.editTask);
  if(task)openTaskDetail(task);
-});
+ else toast("Bu görev bulunamadı. Görev listesini yenileyin.");
+};
+$("#taskBody")?.addEventListener("click",handleTaskListAction);
+$("#taskCardContainer")?.addEventListener("click",handleTaskListAction);
 document.querySelectorAll("[data-wa-task]").forEach(b=>{
  if(b.closest("#taskBody"))return;
  b.addEventListener("click",e=>{e.stopPropagation();shareTaskWhatsApp(b.dataset.waTask)});
