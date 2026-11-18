@@ -296,3 +296,28 @@
  .appt-icmal-view[data-mobile-mode="cards"]>.appt-mobile-cards{display:none!important}
  .appt-icmal-view .appt-table-wrap{display:block!important}
 }
+
+
+/* Randevu sonucu: compact single-choice tiles on every device.
+   The real radio stays keyboard/screen-reader accessible and remains a required form field. */
+.appt-form-grid .appt-result{min-width:0;margin:2px 0 0;padding:12px 12px 14px;border:1px solid #d9e6eb;border-radius:12px;background:#fbfdfe}
+.appt-form-grid .appt-result legend{padding:0 8px;color:#294e64;font-size:14px;font-weight:800}
+.appt-form-grid .appt-result-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-width:0}
+.appt-form-grid .appt-result-option{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:9px;min-height:50px;margin:0;padding:9px 12px;border:1px solid #d9e5eb;border-radius:10px;background:#fff;color:#34586d;font-size:12px;line-height:1.25;font-weight:750;cursor:pointer;box-sizing:border-box;min-width:0;transition:background-color .12s,border-color .12s,box-shadow .12s}
+.appt-form-grid .appt-result-option input[type="radio"]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;clip-path:inset(50%);overflow:hidden}
+.appt-result-option .appt-result-glyph{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:8px;background:color-mix(in srgb,var(--appt-color) 12%,white);color:var(--appt-color);font-size:17px;line-height:1;font-weight:900}
+.appt-result-option .appt-result-name{min-width:0;flex:1;overflow-wrap:anywhere}
+.appt-form-grid .appt-result-option:has(input:checked){background:color-mix(in srgb,var(--appt-color) 7%,white);border-color:var(--appt-color);box-shadow:inset 0 0 0 1px var(--appt-color),0 2px 8px #173a4d0b;color:#183f53}
+.appt-result-option:has(input:checked)::after{content:"✓";display:grid;place-items:center;flex:none;height:19px;width:19px;border-radius:50%;background:var(--appt-color);color:#fff;font-size:11px;font-weight:900;margin-left:auto}
+.appt-form-grid .appt-result-option:focus-within{outline:2px solid #1389a2;outline-offset:2px}
+@media (hover:hover){.appt-form-grid .appt-result-option:hover{border-color:#89b9c9;background:#f3fafb}}
+@media(max-width:1180px){.appt-form-grid .appt-result-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){
+ .appt-form-grid .appt-result{padding:10px 9px 12px}
+ .appt-form-grid .appt-result-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .appt-form-grid .appt-result-option{min-height:53px;padding:8px 9px;gap:7px;font-size:12px}
+ .appt-result-option .appt-result-glyph{width:25px;height:25px;font-size:16px}
+ .appt-result-option:has(input:checked)::after{width:17px;height:17px;font-size:10px}
+}
+@media(max-width:350px){.appt-form-grid .appt-result-option{font-size:11px;padding:8px 7px;gap:5px}}
+@media(prefers-reduced-motion:reduce){.appt-form-grid .appt-result-option{transition:none}}
