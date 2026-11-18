@@ -3728,15 +3728,20 @@ if(modalKind==="task"){
  const managers=state.members.filter(m=>m.is_active&&["owner","manager"].includes(m.role)).map(m=>m.user_id);
  if(!managers.includes(data.assigned_to)||!managers.includes(data.reviewer_id)||!data.executor_id)throw Error("Üst sorumlu, uygulayıcı ve kontrol eden seçin");
  if(data.executor_id===data.reviewer_id)throw Error("Kontrol eden ana uygulayıcıdan farklı olmalıdır");
+ const requestedApprove=!!editing&&data.status==="tamamlandi"&&editing.status==="kontrol_bekliyor";
  const requestedSubmit=!!editing&&data.status==="kontrol_bekliyor"&&editing.status!=="kontrol_bekliyor";
  if(requestedSubmit){
   if(!["taslak","beklemede","devam_ediyor"].includes(editing.status))throw Error("Bu görev kontrol aşamasına gönderilemez.");
   if(editing.executor_id!==state.user.id)throw Error("Kontrole gönderme işlemini yalnızca ana uygulayıcı yapabilir.");
   if(data.executor_id!==editing.executor_id||data.reviewer_id!==editing.reviewer_id)throw Error("Kontrole göndermeden önce uygulayıcı ve kontrol eden kişiyi ayrı bir işlemde güncelleyin.");
  }
- if(data.status==="tamamlandi"&&data.status!==editing?.status)throw Error("Tamamlama için kontrol eden yöneticinin onayı gerekir.");
+ if(requestedApprove){
+  if(editing.reviewer_id!==state.user.id||editing.executor_id===state.user.id)throw Error("Yalnızca görevde belirtilen kontrol eden yönetici onay verebilir.");
+  if(data.executor_id!==editing.executor_id||data.reviewer_id!==editing.reviewer_id)throw Error("Onaydan önce uygulayıcı ve kontrol eden kişiyi ayrı işlemde güncelleyin.");
+ }
+ if(data.status==="tamamlandi"&&data.status!==editing?.status&&!requestedApprove)throw Error("Tamamlama için görev önce kontrole gönderilmelidir.");
  if(data.status==="kontrol_bekliyor"&&!requestedSubmit&&data.status!==editing?.status)throw Error("Kontrole gönderme için mevcut bir görev seçin.");
- if(requestedSubmit)payload.status=editing.status;
+ if(requestedSubmit||requestedApprove)payload.status=editing.status;
  if(editing?.status==="tamamlandi"&&data.status!==editing.status)
   throw Error("Tamamlanmış görevde durum değiştirilemez");
  payload.helper_user_ids=helpers.filter(id=>id!==data.executor_id);
@@ -3770,7 +3775,11 @@ if(modalKind==="goal"){
 if(modalKind==="event"){if(new Date(payload.ends_at)<=new Date(payload.starts_at))throw Error("Bitiş başlangıçtan sonra olmalı");payload.starts_at=new Date(payload.starts_at).toISOString();payload.ends_at=new Date(payload.ends_at).toISOString()}
 let r;if(editing){r=await sb.from(table).update(payload).eq("id",editing.id).eq("workspace_id",WS)}else{payload.created_by=state.user.id;r=await sb.from(table).insert(payload)}
 if(r.error)throw r.error;
- if(modalKind==="task"&&editing&&data.status==="kontrol_bekliyor"&&editing.status!=="kontrol_bekliyor"){
+ if(modalKind==="task"&&editing&&data.status==="tamamlandi"&&editing.status==="kontrol_bekliyor"){
+  const {error:approveError}=await sb.rpc("task_action",{p_task_id:editing.id,p_action:"approve",p_note:"Kontrol eden yönetici tarafından görev düzenleme ekranından onaylandı.",p_evidence_url:""});
+  if(approveError)throw Error("Görev bilgileri kaydedildi ancak onaylanamadı: "+approveError.message);
+  toast("Görev yönetici onayıyla tamamlandı.");
+ }else if(modalKind==="task"&&editing&&data.status==="kontrol_bekliyor"&&editing.status!=="kontrol_bekliyor"){
   const {error:submitError}=await sb.rpc("task_action",{p_task_id:editing.id,p_action:"submit",p_note:"Görev düzenleme ekranından kontrole gönderildi.",p_evidence_url:""});
   if(submitError)throw Error("Görev bilgileri kaydedildi ancak kontrole gönderilemedi: "+submitError.message);
   toast("Görev kontrol eden yöneticiye gönderildi.");
