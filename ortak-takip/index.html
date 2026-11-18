@@ -761,6 +761,15 @@ body *{visibility:hidden!important}
 }
 @media(min-width:1001px) and (max-width:600px){.ot-menu-groups{grid-template-columns:1fr}}
 
+
+/* Linked appointment task: two-way, accessible return navigation. */
+.task-appointment-return{margin:10px 0 15px}
+.task-appointment-return-actions{display:inline-flex;align-items:center}
+.task-appt-back{display:inline-flex!important;align-items:center;justify-content:center;gap:8px;min-height:44px!important;border:1px solid #95d5d8!important;background:#eaf8f7!important;color:#086879!important;font-size:13px;font-weight:800!important;border-radius:10px!important;padding:10px 13px!important;text-decoration:none}
+.task-appt-back:hover{background:#d7f2f0!important}
+.task-appt-back:focus-visible{outline:2px solid #0a8394;outline-offset:2px}
+@media(max-width:720px){.task-appointment-return{margin:8px 0 12px}.task-appointment-return .task-appt-back{width:100%}.task-appointment-return-actions{width:100%}.task-appointment-return-actions .task-appt-back{width:100%}}
+
 </style><script>
 (function(){
  const nav=document.getElementById('nav');if(!nav||nav.dataset.otGrouped)return;nav.dataset.otGrouped='1';
@@ -3523,19 +3532,20 @@ function openTaskDetail(t,editingNoteId=null){
  if(executor||helper||canManage())actions.push(["comment","Not Ekle"]);
  const fields=[["Üst Sorumlu",memberName(t.assigned_to)],["Ana Uygulayıcı",memberName(t.executor_id)],["Yardımcı Personeller",(t.helper_user_ids||[]).map(memberName).join(", ")||"Yok"],["Kontrol Eden",memberName(t.reviewer_id)],["Görevi Veren",memberName(t.created_by)],["Son Tarih",date(t.due_date)],["Durum",statusName(t.status)],["Kontrole Gönderildi",date(t.submitted_at)],["Kontrol Tarihi",date(t.reviewed_at)],["Tamamlandı",date(t.completed_at)]];
  const log=state.taskActivities.filter(a=>a.task_id===t.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
- $("#modalFields").innerHTML='<div class="span2"><p>'+esc(t.description||"")+'</p><div class="task-info-grid">'+fields.map(([k,v])=>'<div><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join("")+'</div>'+
+ $("#modalFields").innerHTML='<div class="span2"><p>'+esc(t.description||"")+'</p><div id="taskReturnTop" class="task-appointment-return"></div><div class="task-info-grid">'+fields.map(([k,v])=>'<div><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join("")+'</div>'+
  (t.execution_note?'<p><strong>Uygulama notu: </strong>'+esc(t.execution_note)+'</p>':"")+
  (t.review_note?'<p><strong>Kontrol notu: </strong>'+esc(t.review_note)+'</p>':"")+
  (t.evidence_url?'<p><a href="'+esc(t.evidence_url)+'" target="_blank" rel="noopener noreferrer">Belge bağlantısı</a></p>':"")+
  '<div class="task-action-card">'+(actions.length?'<label>Açıklama<textarea id="taskActionNote" rows="3" maxlength="2000" placeholder="Yapılan iş veya kontrol notu"></textarea></label><label>Belge bağlantısı (https://)<input type="url" id="taskActionEvidence" maxlength="700" placeholder="https://..."></label><div class="task-actions">'+
  actions.map(([a,l])=>'<button type="button" class="btn sm" data-task-action="'+a+'">'+l+'</button>').join("")+'</div>':"")+
- '<div class="task-actions">'+(canManage()?'<button type="button" class="btn sm" id="editTaskDetail">Görevi Düzenle</button>':"")+
+ '<div class="task-actions"><span id="taskReturnActions" class="task-appointment-return-actions"></span>'+(canManage()?'<button type="button" class="btn sm" id="editTaskDetail">Görevi Düzenle</button>':"")+
  '<button type="button" class="btn sm" id="shareTaskDetail">WhatsApp ile Paylaş</button>'+ 
  (canManage()&&!t.deleted_at&&t.status!=="tamamlandi"&&t.status!=="iptal"?'<button type="button" class="btn sm" id="cancelTaskDetail">Görevlendirmeyi Geri Al</button>':'')+
  (canManage()&&!t.deleted_at&&!['tamamlandi','kontrol_bekliyor'].includes(t.status)?'<button type="button" class="btn sm" id="deleteTaskDetail">Sil</button>':'')+
  (canManage()&&!t.deleted_at&&t.status==="iptal"?'<button type="button" class="btn sm" id="reopenTaskDetail">Yeniden Aç</button>':'')+'</div></div>'+
  '<h3>İşlem Geçmişi</h3>'+(log.length?log.map(a=>taskActivityHistoryEntry(a,t,editingNoteId)).join(""):'<p class="muted small">Henüz işlem kaydı yok.</p>')+'</div>';
  $("#modalscrim").classList.remove("hide");
+ void loadTaskAppointmentReturn(t);
  $("#editTaskDetail")?.addEventListener("click",()=>openModal("task",t));
  $("#shareTaskDetail")?.addEventListener("click",()=>shareTaskWhatsApp(t.id));
  $("#cancelTaskDetail")?.addEventListener("click",()=>manageTaskLifecycle(t.id,"cancel"));
@@ -3549,6 +3559,47 @@ function openTaskDetail(t,editingNoteId=null){
  document.querySelectorAll("[data-comment-cancel]").forEach(b=>b.onclick=()=>openTaskDetail(t));
  document.querySelectorAll("[data-comment-save]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentSave,"edit"));
  document.querySelectorAll("[data-comment-delete]").forEach(b=>b.onclick=()=>modifyTaskComment(t.id,b.dataset.commentDelete,"delete"));
+}
+
+
+/* The link is resolved through appointment_task_links, not parsed from a task title.
+   RLS limits it to appointments that the current user may read. */
+async function loadTaskAppointmentReturn(t){
+ if(!t?.id||!t.title?.startsWith("Veli takibi #"))return;
+ try{
+  const {data:link,error:linkError}=await sb.from("appointment_task_links")
+   .select("appointment_id").eq("workspace_id",WS).eq("task_id",t.id).maybeSingle();
+  if(linkError)throw linkError;
+  if(!link?.appointment_id||modalKind!=="taskDetail"||editing?.id!==t.id)return;
+  const openLinked=async()=>{
+   const changed=[...document.querySelectorAll("#modalFields textarea,#modalFields input:not([type=hidden])")]
+     .some(el=>String(el.value||"").trim().length>0);
+   if(changed&&!window.confirm("Kaydedilmemiş görev notu veya bağlantısı var. Kaydetmeden randevuya dönmek istiyor musunuz?"))return;
+   try{
+    await requireActiveSession();
+    await appointments.load(true);
+    const appointment=state.appointmentsModule?.rows?.find(row=>row.id===link.appointment_id);
+    if(!appointment){toast("Bağlı randevu bulunamadı veya görüntüleme yetkiniz yok.");return}
+    closeModal();
+    const apptState=state.appointmentsModule;
+    apptState.tab="icmal";
+    apptState.editingId=appointment.id;
+    apptState.form=true;
+    state.view="appointments";
+    render();
+    window.scrollTo({top:0,behavior:"smooth"});
+   }catch(e){error(e)}
+  };
+  for(const [id,label] of [["taskReturnTop","↩ Randevu Kaydına Dön"],["taskReturnActions","↩ Randevuya Dön"]]){
+   const host=document.getElementById(id);
+   if(!host)continue;
+   const button=document.createElement("button");
+   button.type="button";button.className="btn task-appt-back";
+   button.textContent=label;button.title="Bağlı randevu kaydını düzenleme ekranında aç";
+   button.addEventListener("click",()=>void openLinked());
+   host.replaceChildren(button);
+  }
+ }catch(e){console.warn("Randevu görev bağlantısı yüklenemedi:",e?.message||e)}
 }
 
 async function manageTaskLifecycle(id,action){
