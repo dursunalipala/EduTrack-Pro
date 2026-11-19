@@ -51,6 +51,13 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
    </div><div class="panel hr-leave-panel"><div class="row hr-leave-heading"><h2>İzin Talepleri</h2><button class="btn primary" data-hr-request>İzin Talebi Oluştur</button></div>${s.leaves.filter(l=>s.selected==="all"||l.organization_id===s.selected).length?`<div class="tablewrap hr-leave-table"><table><thead><tr><th>Personel</th><th>Kurum</th><th>Tür / Tarih</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${s.leaves.filter(l=>s.selected==="all"||l.organization_id===s.selected).map(l=>`<tr><td data-label="Personel">${safe(s.employees.find(e=>e.id===l.employee_id)?.first_name||"")} ${safe(s.employees.find(e=>e.id===l.employee_id)?.last_name||"")}</td><td data-label="Kurum">${safe(orgs.find(o=>o.id===l.organization_id)?.name||"")}</td><td data-label="Tür / Tarih">${safe(leaveTypeLabel[l.leave_type]||l.leave_type)} · ${safe(l.starts_on)} – ${safe(l.ends_on)}</td><td data-label="Durum">${safe(leaveStatusLabel[l.status]||l.status)}</td><td data-label="İşlem">${l.status==="pending"&&canDecide(l)?`<button class="btn sm" data-hr-leave="${safe(l.id)}" data-decision="approved">Onayla</button> <button class="btn sm" data-hr-leave="${safe(l.id)}" data-decision="rejected">Reddet</button>`:"—"}</td></tr>`).join("")}</tbody></table></div>`:"<p class=\"muted\">İzin talebi bulunamadı.</p>"}</div></div>`;
  }
  function bind(root){
+  root.querySelector('[data-hr-ai-toggle]')?.addEventListener('click',()=>{S().hiringAiExpanded=!S().hiringAiExpanded;draw(root)});
+  root.querySelectorAll('[data-hr-ai-candidate]').forEach(b=>b.addEventListener('click',()=>{
+   const c=S().hiringCandidates.find(x=>String(x.id)===b.dataset.hrAiCandidate);if(!c)return;
+   S().hiringFilters={search:c.full_name||'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};
+   draw(root);
+  }));
+
   root.querySelectorAll('[data-hr-tab]').forEach(b=>b.addEventListener('click',()=>{S().section=b.dataset.hrTab;draw(root)}));
   root.querySelectorAll('[data-hr-filter]').forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{const f=S().hiringFilters||(S().hiringFilters={});f[el.dataset.hrFilter]=el.value;if(el.dataset.hrFilter==='sort')draw(root);else applyHiringFilters(root)}));
   root.querySelector('[data-hr-clear-filters]')?.addEventListener('click',()=>{S().hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'};draw(root)});
@@ -324,12 +331,34 @@ export function createHrModule({sb,WS,state,esc,toast,error}) {
   if(sort==='stage')return String(a.stage).localeCompare(String(b.stage));
   return (a.priority||2)-(b.priority||2)||String(a.interview_at||'9999').localeCompare(String(b.interview_at||'9999'));
  }
+ function hiringAssistant(){
+  if(!canViewHiring())return '';
+  const s=S(),now=Date.now(),day=86400000;
+  const openJobs=s.hiringOpenings.filter(j=>j.status==='open');
+  const active=s.hiringCandidates.filter(c=>!['hired','rejected'].includes(c.stage)&&openJobs.some(j=>j.id===c.opening_id));
+  const scored=active.map(c=>{
+   const when=c.interview_at?new Date(c.interview_at).getTime():NaN;
+   const overdue=Number.isFinite(when)&&when<now;
+   const upcoming=Number.isFinite(when)&&when>=now&&when<=now+7*day;
+   const call=c.stage==='call';
+   const priority=Number(c.priority)===1;
+   return {c,overdue,upcoming,call,priority,score:(overdue?100:0)+(upcoming?50:0)+(call?35:0)+(priority?15:0)};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,5);
+  const open=!!s.hiringAiExpanded;
+  return '<section class="hr-ai-panel" aria-label="İşe alım takip asistanı"><div class="hr-ai-head"><div><strong>✦ İşe Alım Takip Asistanı</strong><p>Yetkili aday kayıtlarından öncelik analizi · Otomatik işlem yok</p></div><button type="button" class="btn sm" data-hr-ai-toggle aria-expanded="'+open+'">'+(open?'Daralt −':'Önerileri göster +')+'</button></div>'+
+   '<div class="hr-ai-stats"><span><b>'+openJobs.length+'</b> açık ilan</span><span><b>'+active.length+'</b> aktif aday</span><span><b>'+scored.filter(x=>x.overdue).length+'</b> geçmiş görüşme</span></div>'+
+   (open?'<div class="hr-ai-body">'+(scored.length?scored.map(x=>{
+    const c=x.c,reason=[x.overdue?'Görüşme tarihi geçmiş':null,x.upcoming?'7 gün içinde görüşme':null,x.call?'Çağrılacak':null,x.priority?'Yüksek öncelik':null].filter(Boolean).join(' · ');
+    return '<div class="hr-ai-item"><div><strong>'+safe(c.full_name||'Aday')+'</strong><small>'+safe(reason)+' · '+safe(hiringStages[c.stage]||c.stage||'Başvuru')+'</small></div><button type="button" class="btn sm" data-hr-ai-candidate="'+safe(c.id)+'">Listede göster</button></div>';
+   }).join(''):'<p class="muted small">Şu anda öncelikli aday kaydı bulunamadı.</p>')+'<p class="muted small">Bu sıralama görüşme tarihi, başvuru aşaması ve kayıtlı önceliğe dayanır; adaylar hakkında otomatik karar verilmez.</p></div>':'')+'</section>';
+ }
  function hiringView(){
   const s=S();if(!canViewHiring())return '<div class="hr-module"><h2>İşe Alım</h2><p>Bu alan yalnızca yönetici yetkisine açıktır.</p><button class="btn" data-hr-tab="staff">Personel Yönetimine Dön</button></div>';
   const f=s.hiringFilters||(s.hiringFilters={search:'',organization:'all',opening:'all',stage:'all',priority:'all',interview:'all',sort:'priority'});
   return `<div class="hr-module hr-hiring-view hr-display-${safe(s.hiringDisplay||'list')}"><div class="titlebar"><div><h2>İşe Alım</h2><p class="muted">İlanlar, aday başvuruları ve görüşme aşamaları</p></div><button class="btn primary" data-hr-new-job>Yeni İlan</button></div>
    <div class="actions" style="margin-bottom:12px"><button class="btn" data-hr-tab="staff">Personel Yönetimi</button><button class="btn primary" data-hr-tab="hiring">İşe Alım</button></div>
    <div class="hr-kpis"><div class="panel">İlanlar<strong>${s.hiringOpenings.length}</strong></div><div class="panel">Açık İlan<strong>${s.hiringOpenings.filter(j=>j.status==='open').length}</strong></div><div class="panel">Adaylar<strong>${s.hiringCandidates.length}</strong></div></div>
+   ${hiringAssistant()}
    <div class="panel"><h3>Aday Filtreleme ve Sıralama</h3><div class="hr-filter-grid">
    <label>Ara<input data-hr-filter="search" placeholder="Ad, telefon, deneyim, pozisyon..." value="${safe(f.search||'')}"></label>
    <label>Kurum<select data-hr-filter="organization"><option value="all">Tüm kurumlar</option>${s.organizations.map(o=>`<option value="${safe(o.id)}" ${f.organization===o.id?'selected':''}>${safe(o.name)}</option>`).join('')}</select></label>
