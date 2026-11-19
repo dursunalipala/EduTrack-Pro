@@ -862,7 +862,7 @@ const loadDigitalSort=()=>{
 };
 
 document.addEventListener("input",e=>{if(e.target?.id!=="progressStepNames")return;const box=document.querySelector("#progressStepChecks");if(!box)return;const prior=[...box.querySelectorAll("[data-step-done]")].map(x=>x.checked);const names=e.target.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,30);box.innerHTML=names.map((title,i)=>'<label><input type="checkbox" data-step-done="'+i+'" '+(prior[i]?"checked":"")+'> '+esc(title)+'</label>').join("");});
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",taskDisplayMode:"cards",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiStats:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",taskDisplayMode:"cards",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiStats:null,aiSchoolFilter:"all",aiPersonFilter:"all",aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -2088,6 +2088,27 @@ function renderAIMessage(message){
   '<span class="ai-msg-meta">'+(user?"Siz":"✦ Ortak Takip Asistanı"+(origin?" · "+origin:""))+'</span>'+
   esc(message.text||"")+(message.notice?'<span class="ai-msg-note">'+esc(message.notice)+'</span>':"")+'</div>';
 }
+function aiOverdueTasks(){
+ if(!state.aiStats)return "";
+ const today=state.aiStats.date||new Date().toISOString().slice(0,10);
+ const late=(state.tasks||[]).filter(t=>!t.deleted_at&&!["tamamlandi","iptal"].includes(t.status)&&t.due_date&&String(t.due_date).slice(0,10)<today);
+ const schoolNames={ortak:"Ortak",aksam:"Akşam Lisesi",ilkokul:"İlkokul",anasinifi:"Anaokulu"};
+ const units=[...new Set(late.map(t=>t.school_unit).filter(Boolean))].sort();
+ const persons=[...new Set(late.map(t=>t.executor_id||t.assigned_to).filter(Boolean))].sort((a,b)=>memberName(a).localeCompare(memberName(b),"tr"));
+ const filtered=late.filter(t=>(state.aiSchoolFilter==="all"||t.school_unit===state.aiSchoolFilter)&&(state.aiPersonFilter==="all"||[t.executor_id,t.assigned_to].includes(state.aiPersonFilter))).sort((a,b)=>String(a.due_date).localeCompare(String(b.due_date)));
+ const options=(items,selected)=>items.map(([v,label])=>'<option value="'+esc(v)+'"'+(selected===v?' selected':'')+'>'+esc(label)+'</option>').join("");
+ const dayDiff=d=>Math.max(0,Math.round((Date.parse(today+"T12:00:00Z")-Date.parse(String(d).slice(0,10)+"T12:00:00Z"))/86400000));
+ return '<section style="margin:0 0 16px;padding:16px;border:1px solid var(--line,#dce5ee);border-radius:16px" aria-label="Geciken görevler">'+
+ '<strong>Geciken Görevlerin Takibi</strong><p style="font-size:12px;opacity:.75;margin:6px 0 12px">Görüntüleme yetkinizdeki görevler · Son tarihe göre sıralı</p>'+
+ '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">'+
+ '<label style="font-size:12px">Kurum<select id="aiSchoolFilter" style="width:100%;padding:10px;border-radius:9px;margin-top:5px">'+options([["all","Tüm kurumlar"],...units.map(u=>[u,schoolNames[u]||u])],state.aiSchoolFilter)+'</select></label>'+
+ '<label style="font-size:12px">Sorumlu<select id="aiPersonFilter" style="width:100%;padding:10px;border-radius:9px;margin-top:5px">'+options([["all","Tüm sorumlular"],...persons.map(id=>[id,memberName(id)])],state.aiPersonFilter)+'</select></label></div>'+
+ '<p style="font-size:12px;margin:12px 0">'+filtered.length+' geciken görev gösteriliyor. <span style="opacity:.7">Yönetim özeti ile liste sayıları, veri kapsamı veya erişim yetkisi nedeniyle farklı olabilir.</span></p>'+
+ '<div style="display:grid;gap:8px">'+(filtered.length?filtered.slice(0,50).map(t=>
+ '<button type="button" data-ai-task="'+esc(String(t.id))+'" style="text-align:left;width:100%;padding:12px;border:1px solid var(--line,#dce5ee);border-radius:12px;background:var(--card,#fff);color:inherit;cursor:pointer">'+
+ '<strong style="display:block;overflow-wrap:anywhere">'+esc(t.title||"Başlıksız görev")+'</strong><span style="font-size:12px;opacity:.8">'+esc(schoolNames[t.school_unit]||t.school_unit||"Ortak")+' · '+esc(memberName(t.executor_id||t.assigned_to))+' · '+esc(String(t.due_date).slice(0,10))+' · '+dayDiff(t.due_date)+' gün gecikti</span></button>').join(""):'<p>Bu filtrede geciken görev yok.</p>')+'</div>'+
+ (filtered.length>50?'<p style="font-size:12px">İlk 50 görev gösteriliyor. Filtreleri daraltabilirsiniz.</p>':'')+'</section>';
+}
 function aiDashboard(){
  const a=state.aiStats;
  const cards=a?[
@@ -2104,7 +2125,7 @@ function aiDashboard(){
 function aiView(){
  const messages=state.aiMessages.length?state.aiMessages.map(renderAIMessage).join(""):
   '<div class="ai-msg ai-msg-assistant"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Merhaba! Görevler, geciken işler, performans hedefleri ve iş havuzu hakkında soru sorabilirsiniz.\n\nÖrneğin: “Bu hafta hangi işlere öncelik vermeliyiz?”</div>';
- return aiDashboard()+'<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
+ return aiDashboard()+aiOverdueTasks()+'<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
   '<p>Görev, hedef, takvim, rapor ve yönetim kararları hakkında serbestçe sorun. OpenAI bağlantısı etkinse gerçek sohbet modeli, değilse doğrudan veri özeti kullanılır.</p></section>'+
   '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div class="ai-chat-identity"><span class="ai-chat-symbol" aria-hidden="true">✦</span><div><strong>Ortak Takip Asistanı</strong><div><span><i class="ai-presence-dot"></i> Görevler, hedefler ve takvim · Salt okunur</span></div></div></div>'+
   '<button type="button" class="btn sm" id="aiClearChat" '+(!state.aiMessages.length||state.aiLoading?"disabled":"")+'>Sohbeti Temizle</button></div>'+
@@ -3240,6 +3261,9 @@ if(state.view==="digital")bindDigitalCenter();
 if(state.view==="appointments")appointments.bind();
 if(state.view==="inspection"||state.view==="documents")inspection.bind();
 document.querySelectorAll("[data-task-jump]").forEach(b=>b.addEventListener("click",()=>openDashboardTaskFilter(b.dataset.taskJump)));
+$("#aiSchoolFilter")?.addEventListener("change",e=>{state.aiSchoolFilter=e.target.value;render()});
+$("#aiPersonFilter")?.addEventListener("change",e=>{state.aiPersonFilter=e.target.value;render()});
+document.querySelectorAll("[data-ai-task]").forEach(b=>b.addEventListener("click",()=>{const t=state.tasks.find(x=>String(x.id)===b.dataset.aiTask);if(t)openTaskDetail(t)}));
 document.querySelectorAll("[data-ai-run]").forEach(b=>b.onclick=()=>generateAIReport(b.dataset.aiRun));
 document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>sendAIRequest("chat",b.dataset.aiQuestion));
 $("#aiAllowOpenAI")?.addEventListener("change",e=>{state.aiAllowOpenAI=!!e.target.checked;if(!state.aiAllowOpenAI)state.aiIncludeDetails=false;render()});
