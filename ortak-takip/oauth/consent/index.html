@@ -2,7 +2,7 @@
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Ortak Takip | Bağlantı İzni</title>
 <style>body{font-family:system-ui,Arial;background:#f3f6fa;color:#18314d;margin:0;min-height:100vh;display:grid;place-items:center}main{width:min(440px,calc(100% - 36px));background:white;border:1px solid #dce5ee;border-radius:18px;padding:28px;box-shadow:0 12px 36px #142c4914}h1{font-size:23px;margin:0 0 12px}p{line-height:1.5;color:#53667c}.muted{font-size:13px}.field{display:block;margin:13px 0;font-weight:600;font-size:13px}input{display:block;width:100%;box-sizing:border-box;padding:12px;margin-top:5px;border:1px solid #cbd5e1;border-radius:9px}button{border:0;background:#176d82;color:white;border-radius:9px;padding:12px 16px;font-weight:700;cursor:pointer}button:disabled{opacity:.5}.secondary{background:#e9eef5;color:#18314d}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}#msg{color:#8a342c;white-space:pre-wrap}#details{background:#f5f8fb;border-radius:10px;padding:14px;overflow-wrap:anywhere}</style></head><body><main><h1>Ortak Takip</h1><p>Bir uygulama, Ortak Takip hesabınıza erişim izni istiyor. İzin vermeden önce uygulamayı kontrol edin.</p><p id="msg" role="alert"></p><section id="login" hidden><p>Devam etmek için Ortak Takip hesabınızla giriş yapın.</p><form id="loginform"><label class="field">E-posta<input type="email" id="email" autocomplete="username" required></label><label class="field">Şifre<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">Giriş yap</button></form></section><section id="consent" hidden><div id="details"></div><p class="muted">Onay verirseniz bağlantı, hesabınızın mevcut yetkileriyle erişebildiği verilere ulaşabilir. İzni tanımadığınız uygulamalara vermeyin.</p><div class="actions"><button id="approve" type="button">İzin ver</button><button id="deny" class="secondary" type="button">Reddet</button></div></section></main>
 <script type="module">
-import{createClient}from"https://esm.sh/@supabase/supabase-js@2.57.0";
+import{createClient}from"https://esm.sh/@supabase/supabase-js@2.95.0";
 const db=createClient("https://gnwliizxuryfnpqrynym.supabase.co","sb_publishable_nNQjagytmTUtlvUL6MYOmw_UQJANk3C",{auth:{persistSession:true,storage:window.localStorage,autoRefreshToken:true,detectSessionInUrl:false}});
 const id=new URL(location.href).searchParams.get("authorization_id"),msg=document.getElementById("msg"),login=document.getElementById("login"),consent=document.getElementById("consent");
 function fail(e){msg.textContent=e?.message||String(e||"İşlem tamamlanamadı.");}
@@ -10,8 +10,8 @@ async function load(){
 msg.textContent="";login.hidden=true;consent.hidden=true;
 if(!id||!/^[a-zA-Z0-9_-]{8,200}$/.test(id)){fail("Geçerli bir yetkilendirme isteği bulunamadı.");return;}
 const {data:{user},error:ue}=await db.auth.getUser();if(ue||!user){login.hidden=false;return;}
-const {data,error}=await db.auth.oauth.getAuthorizationDetails(id);if(error){fail(error);return;}
-const client=data?.client||data?.oauth_client||{};
+if(!db.auth.oauth){fail('OAuth istemci kütüphanesi yüklenemedi. Sayfayı yenileyin.');return;} const {data,error}=await db.auth.oauth.getAuthorizationDetails(id);if(error){fail(error);return;}
+if(data?.redirect_url){location.assign(data.redirect_url);return;} const client=data?.client||data?.oauth_client||{};
 const name=client.client_name||client.name||data?.client_name||"Harici uygulama";
 const scopes=data?.scopes||data?.requested_scopes||[];
 const scopeText=Array.isArray(scopes)?scopes.join(", "):String(scopes||"Belirtilmedi");
