@@ -96,12 +96,22 @@ export function createInspectionModule(api) {
     const safe=validDriveURL(url);
     return safe?'<a href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" class="btn sm">'+esc(title)+' ↗</a>':'';
   };
+  function inspectionAssistant(rows,stats,selected){
+    const open=!!S().aiExpanded;
+    const missing=rows.filter(x=>answerFor(x.key)?.status==='eksik').sort((a,b)=>Number(b.critical)-Number(a.critical));
+    const pending=rows.filter(x=>!answerFor(x.key)?.status||answerFor(x.key)?.status==='incelenmedi');
+    const priority=[...missing,...pending].slice(0,5);
+    return '<section class="inspection-ai-panel" aria-label="Ön denetim takip asistanı"><div class="inspection-ai-head"><div><strong>✦ Teftiş Takip Asistanı</strong><p>Seçili kurum ve oturumun kayıtlı kontrol sonuçları · Salt okunur</p></div><button type="button" class="btn sm" id="inspectionAiToggle" aria-expanded="'+open+'">'+(open?'Daralt −':'Önerileri göster +')+'</button></div>'+
+      '<div class="inspection-ai-stats"><span><b>'+stats.critical+'</b> kritik eksik</span><span><b>'+stats.missing+'</b> eksik</span><span><b>'+stats.pending+'</b> incelenmedi</span><span><b>%'+stats.percent+'</b> uygunluk</span></div>'+
+      (open?'<div class="inspection-ai-body">'+(!selected?'<p class="muted small">Kontrol önerilerini görmek için bir ön denetim oturumu oluşturun veya seçin.</p>':priority.length?priority.map(x=>'<div class="inspection-ai-item"><div><strong>'+esc(x.title)+'</strong><small>'+(answerFor(x.key)?.status==='eksik'?(x.critical?'Kritik eksik':'Eksik'):'İncelenmedi')+'</small></div><button type="button" class="btn sm" data-inspection-ai-focus="'+esc(x.key)+'">Kontrole git</button></div>').join(''):'<p class="muted small">Seçili oturumda eksik veya incelenmemiş kontrol görünmüyor.</p>')+'<p class="muted small">Bu bir iç kontrol özetidir; resmî denetim sonucu değildir. Hiçbir kayıt otomatik değiştirilmez.</p></div>':'')+'</section>';
+  }
   function view() {
     if(!canManage())return '<p class="muted">Bu modüle yalnızca Admin ve Yönetici erişebilir.</p>';
     const s=S(),selected=current(),stats=count(),rows=checklist(s.unit);
     const sessionOpts=s.sessions.filter(x=>x.school_unit===s.unit).map(x=>[x.id,(x.title||'Ön Denetim')+' · '+x.academic_year+' · '+new Date(x.created_at).toLocaleDateString('tr-TR')+(x.status==='completed'?' ✓':'')]);
     const html=['<div class="inspection-hero"><div><h2>Denetime Hazırlık ve Öz Değerlendirme</h2><p>Okul müdürü ve kurum sahibi için iç kontrol. Resmî MEB denetimi veya uygunluk belgesi değildir.</p></div><a href="'+legalURL+'" target="_blank" rel="noopener noreferrer" class="btn sm">MEB denetim rehberleri ↗</a></div>',
       '<div class="inspection-toolbar"><label>Kurum<select id="inspectionSchool">'+options(schoolOptions,s.unit)+'</select></label><label>Denetim oturumu<select id="inspectionSession">'+options([['','Yeni oturum seçin'],...sessionOpts],selected?.id||'')+'</select></label><button type="button" class="btn teal" id="inspectionNew">+ Yeni Ön Denetim</button><button type="button" class="btn" data-view="documents">Evrak Merkezi</button></div>'];
+    html.push(inspectionAssistant(rows,stats,selected));
     if(!selected){
       html.push('<div class="inspection-empty"><h3>Bu kurum için henüz ön denetim yok</h3><p>Yeni Ön Denetim seçeneğiyle ilk kontrolünüzü başlatın.</p></div>');
       return html.join('');
@@ -216,6 +226,14 @@ export function createInspectionModule(api) {
   }
   function bind() {
     if(state.view==='inspection') {
+      document.getElementById('inspectionAiToggle')?.addEventListener('click',()=>{S().aiExpanded=!S().aiExpanded;render()});
+      document.querySelectorAll('[data-inspection-ai-focus]').forEach(b=>b.addEventListener('click',()=>{
+        const target=[...document.querySelectorAll('[data-criterion]')].find(x=>x.dataset.criterion===b.dataset.inspectionAiFocus);
+        target?.scrollIntoView({behavior:'smooth',block:'center'});
+        target?.classList.add('inspection-ai-focused');
+        target?.querySelector('select[name="status"]')?.focus({preventScroll:true});
+      }));
+
       document.getElementById('inspectionSchool')?.addEventListener('change',e=>{void setSchool(e.target.value);});
       document.getElementById('inspectionSession')?.addEventListener('change',e=>{void selectSession(e.target.value);});
       document.getElementById('inspectionNew')?.addEventListener('click',()=>void newSession());
