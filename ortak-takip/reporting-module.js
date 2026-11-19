@@ -152,6 +152,13 @@ export function createReportingModule(api){
    a.open.filter(t=>t.due_date&&t.due_date<=localISO(new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()+7))).sort((x,y)=>x.due_date.localeCompare(y.due_date)).slice(0,25).map(t=>[t.title,schoolName[t.school_unit]||'Ortak',memberName(t.executor_id||t.assigned_to),trDate(t.due_date),t.due_date<a.today?'Gecikmiş':statusName[t.status]||t.status])))+
    '<p class="rep-hint">Görev tamamlama oranında iptal edilenler paydadan çıkarılır. Dönem filtresi görevlerin oluşturulma tarihini; takvimde başlangıç tarihini; diğer alanlarda ilgili kayıt tarihini esas alır. Geçmiş dönem raporları kayıtların mevcut durumunu gösterir, geçmişteki anlık durumu yeniden oluşturmaz.</p>';
  }
+ function reportAssistant(a){
+  const r=R(),open=!!r.aiExpanded,late=a.late.length,review=a.review.length,critical=a.critical.length,done=a.done.length,total=a.valid.length;
+  const items=[{count:late,label:'Geciken görev',detail:'Son tarihi geçmiş açık görevler'},{count:critical,label:'Kritik açık görev',detail:'Kritik öncelikli açık işler'},{count:review,label:'Kontrol bekleyen',detail:'Onay sürecindeki görevler'}].filter(x=>x.count>0).sort((x,y)=>y.count-x.count);
+  return '<section class="rep-ai-panel" aria-label="Raporlama takip asistanı"><div class="rep-ai-head"><div><strong>✦ Yönetim Analiz Asistanı</strong><p>Seçili filtrelere göre güncel görev verileri · Salt okunur</p></div><button type="button" class="btn sm" id="repAiToggle" aria-expanded="'+open+'">'+(open?'Daralt −':'Önerileri göster +')+'</button></div>'+
+  '<div class="rep-ai-metrics"><span><b>'+total+'</b> görev</span><span><b>%'+percent(done,total)+'</b> tamamlanma</span><span><b>'+late+'</b> geciken</span><span><b>'+review+'</b> kontrol bekleyen</span></div>'+
+  (open?'<div class="rep-ai-body">'+(items.length?items.map(x=>'<div class="rep-ai-item"><div><strong>'+x.count+' · '+esc(x.label)+'</strong><small>'+esc(x.detail)+'</small></div><button type="button" class="btn sm" data-rep-ai-tab="tasks">Raporu incele</button></div>').join(''):'<p class="muted small">Seçili filtrelerde öncelikli görev bulunamadı.</p>')+'<p class="muted small">Bu analiz kayıt durumlarından hesaplanır; herhangi bir işlem yapılmaz.</p></div>':'')+'</section>';
+ }
  function view(){
   if(!canManage())return '<p>Raporlama için Yönetici veya Admin yetkisi gereklidir.</p>';
   const r=R(),a=aggregate(),sets=reportTables(a),range=effectiveRange();
@@ -163,7 +170,7 @@ export function createReportingModule(api){
    '<label>Görev durumu<select id="repStatus">'+options([['all','Tüm durumlar'],...Object.entries(statusName)],r.status)+'</select></label>'+
    '<label>Öncelik<select id="repPriority">'+options([['all','Tüm öncelikler'],...Object.entries(priorityName)],r.priority)+'</select></label></div>';
   return '<div class="rep-root"><div class="rep-hero"><div><span class="rep-eyebrow">ORTAK TAKİP • YÖNETİM ANALİTİĞİ</span><h2>Yönetim Raporlama Merkezi</h2><p>Kurum, görev, hedef, ortak, teftiş, evrak ve dijital operasyonlar tek noktada. <b>'+esc(range.label)+'</b> · '+esc(new Date().toLocaleString('tr-TR'))+'</p></div><div class="rep-hero-actions"><button class="btn" id="repReload">↻ Güncelle</button><button class="btn" id="repPrint">Yazdır</button><button class="btn" id="repExcel">Excel · Tüm Modüller</button><button class="btn primary" id="repPdf">PDF · Yönetim Raporu</button></div></div>'+
-   '<section class="rep-filters">'+menus+'</section>'+
+   reportAssistant(a)+'<section class="rep-filters">'+menus+'</section>'+
    '<div class="rep-tabs" role="tablist" aria-label="Rapor kategorisi">'+tabs.map(x=>'<button type="button" role="tab" aria-selected="'+(r.tab===x[0])+'" data-rep-tab="'+x[0]+'" class="'+(r.tab===x[0]?'active':'')+'">'+esc(x[1])+'</button>').join('')+'</div>'+
    (r.loading?'<p class="rep-info">Teftiş, bildirim ve dijital işlem ayrıntıları güvenli şekilde yükleniyor…</p>':r.loadError?'<p class="rep-error">Bazı ek rapor kaynakları okunamadı: '+esc(r.loadError)+'</p>':'')+
    (r.truncated.length?'<p class="rep-info">Büyük veri kümelerinde '+esc(r.truncated.join(', '))+' kayıtları için güvenli sorgu sınırına ulaşıldı; bu başlıklarda tüm geçmişi göstermek için sayfalama geliştirilebilir.</p>':'')+
@@ -254,6 +261,8 @@ export function createReportingModule(api){
  }
  function bind(){
   if(!canManage())return;
+  document.getElementById('repAiToggle')?.addEventListener('click',()=>{R().aiExpanded=!R().aiExpanded;render()});
+  document.querySelectorAll('[data-rep-ai-tab]').forEach(b=>b.addEventListener('click',()=>{R().tab=b.dataset.repAiTab;render()}));
   const onchange=(id,key)=>document.getElementById(id)?.addEventListener('change',e=>{R()[key]=e.target.value;render()});
   for(const [id,key] of [['repPeriod','period'],['repFrom','from'],['repTo','to'],['repSchool','school'],['repStream','stream'],['repPerson','person'],['repStatus','status'],['repPriority','priority']])onchange(id,key);
   document.querySelectorAll('[data-rep-tab]').forEach(b=>b.addEventListener('click',()=>{R().tab=b.dataset.repTab;render()}));
