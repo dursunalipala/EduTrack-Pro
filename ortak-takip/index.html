@@ -862,7 +862,7 @@ const loadDigitalSort=()=>{
 };
 
 document.addEventListener("input",e=>{if(e.target?.id!=="progressStepNames")return;const box=document.querySelector("#progressStepChecks");if(!box)return;const prior=[...box.querySelectorAll("[data-step-done]")].map(x=>x.checked);const names=e.target.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,30);box.innerHTML=names.map((title,i)=>'<label><input type="checkbox" data-step-done="'+i+'" '+(prior[i]?"checked":"")+'> '+esc(title)+'</label>').join("");});
-const state={simpleMode:loadSimpleMode(),taskScope:"mine",taskDisplayMode:"cards",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
+const state={simpleMode:loadSimpleMode(),taskScope:"mine",taskDisplayMode:"cards",simpleTaskStatus:"open",simpleTaskSearch:"",simpleTaskLimit:20,user:null,role:"",view:"overview",tasks:[],deletedTasks:[],showDeletedTasks:false,catalog:[],deletedCatalog:[],showDeletedCatalog:false,catalogStream:"all",catalogCadence:"all",catalogStatus:"all",catalogSection:"all",catalogSearch:"",streams:[],goals:[],events:[],members:[],profiles:[],invites:[],notificationQueue:[],userNotifications:[],notifyPrefs:[],adminSentNotifications:[],adminHistoryLoaded:false,digitalResources:[],digitalAudit:[],digitalCategory:"all",digitalSchool:"all",digitalStatus:"all",digitalSort:loadDigitalSort(),digitalSearch:"",digitalArchive:false,digitalEditingId:null,digitalFormOpen:false,digitalHistoryId:null,teamEmails:{},taskActivities:[],activityRevisions:[],taskAssignmentHistory:[],memberStatusHistory:[],memberStatusTab:"active",performancePeriod:"2026-11",performanceSchool:"all",performanceStream:"all",performancePerson:"all",reportPeriod:"all",reportStream:"all",aiMode:"agenda",aiResult:null,aiStats:null,aiMessages:[],aiLastTopic:"overview",aiLoading:false,aiAllowOpenAI:false,aiIncludeDetails:false,month:new Date(),calendarDay:null,search:"",status:"all",stream:"all",quickFilter:"all"};
 const labels={taslak:"Taslak",beklemede:"Beklemede",devam_ediyor:"Devam Ediyor",tamamlandi:"Tamamlandı",kontrol_bekliyor:"Kontrol Bekliyor",iptal:"İptal",dusuk:"Düşük",normal:"Normal",yuksek:"Yüksek",kritik:"Kritik",owner:"Admin",manager:"Yönetici",member:"Personel",viewer:"İzleyici"};
 const options=(items,v)=>items.map(x=>'<option value="'+esc(x[0])+'"'+(String(v??"")===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join("");
 const date=s=>s?new Date(s.length===10?s+"T12:00:00":s).toLocaleDateString("tr-TR"):"—";
@@ -2088,10 +2088,23 @@ function renderAIMessage(message){
   '<span class="ai-msg-meta">'+(user?"Siz":"✦ Ortak Takip Asistanı"+(origin?" · "+origin:""))+'</span>'+
   esc(message.text||"")+(message.notice?'<span class="ai-msg-note">'+esc(message.notice)+'</span>':"")+'</div>';
 }
+function aiDashboard(){
+ const a=state.aiStats;
+ const cards=a?[
+ ["Açık görev",a.open],["Geciken görev",a.overdue],["Kritik görev",a.critical],
+ ["7 günlük randevu",a.appointmentsUpcoming],["Geciken randevu takibi",a.appointmentsOverdueFollowup],["7 günlük toplantı",a.meetingsUpcoming]
+ ]:[];
+ return '<section class="ai-overview" aria-label="Yönetim merkezi" style="margin:0 0 16px;padding:16px;border:1px solid var(--line,#dce5ee);border-radius:16px">'+
+ '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><strong>Yönetim Merkezi</strong><div style="font-size:12px;opacity:.75">Yetkili kurum verilerinden hazırlanır · Salt okunur</div></div>'+
+ '<button type="button" class="btn sm" data-ai-question="Bugünün yönetim ajandasını hazırla: geciken ve öncelikli görevler, yaklaşan randevular, gecikmiş takipler ve toplantıları ayrı başlıklarda özetle." '+(state.aiLoading?'disabled':'')+'>↻ Güncel durumu getir</button></div>'+
+ (a?'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-top:14px">'+cards.map(([name,value])=>'<div style="padding:12px;border-radius:12px;background:var(--card,#f3f6fa);border:1px solid var(--line,#e2e8f0)"><div style="font-size:23px;font-weight:750">'+esc(String(value??0))+'</div><div style="font-size:12px">'+esc(name)+'</div></div>').join('')+'</div><p style="font-size:12px;margin:10px 0 0;opacity:.7">Son analiz tarihi: '+esc(a.date||"")+' · Görevler en fazla '+esc(String(a.recordsShown??0))+' kayıt üzerinden değerlendirilmiştir.</p>':
+ '<p style="font-size:13px;margin:12px 0 0">Güncel görev, randevu ve toplantı sayılarını görmek için yukarıdaki düğmeye basın. Veriler otomatik olarak OpenAI’ye gönderilmez.</p>')+
+ '</section>';
+}
 function aiView(){
  const messages=state.aiMessages.length?state.aiMessages.map(renderAIMessage).join(""):
   '<div class="ai-msg ai-msg-assistant"><span class="ai-msg-meta">✦ Ortak Takip Asistanı</span>Merhaba! Görevler, geciken işler, performans hedefleri ve iş havuzu hakkında soru sorabilirsiniz.\n\nÖrneğin: “Bu hafta hangi işlere öncelik vermeliyiz?”</div>';
- return '<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
+ return aiDashboard()+'<section class="ai-hero"><h2>✦ Yapay Zekâ ile Sohbet Et</h2>'+
   '<p>Görev, hedef, takvim, rapor ve yönetim kararları hakkında serbestçe sorun. OpenAI bağlantısı etkinse gerçek sohbet modeli, değilse doğrudan veri özeti kullanılır.</p></section>'+
   '<section class="ai-chat-panel" aria-label="Yapay zekâ sohbeti"><div class="ai-chat-header"><div class="ai-chat-identity"><span class="ai-chat-symbol" aria-hidden="true">✦</span><div><strong>Ortak Takip Asistanı</strong><div><span><i class="ai-presence-dot"></i> Görevler, hedefler ve takvim · Salt okunur</span></div></div></div>'+
   '<button type="button" class="btn sm" id="aiClearChat" '+(!state.aiMessages.length||state.aiLoading?"disabled":"")+'>Sohbeti Temizle</button></div>'+
@@ -2138,6 +2151,7 @@ async function sendAIRequest(mode,message=""){
   let result={};try{result=await response.json()}catch{}
   if(!response.ok)throw Error(result.error||"Asistan yanıtı alınamadı.");
   if(result.topic)state.aiLastTopic=result.topic;
+  if(result.stats&&typeof result.stats==="object")state.aiStats=result.stats;
   state.aiMessages.push({role:"assistant",text:result.text||"Yanıt boş döndü.",source:result.source,notice:result.notice});
  }catch(e){
   state.aiMessages.push({role:"assistant",text:e?.message||"Bağlantı hatası. Daha sonra tekrar deneyin.",source:"system"});
