@@ -237,6 +237,33 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   inp('Evrak HTTPS Bağlantısı','document_url','url',d.document_url)+
   '<div class="appt-wide appt-form-bottom"><button type="button" class="btn" id="apptCancelBottom">Vazgeç</button><button type="submit" class="btn primary" id="apptSave">Kaydet</button></div></form></section>';
  }
+ function assistantPanel(){
+  const s=S(),todayDate=today();
+  const terminal=new Set(['kayit','on_kayit','olumsuz','baska_okula_kayit','yas_hatasi']);
+  const rows=activeRows().filter(r=>!terminal.has(r.outcome));
+  const candidates=rows.map(r=>{
+   const late=!!r.followup_date&&r.followup_date<todayDate;
+   const noAnswer=r.outcome==='cevap_yok';
+   const appointmentPast=!!r.appointment_date&&r.appointment_date<todayDate;
+   const dueToday=r.followup_date===todayDate;
+   const score=(late?100:0)+(noAnswer?45:0)+(appointmentPast?30:0)+(dueToday?20:0)+(r.outcome==='dusunecek'?10:0);
+   return {r,score,late,noAnswer,appointmentPast,dueToday};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(a.r.followup_date||'9999').localeCompare(b.r.followup_date||'9999')).slice(0,5);
+  const message=x=>{
+   const r=x.r;
+   if(x.late)return 'Merhaba, Elit Eğitim Kurumları olarak önceki görüşmemizle ilgili size ulaşmak istiyoruz. Uygun olduğunuz zamanı paylaşabilir misiniz?';
+   if(x.noAnswer)return 'Merhaba, Elit Eğitim Kurumları olarak görüşme talebiniz hakkında size ulaşmaya çalıştık. Size uygun bir görüşme zamanı belirleyebilir miyiz?';
+   return 'Merhaba, Elit Eğitim Kurumları olarak görüşmemizin devamı için sizinle iletişime geçmek isteriz. Müsait olduğunuz zamanı paylaşabilir misiniz?';
+  };
+  return '<section class="panel" style="margin:12px 0;padding:14px;border:1px solid var(--line,#dce5ee);border-radius:14px" aria-label="Randevu akıllı takip asistanı">'+
+   '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><strong>✦ Randevu Akıllı Takip Asistanı</strong><p class="muted small" style="margin:5px 0">Onaylı asistan · Öncelik önerileri, taslak mesajlar · Otomatik işlem yok</p></div><span class="appt-live">Öneri</span></div>'+
+   '<p class="muted small">'+rows.length+' açık görüşme içinden takip gerektiren ilk '+candidates.length+' kayıt. Geciken takip, cevapsız arama ve geçmiş randevu dikkate alınır.</p>'+
+   '<div style="display:grid;gap:9px">'+(candidates.length?candidates.map((x,i)=>{
+    const r=x.r;const reason=[x.late?'Geciken takip':null,x.noAnswer?'Cevap yok':null,x.appointmentPast?'Geçmiş randevu':null,x.dueToday?'Bugün takip':null].filter(Boolean).join(' · ');
+    return '<div style="padding:11px;border:1px solid var(--line,#dce5ee);border-radius:10px;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong style="overflow-wrap:anywhere">'+(i+1)+'. '+esc(r.full_name||'İsimsiz kayıt')+'</strong>'+statusBadge(r.outcome)+'</div><p class="muted small" style="margin:6px 0">'+esc(reason)+' · Takip: '+esc(dateLabel(r.followup_date))+' · '+esc(r.staff_name||'Sorumlu belirtilmemiş')+'</p><div style="display:flex;flex-wrap:wrap;gap:7px"><button type="button" class="btn sm" data-appt-ai-draft="'+esc(String(r.id))+'">Mesaj taslağı</button><button type="button" class="btn sm" data-appt-ai-open="'+esc(String(r.id))+'">Randevuyu incele</button></div></div>';
+   }).join(''):'<p class="muted small">Öncelikli takip gerektiren kayıt bulunamadı.</p>')+'</div>'+
+   (s.aiDraftId&&s.rows.some(r=>String(r.id)===String(s.aiDraftId))?'<div style="margin-top:12px;padding:12px;border:1px solid var(--line,#dce5ee);border-radius:10px"><strong>Onayınıza sunulan mesaj taslağı</strong><p style="white-space:pre-wrap">'+esc(message({r:s.rows.find(r=>String(r.id)===String(s.aiDraftId)),late:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).followup_date<todayDate,noAnswer:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).outcome==='cevap_yok'}))+'</p><button type="button" class="btn sm" id="apptAiCopy">Metni kopyala</button><p class="muted small">Kopyalama mesajı göndermez; metni kontrol edip göndermeye siz karar verirsiniz.</p></div>':'')+'</section>';
+ }
  function view(){
   const s=S();
   if(!state.user||s.ownerId!==state.user.id)return '<section class="panel"><h2>Randevu Merkezi</h2><p class="muted">Oturum randevu kayıtları için hazırlanıyor…</p></section>';
@@ -245,7 +272,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   const lastSync=s.rows.reduce((m,r)=>r.last_synced_at&&r.last_synced_at>m?r.last_synced_at:m,'');
   const syncLabel=lastSync?'Son AppSheet veri aktarımı: '+new Date(lastSync).toLocaleString('tr-TR'):'AppSheet otomatik aktarımı: ilk gerçek veri gönderimi bekleniyor';
   return '<div class="appt-root">'+(s.form?editForm():'<div class="appt-intro"><div><h2>Elit Randevu Merkezi</h2><p>AppSheet kayıtları → Ortak Takip · tek yönlü geçiş dönemi</p><p class="muted small">'+esc(syncLabel)+'</p></div><span class="appt-live">● Canlı Supabase</span></div>'+
-   stats()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal" aria-label="Randevu İcmali"><span class="appt-tab-full">▤ Randevu İcmali</span><span class="appt-tab-short">▤ İcmal</span></button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim" aria-label="Takvim"><span class="appt-tab-full">▦ Takvim</span><span class="appt-tab-short">▦ Takvim</span></button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis" aria-label="Geçmiş Randevular"><span class="appt-tab-full">◷ Geçmiş Randevular</span><span class="appt-tab-short">◷ Geçmiş</span></button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz" aria-label="Kayıt Analizi"><span class="appt-tab-full">▥ Kayıt Analizi</span><span class="appt-tab-short">▥ Analiz</span></button><button class="'+(s.tab==='takip'?'active':'')+'" data-appt-tab="takip" aria-label="Takip Görevleri"><span class="appt-tab-full">☎ Takip Görevleri</span><span class="appt-tab-short">☎ Takip</span></button></div>'+
+   stats()+assistantPanel()+toolbar()+'<div class="appt-tabs"><button class="'+(s.tab==='icmal'?'active':'')+'" data-appt-tab="icmal" aria-label="Randevu İcmali"><span class="appt-tab-full">▤ Randevu İcmali</span><span class="appt-tab-short">▤ İcmal</span></button><button class="'+(s.tab==='takvim'?'active':'')+'" data-appt-tab="takvim" aria-label="Takvim"><span class="appt-tab-full">▦ Takvim</span><span class="appt-tab-short">▦ Takvim</span></button><button class="'+(s.tab==='gecmis'?'active':'')+'" data-appt-tab="gecmis" aria-label="Geçmiş Randevular"><span class="appt-tab-full">◷ Geçmiş Randevular</span><span class="appt-tab-short">◷ Geçmiş</span></button><button class="'+(s.tab==='analiz'?'active':'')+'" data-appt-tab="analiz" aria-label="Kayıt Analizi"><span class="appt-tab-full">▥ Kayıt Analizi</span><span class="appt-tab-short">▥ Analiz</span></button><button class="'+(s.tab==='takip'?'active':'')+'" data-appt-tab="takip" aria-label="Takip Görevleri"><span class="appt-tab-full">☎ Takip Görevleri</span><span class="appt-tab-short">☎ Takip</span></button></div>'+
    (s.tab==='takvim'?calendar():s.tab==='analiz'?analysis():s.tab==='takip'?taskQueue():sheet()))+'</div>'+followup.view();
  }
  async function quickStatus(el){
@@ -313,6 +340,13 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
    document.getElementById('apptForm')?.addEventListener('submit',e=>{e.preventDefault();void save(e.currentTarget)});
    return;
   }
+  document.querySelectorAll('[data-appt-ai-draft]').forEach(b=>b.addEventListener('click',()=>{s.aiDraftId=b.dataset.apptAiDraft;render()}));
+  document.querySelectorAll('[data-appt-ai-open]').forEach(b=>b.addEventListener('click',()=>{s.editingId=b.dataset.apptAiOpen;s.form=true;render()}));
+  document.getElementById('apptAiCopy')?.addEventListener('click',async()=>{
+   const text=document.querySelector('[aria-label="Randevu akıllı takip asistanı"] div[style*="white-space:pre-wrap"] p')?.textContent;
+   if(!text)return;
+   try{await navigator.clipboard.writeText(text);toast('Mesaj taslağı kopyalandı; gönderilmedi.')}catch(e){toast('Kopyalama başarısız. Metni seçip kopyalayabilirsiniz.')}
+  });
   document.getElementById('apptNew')?.addEventListener('click',()=>{s.form=true;s.editingId=null;render()});
   document.getElementById('apptImport')?.addEventListener('click',()=>importer.show());
   document.querySelectorAll('[data-appt-quick]').forEach(el=>el.addEventListener('change',()=>void quickStatus(el)));
