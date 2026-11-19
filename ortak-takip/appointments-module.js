@@ -262,7 +262,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
     const r=x.r;const reason=[x.late?'Geciken takip':null,x.noAnswer?'Cevap yok':null,x.appointmentPast?'Geçmiş randevu':null,x.dueToday?'Bugün takip':null].filter(Boolean).join(' · ');
     return '<div style="padding:11px;border:1px solid var(--line,#dce5ee);border-radius:10px;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong style="overflow-wrap:anywhere">'+(i+1)+'. '+esc(r.full_name||'İsimsiz kayıt')+'</strong>'+statusBadge(r.outcome)+'</div><p class="muted small" style="margin:6px 0">'+esc(reason)+' · Takip: '+esc(dateLabel(r.followup_date))+' · '+esc(r.staff_name||'Sorumlu belirtilmemiş')+'</p><div style="display:flex;flex-wrap:wrap;gap:7px"><button type="button" class="btn sm" data-appt-ai-draft="'+esc(String(r.id))+'">Mesaj taslağı</button><button type="button" class="btn sm" data-appt-ai-open="'+esc(String(r.id))+'">Randevuyu incele</button></div></div>';
    }).join(''):'<p class="muted small">Öncelikli takip gerektiren kayıt bulunamadı.</p>')+'</div>'+
-   (s.aiDraftId&&s.rows.some(r=>String(r.id)===String(s.aiDraftId))?'<div style="margin-top:12px;padding:12px;border:1px solid var(--line,#dce5ee);border-radius:10px"><strong>Onayınıza sunulan mesaj taslağı</strong><p style="white-space:pre-wrap">'+esc(message({r:s.rows.find(r=>String(r.id)===String(s.aiDraftId)),late:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).followup_date<todayDate,noAnswer:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).outcome==='cevap_yok'}))+'</p><button type="button" class="btn sm" id="apptAiCopy">Metni kopyala</button><p class="muted small">Kopyalama mesajı göndermez; metni kontrol edip göndermeye siz karar verirsiniz.</p></div>':'')+'</section>';
+   (s.aiDraftId&&s.rows.some(r=>String(r.id)===String(s.aiDraftId))?'<div style="margin-top:12px;padding:12px;border:1px solid var(--line,#dce5ee);border-radius:10px"><strong>Onayınıza sunulan mesaj taslağı</strong><p id="apptAiDraftText" style="white-space:pre-wrap">'+esc(message({r:s.rows.find(r=>String(r.id)===String(s.aiDraftId)),late:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).followup_date<todayDate,noAnswer:s.rows.find(r=>String(r.id)===String(s.aiDraftId)).outcome==='cevap_yok'}))+'</p><button type="button" class="btn sm" id="apptAiCopy">Metni kopyala</button><p class="muted small">Kopyalama mesajı göndermez; metni kontrol edip göndermeye siz karar verirsiniz.</p></div>':'')+'</section>';
  }
  function view(){
   const s=S();
@@ -343,7 +343,7 @@ export function createAppointmentModule({sb,WS,state,esc,toast,error,requireActi
   document.querySelectorAll('[data-appt-ai-draft]').forEach(b=>b.addEventListener('click',()=>{s.aiDraftId=b.dataset.apptAiDraft;render()}));
   document.querySelectorAll('[data-appt-ai-open]').forEach(b=>b.addEventListener('click',()=>{s.editingId=b.dataset.apptAiOpen;s.form=true;render()}));
   document.getElementById('apptAiCopy')?.addEventListener('click',async()=>{
-   const text=document.querySelector('[aria-label="Randevu akıllı takip asistanı"] div[style*="white-space:pre-wrap"] p')?.textContent;
+   const text=document.getElementById('apptAiDraftText')?.textContent;
    if(!text)return;
    try{await navigator.clipboard.writeText(text);toast('Mesaj taslağı kopyalandı; gönderilmedi.')}catch(e){toast('Kopyalama başarısız. Metni seçip kopyalayabilirsiniz.')}
   });
