@@ -132,6 +132,19 @@ export function createInspectionModule(api) {
     html.push('<div class="inspection-footer"><button type="button" class="btn" id="inspectionPrint">Yazdır / PDF</button><button type="button" class="btn" id="inspectionCsv">Excel için CSV</button>'+(selected.status==='draft'?'<button type="button" class="btn teal" id="inspectionComplete">Ön Denetimi Tamamla</button>':'')+'</div>');
     return html.join('');
   }
+  function documentsAssistant(docs){
+    const open=!!S().docAiExpanded;
+    const today=new Date();today.setHours(0,0,0,0);
+    const horizon=new Date(today);horizon.setDate(horizon.getDate()+30);
+    const day=x=>x?new Date(String(x).slice(0,10)+'T12:00:00'):null;
+    const overdue=docs.filter(d=>d.expires_on&&day(d.expires_on)<today).sort((a,b)=>String(a.expires_on).localeCompare(String(b.expires_on)));
+    const soon=docs.filter(d=>d.expires_on&&day(d.expires_on)>=today&&day(d.expires_on)<=horizon).sort((a,b)=>String(a.expires_on).localeCompare(String(b.expires_on)));
+    const undated=docs.filter(d=>!d.expires_on);
+    const items=[...overdue.map(d=>({d,reason:'Kontrol tarihi geçmiş'})),...soon.map(d=>({d,reason:'30 gün içinde kontrol'}))].slice(0,5);
+    return '<section class="doc-ai-panel" aria-label="Evrak takip asistanı"><div class="doc-ai-head"><div><strong>✦ Evrak Takip Asistanı</strong><p>Seçili filtrelerdeki kayıtlı belge bağlantıları ve kontrol tarihleri</p></div><button type="button" class="btn sm" id="docAiToggle" aria-expanded="'+open+'">'+(open?'Daralt −':'Önerileri göster +')+'</button></div>'+
+      '<div class="doc-ai-stats"><span><b>'+docs.length+'</b> kayıt</span><span><b>'+overdue.length+'</b> tarihi geçmiş</span><span><b>'+soon.length+'</b> 30 gün içinde</span><span><b>'+undated.length+'</b> tarih girilmemiş</span></div>'+
+      (open?'<div class="doc-ai-body">'+(items.length?items.map(x=>'<div class="doc-ai-item"><div><strong>'+esc(x.d.title)+'</strong><small>'+esc(x.reason)+' · '+esc(x.d.expires_on)+'</small></div><button type="button" class="btn sm" data-doc-ai-edit="'+esc(x.d.id)+'">Kaydı incele</button></div>').join(''):'<p class="muted small">Bu filtrede tarihi geçmiş veya 30 gün içinde kontrol gerektiren kayıt görünmüyor.</p>')+'<p class="muted small">Kontrol tarihi, belge geçerliliğinin resmî doğrulaması değildir. Yalnızca sistemde kayıtlı belgeler değerlendirilir; eksik belgeler otomatik tespit edilmez.</p></div>':'')+'</section>';
+  }
   function docsView() {
     if(!canManage())return '<p class="muted">Bu alana erişim yetkiniz yok.</p>';
     const s=S();
@@ -139,6 +152,7 @@ export function createInspectionModule(api) {
     const edit=s.docs.find(d=>d.id===s.editDocId);
     const html=['<div class="inspection-hero"><div><h2>Kurumsal Evrak Merkezi</h2><p>Belgeler Google Drive üzerinde kalır; uygulamaya sadece adları, bağlantıları ve açıklamaları kaydedilir.</p></div><a class="btn sm" href="https://drive.google.com/drive/u/0/my-drive" target="_blank" rel="noopener noreferrer">Google Drive ↗</a></div>',
       '<div class="inspection-toolbar"><label>Kurum<select id="docSchoolFilter">'+options(docSchools,s.docUnit)+'</select></label><label>Belge ara<input id="docSearch" type="search" placeholder="Belge adı veya açıklama..." value="'+esc(s.docSearch)+'"></label><button type="button" class="btn teal" id="docNew">+ Drive Bağlantısı Ekle</button></div>',
+      documentsAssistant(docs),
       '<p class="inspection-note">Güvenlik: Drive bağlantısı eklemek belge erişimi vermez. Google Drive paylaşım ayarlarında yalnızca yetkili kişiler bulunmalıdır. Öğrenci ve personel dosyaları için KVKK değerlendirmesi yapılmadan belge eklemeyin.</p>'];
     if(s.docForm)html.push('<form id="inspectionDocForm" class="inspection-doc-form"><h3>'+(edit?'Evrak Bağlantısını Düzenle':'Evrak Bağlantısı Ekle')+'</h3><div class="inspection-check-fields"><label>Belge adı<input name="title" minlength="3" maxlength="220" required value="'+esc(edit?.title||'')+'"></label><label>Kurum<select name="school_unit">'+options(docSchools.filter(x=>x[0]!=='all'),edit?.school_unit||'ortak')+'</select></label><label>Belge sınıfı<select name="category">'+options(docCategories,edit?.category||'resmiyet')+'</select></label><label>Geçerlilik / kontrol tarihi<input type="date" name="expires_on" value="'+esc(edit?.expires_on||'')+'"></label></div><label>Google Drive / Google Docs bağlantısı<input name="drive_url" type="url" required maxlength="1900" placeholder="https://drive.google.com/file/d/..." value="'+esc(edit?.drive_url||'')+'"></label><label>Açıklama<textarea name="notes" rows="2" maxlength="1500">'+esc(edit?.notes||'')+'</textarea></label><div class="inspection-check-actions"><button class="btn teal" type="submit">Kaydet</button><button class="btn" type="button" id="docCancel">Vazgeç</button></div></form>');
     if(!docs.length)html.push('<div class="inspection-empty">Bu filtreye uygun evrak bağlantısı bulunamadı.</div>');
@@ -247,6 +261,12 @@ export function createInspectionModule(api) {
       document.getElementById('inspectionCsv')?.addEventListener('click',downloadCSV);
     }
     if(state.view==='documents') {
+      document.getElementById('docAiToggle')?.addEventListener('click',()=>{S().docAiExpanded=!S().docAiExpanded;render()});
+      document.querySelectorAll('[data-doc-ai-edit]').forEach(btn=>btn.addEventListener('click',()=>{
+        S().editDocId=btn.dataset.docAiEdit;S().docForm=true;render();
+        document.getElementById('inspectionDocForm')?.scrollIntoView({block:'start',behavior:'smooth'});
+      }));
+
       document.getElementById('docSchoolFilter')?.addEventListener('change',e=>{S().docUnit=e.target.value;render()});
       document.getElementById('docSearch')?.addEventListener('input',e=>{S().docSearch=e.target.value;const pos=e.target.selectionStart;render();const search=document.getElementById('docSearch');search?.focus();search?.setSelectionRange(pos,pos);});
       document.getElementById('docNew')?.addEventListener('click',()=>{S().docForm=true;S().editDocId=null;render()});
