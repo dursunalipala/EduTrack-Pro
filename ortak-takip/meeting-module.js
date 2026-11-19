@@ -1,6 +1,6 @@
 export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
  const types={board:"Yönetim Kurulu",partners:"Ortaklar",school_management:"Okul Yönetimi",teachers:"Öğretmenler Kurulu",department:"Zümre / Kurul",mem:"MEM Müdürler Toplantısı",other:"Diğer"};
- let rows=[],selected=null,loading=false,problem="";
+ let rows=[],selected=null,loading=false,problem="",aiOpen=false;
  const statusNames={requested:"Talep Edildi",scheduled:"Planlandı",in_progress:"Devam Ediyor",minutes_pending:"Tutanak Bekleniyor",completed:"Tamamlandı",cancelled:"İptal Edildi"};
  const decisionNames={draft:"Taslak",approved:"Onaylandı",in_progress:"Devam Ediyor",awaiting_review:"Kontrol Bekliyor",completed:"Tamamlandı",cancelled:"İptal Edildi"};
  const canManage=()=>["owner","manager"].includes(state.role);
@@ -18,8 +18,13 @@ export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
   root.innerHTML='<div class="meeting-toolbar"><div><h2>Toplantı ve Karar Merkezi</h2><p>Toplantı talepleri, gündemler, kararlar ve MEM talimatları</p></div>'+(canCreate()?'<button class="btn primary" id="meetingNew">+ Toplantı Talebi</button>':'')+'</div>'+
   (problem?'<div class="meeting-alert">Toplantı verileri henüz kullanılamıyor. Veritabanı kurulumu ve erişim izinleri kontrol edilmeli.<small>'+e(problem)+'</small></div>':'')+
   '<div class="meeting-stats"><div><b>'+rows.length+'</b><span>Toplantı</span></div><div><b>'+rows.filter(x=>x.status==="requested").length+'</b><span>Talep</span></div><div><b>'+rows.filter(x=>x.status==="scheduled").length+'</b><span>Planlanan</span></div><div><b>'+rows.filter(x=>x.type==="mem").length+'</b><span>MEM</span></div></div>'+
+  '<section class="meeting-ai-panel" aria-label="Toplantı karar asistanı"><div class="meeting-ai-head"><div><strong>✦ Toplantı ve Karar Asistanı</strong><p>Gerçek toplantı kayıtlarına dayalı öncelik analizi · Onaylı öneriler</p></div><button type="button" class="btn sm" id="meetingAiToggle" aria-expanded="'+aiOpen+'">'+(aiOpen?'Daralt −':'Önerileri göster +')+'</button></div>'+
+  '<div class="meeting-ai-stats"><span><b>'+rows.filter(x=>x.status==="requested").length+'</b> talep</span><span><b>'+rows.filter(x=>x.status==="minutes_pending").length+'</b> tutanak bekliyor</span><span><b>'+rows.filter(x=>x.status==="scheduled"&&x.starts_at&&new Date(x.starts_at)<new Date()).length+'</b> tarihi geçmiş plan</span></div>'+
+  (aiOpen?'<div class="meeting-ai-body">'+(rows.filter(x=>["requested","minutes_pending"].includes(x.status)||(x.status==="scheduled"&&x.starts_at&&new Date(x.starts_at)<new Date())).slice(0,5).map(x=>'<div class="meeting-ai-item"><div><strong>'+e(x.title)+'</strong><small>'+e(statusNames[x.status]||x.status)+' · '+e(fmt(x.starts_at))+'</small></div><button type="button" class="btn sm" data-meeting-ai-open="'+e(x.id)+'">İncele</button></div>').join("")||'<p class="meeting-muted">Şu anda öncelikli toplantı kaydı görünmüyor.</p>')+'<p class="meeting-muted">Bu liste kayıt durumlarından hesaplanır. Kararlar otomatik değiştirilmez.</p></div>':'')+'</section>'+
   '<div class="meeting-cards">'+(rows.length?rows.map(x=>'<article class="meeting-card"><div class="meeting-card-head"><strong>'+e(x.title)+'</strong><span>'+e(types[x.type]||x.type)+'</span></div><p>'+e(fmt(x.starts_at))+' · '+e(x.location||"Yer belirtilmedi")+'</p><p>Durum: '+e(statusNames[x.status]||x.status)+'</p><div class="meeting-actions"><button class="btn sm" data-meeting-open="'+e(x.id)+'">Gündem / Kararlar</button>'+(x.meeting_url?'<a class="btn sm" target="_blank" rel="noopener noreferrer" href="'+e(x.meeting_url)+'">Toplantıya katıl</a>':'')+'</div></article>').join(""):'<div class="meeting-empty">Henüz erişebildiğiniz bir toplantı kaydı bulunmuyor.</div>')+'</div>'+
   (selected?'<div id="meetingDetail" class="meeting-detail"></div>':'');
+  root.querySelector("#meetingAiToggle")?.addEventListener("click",()=>{aiOpen=!aiOpen;paint()});
+  root.querySelectorAll("[data-meeting-ai-open]").forEach(b=>b.addEventListener("click",()=>openDetail(b.dataset.meetingAiOpen)));
   root.querySelector("#meetingNew")?.addEventListener("click",openForm);
   root.querySelectorAll("[data-meeting-open]").forEach(b=>b.addEventListener("click",()=>openDetail(b.dataset.meetingOpen)));
   if(selected)loadDetail(selected);
