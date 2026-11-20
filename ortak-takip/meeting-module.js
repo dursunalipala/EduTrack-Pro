@@ -10,7 +10,10 @@ export function createMeetingModule({sb,WS,state,esc,toast,onAskAI}){
  async function refresh(){
   if(loading)return;loading=true;
   const {data,error}=await sb.from("meetings").select("id,title,type,status,starts_at,location,meeting_url,description,created_by").eq("workspace_id",WS).order("created_at",{ascending:false}).limit(100);
-  loading=false;problem=error?.message||"";rows=data||[];paint();
+  loading=false;problem=error?.message||"";rows=data||[];
+  if(!problem&&canManage())state.meetingDigest={loaded:true,requested:rows.filter(x=>x.status==="requested").length,minutesPending:rows.filter(x=>x.status==="minutes_pending").length,overdue:rows.filter(x=>x.status==="scheduled"&&x.starts_at&&new Date(x.starts_at)<new Date()).length,upcoming:rows.filter(x=>x.status==="scheduled"&&x.starts_at&&new Date(x.starts_at)>=new Date()&&new Date(x.starts_at)<=new Date(Date.now()+7*86400000)).length};
+  else state.meetingDigest=null;
+  paint();
  }
  function view(){return '<section id="meetingRoot" class="meeting-module"><div class="meeting-loading">Toplantılar yükleniyor…</div></section>'}
  function paint(){
