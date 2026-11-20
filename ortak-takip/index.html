@@ -832,7 +832,7 @@ import {createInspectionModule} from "./inspection-module.js?v=20261119-docai1";
 import {createReportingModule} from "./reporting-module.js?v=20261119-reportai1";
 import {createAppointmentModule} from "./appointments-module.js?v=20261119-ai2";
 import {createHrModule} from "./hr-module.js?v=20261119-hrai2";
-import {createMeetingModule} from "./meeting-module.js?v=20261119-ai-live";
+import {createMeetingModule} from "./meeting-module.js?v=20261120-central2";
 import {readMebCalendar} from "./meb-calendar-reader.js";
 const URL="https://gnwliizxuryfnpqrynym.supabase.co",KEY="sb_publishable_nNQjagytmTUtlvUL6MYOmw_UQJANk3C";
 // Earlier builds kept the session in localStorage. Clear only that legacy token;
@@ -2159,15 +2159,15 @@ function dailyManagementBrief(){
  const appointmentFollowups=apptRows.filter(x=>{const status=String(x.status||x.result||x.followup_status||"").toLocaleLowerCase("tr-TR");return /gecik|ulaşılamadı|aranacak|bekliyor|takip/.test(status)});
  const hiring=state.hr?.loaded?(state.hr.hiringCandidates||[]):[];
  const urgentCandidates=hiring.filter(x=>["kritik","yuksek","high"].includes(String(x.priority||"").toLowerCase())||x.interview_date&&String(x.interview_date).slice(0,10)<=today);
- const meetingStats=state.aiStats;
+ const meetingStats=state.meetingDigest;
  const proposals=[{n:late.length,title:"Geciken görevler",view:"tasks"},{n:reviews.length,title:"Kontrol/onay bekleyen görevler",view:"tasks"},{n:critical.length,title:"Kritik açık görevler",view:"tasks"},{n:goals.length,title:"Onay bekleyen hedefler",view:"goals"},{n:expired.length,title:"Kontrol tarihi geçmiş evraklar",view:"documents"},
   {n:appointmentFollowups.length,title:"Randevu takip değerlendirmesi",view:"appointments"},
   {n:urgentCandidates.length,title:"Öncelikli işe alım başvuruları",view:"hr"},
-  {n:meetingStats?.meetingsUpcoming||0,title:"Yaklaşan toplantı hazırlıkları",view:"meetings"}].filter(x=>x.n>0);
- const metrics=[[late.length,"Geciken"],[critical.length,"Kritik"],[reviews.length,"Kontrol/onay"],[soon.length,"7 günlük görev"],[appointmentFollowups.length,"Randevu takibi"],[meetingStats?.meetingsUpcoming??"—","7 günlük toplantı"]];
+  {n:meetingStats?(meetingStats.requested+meetingStats.minutesPending+meetingStats.overdue):0,title:"Toplantı talepleri, tutanak ve gecikmiş planlar",view:"meetings"}].filter(x=>x.n>0);
+ const metrics=[[late.length,"Geciken"],[critical.length,"Kritik"],[reviews.length,"Kontrol/onay"],[soon.length,"7 günlük görev"],[appointmentFollowups.length,"Randevu takibi"],[meetingStats?.upcoming??"—","7 günlük toplantı"]];
  return '<section class="daily-management-brief"><div class="daily-brief-head"><div><strong>✦ Günlük Yönetim Özeti</strong><p>'+esc(today)+' · Mevcut kayıtlara dayalı · Salt okunur</p></div><button type="button" class="btn sm" id="dailyBriefCopy">Özeti kopyala</button></div><div class="daily-brief-metrics">'+metrics.map(x=>'<span><b>'+x[0]+'</b> '+esc(x[1])+'</span>').join('')+'</div><strong>Onay gerektiren işlem önerileri</strong>'+
  (proposals.length?proposals.map(x=>'<div class="daily-brief-action"><span><b>'+x.n+'</b> · '+esc(x.title)+'</span><button type="button" class="btn sm" data-daily-brief-view="'+esc(x.view)+'">İncele</button></div>').join(''):'<p class="muted small">Öncelikli işlem önerisi bulunamadı.</p>')+
- '<p class="muted small">İncele düğmeleri ilgili modüle yönlendirir. Kayıt değişikliği, onay veya mesaj gönderimi yalnızca yetkili kullanıcının ayrı işlemiyle yapılır. Randevu ve İK sayıları ilgili modül yüklenmişse, toplantı sayısı son asistan analizi varsa gösterilir. Öneriler otomatik uygulanmaz.</p></section>';
+ '<p class="muted small">İncele düğmeleri ilgili modüle yönlendirir. Kayıt değişikliği, onay veya mesaj gönderimi yalnızca yetkili kullanıcının ayrı işlemiyle yapılır. Randevu, toplantı ve İK sayıları ilgili modüller bu oturumda yüklendiyse gösterilir. Öneriler otomatik uygulanmaz.</p></section>';
 }
 function bindDailyManagementBrief(){
  document.getElementById("dailyBriefCopy")?.addEventListener("click",async()=>{
